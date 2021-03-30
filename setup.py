@@ -1,9 +1,14 @@
 from setuptools import setup, find_packages
 
+with open('README.md', 'rb') as file:
+    README = file.read().decode('UTF-8')
+
 setup(
     name='pyetm',
     version='0.1.0',    
-    description='Python connector for ETM API',
+    description='Python-ETM Connector',
+    long_description=README,
+    long_description_content_type='text/markdown',
     url='https://github.com/robcalon/pyetm',
     author='Rob Calon',
     author_email='robcalon@protonmail.com',
