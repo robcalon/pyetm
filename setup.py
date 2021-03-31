@@ -4,7 +4,7 @@ with open('README.md', 'rb') as file:
     README = file.read().decode('UTF-8')
 
 setup(
-    name='pyetm',
+    name='pyETM',
     version='0.1.0',    
     description='Python-ETM Connector',
     long_description=README,
