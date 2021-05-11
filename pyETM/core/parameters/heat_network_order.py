@@ -63,7 +63,7 @@ class HeatNetworkOrder:
         self.put(post, json=data, headers=headers, **kwargs)
         
         # reinitialize scenario
-        self._initialize_session
+        self._reset_session()
         
     def _check_heat_network_order(self, order):
         """check if items in flexbility order are in ETM."""

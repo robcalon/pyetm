@@ -1,18 +1,17 @@
 import json
 
-# import property classes
-from .header.area_code import AreaCode
-from .header.created_at import CreatedAt
-from .header.display_group import DisplayGroup
-from .header.end_year import EndYear
-from .header.ordering import Ordering
-from .header.protected import Protected
-from .header.scaling import Scaling
-from .header.source import Source
-from .header.start_year import StartYear
-from .header.template import Template
-from .header.title import Title
-from .header.url import URL
+from .area_code import AreaCode
+from .created_at import CreatedAt
+from .display_group import DisplayGroup
+from .end_year import EndYear
+from .ordering import Ordering
+from .protected import Protected
+from .scaling import Scaling
+from .source import Source
+from .start_year import StartYear
+from .template import Template
+from .title import Title
+from .url import URL
 
 
 class Header(AreaCode, CreatedAt, DisplayGroup, EndYear, Ordering, 

@@ -1,0 +1,58 @@
+import pandas
+
+
+class GQueries:
+    
+    @property
+    def gqueries(self):
+        return self._gqueries
+
+    @gqueries.setter
+    def gqueries(self, gqueries):
+
+        # put string in list
+        if isinstance(gqueries, str):
+            gqueries = [gqueries]
+        
+        # set gqueries
+        self._gqueries = gqueries
+        
+        # reset gquery results
+        self._gquery_results = None
+        
+    @property
+    def gquery_results(self):
+        
+        # get gquery results
+        if self._gquery_results is None:
+            self._get_gquery_results()
+            
+        return self._gquery_results
+    
+    def get_gquery_results(self, gqueries):
+        """Request gqueries from ETM"""
+        
+        # update gqueries
+        self.gqueries = gqueries
+        
+        return self.gquery_results
+        
+    def _get_gquery_results(self, **kwargs):
+        """get data for queried graphs from ETM"""
+                
+        # raise without scenario id
+        self._raise_scenario_id()
+                
+        # create gquery request
+        data = {'detailed': True, 'gqueries': self.gqueries}
+        
+        # prepare post
+        headers = {'Connection': 'close'}
+        post = f'/scenarios/{self.scenario_id}'
+        
+        # evaluate post
+        response = self.put(post, json=data, headers=headers, **kwargs)
+        gquery_results = pandas.DataFrame.from_dict(response['gqueries'], orient='index')
+        
+        # set gquery results
+        self._gquery_results = gquery_results

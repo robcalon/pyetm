@@ -1,10 +1,9 @@
-# import property classes
-from .httpclient.context import Context
-from .httpclient.delete import Delete
-from .httpclient.get import Get
-from .httpclient.post import Post
-from .httpclient.put import Put
-from .httpclient.response import Response
+from .context import Context
+from .delete import Delete
+from .get import Get
+from .post import Post
+from .put import Put
+from .response import Response
 
 
 class HTTPClient(Context, Delete, Get, Post, Put, Response):
