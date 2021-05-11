@@ -151,7 +151,7 @@ class Interconnectors:
     def _update_interconnector(self, package):
                     
         # get corresponsing interconnector
-        name = package['type'].replace('_price', '')
+        name = package['key'].replace('_price', '')
         interconnector = self._interconnectors[name]
 
         # set information
