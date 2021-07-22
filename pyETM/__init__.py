@@ -6,10 +6,10 @@ from .core.httpclient import HTTPClient
 from .core.parameters import Parameters
 from .core.scenario import Scenario
 from .core.gqueries import GQueries
+from .core.interpolate import Interpolate
 
-
-class ETMClient(Curves, Custom, Engine, Header, 
-                 HTTPClient, Parameters, Scenario, GQueries):
+class ETMClient(Curves, Custom, Engine, Header, HTTPClient, 
+                Parameters, Scenario, GQueries, Interpolate):
     
     def __init__(self, scenario_id, beta_engine=False, 
                  context=None, proxy=None):
