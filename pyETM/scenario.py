@@ -37,7 +37,8 @@ class Scenario:
         
         # request response and convert to df
         resp = self.get(post, headers=headers, **kwargs)
-        templates = pandas.DataFrame.from_dict(json.loads(resp))
+        templates = pandas.DataFrame.from_dict(json.loads(resp))        
+        templates['id'] = templates['id'].astype(str)
         
         return templates
     

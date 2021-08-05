@@ -1,15 +1,16 @@
-from .core.curves import Curves
-from .core.custom import Custom
-from .core.engine import Engine
-from .core.header import Header
-from .core.httpclient import HTTPClient
-from .core.parameters import Parameters
-from .core.scenario import Scenario
-from .core.gqueries import GQueries
-from .core.interpolate import Interpolate
+from .curves import Curves
+from .engine import Engine
+from .header import Header
+from .httpclient import HTTPClient
+from .parameters import Parameters
+from .scenario import Scenario
+from .ccurves import CustomCurves
+from .gqueries import GQueries
+from .interpolate import Interpolate
 
-class ETMClient(Curves, Custom, Engine, Header, HTTPClient, 
-                Parameters, Scenario, GQueries, Interpolate):
+
+class ETMClient(Curves, Engine, Header, HTTPClient, Parameters, 
+                Scenario, CustomCurves, GQueries, Interpolate):
     
     def __init__(self, scenario_id, beta_engine=False, 
                  context=None, proxy=None):
@@ -54,6 +55,9 @@ class ETMClient(Curves, Custom, Engine, Header, HTTPClient,
         # reset gqueries
         self._gquery_results = None
         
+        # reset ccurves
+        self._ccurves = None
+        
         # reset curves
         self._hourly_electricity_curves = None
         self._hourly_electricity_price_curve = None
@@ -61,7 +65,3 @@ class ETMClient(Curves, Custom, Engine, Header, HTTPClient,
         self._hourly_household_heat_curves = None
         self._hourly_hydrogen_curves = None
         self._hourly_network_gas_curves = None
-        
-        # reset customs
-        self._reset_interconnectors()
-        self._interconnector_prices = None
