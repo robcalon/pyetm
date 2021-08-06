@@ -2,20 +2,20 @@ import json
 import numpy
 import pandas
 import aiohttp
-
+import warnings
 
 class CCurves:
     """class object access ccurve attributes"""
     
     @property
-    def info(self):
-        """show info on ccurves"""
+    def overview(self):
+        """show overview on ccurves"""
         
-        # get info
-        if self._info is None:
-            self._format_for_info()
+        # get overview
+        if self._overview is None:
+            self._format_for_overview()
         
-        return self._info
+        return self._overview
         
     @property
     def stats(self):
@@ -29,7 +29,7 @@ class CCurves:
     
     @property
     def statistics(self):
-        """alias for stats"""
+        """alias for stats method"""
         return self.stats
         
     @property
@@ -45,13 +45,17 @@ class CCurves:
     @property
     def attached(self):
         """show which ccurves are (un)attached"""    
-        return self.info.attached
+        return self.overview.attached
+    
+    def __call__(self):
+        """return overview on call"""
+        return self.overview
     
     def __init__(self, ccurves):
         """store formatted ccurves response"""
         
         # set defaults
-        self._info = None
+        self._overview = None
         self._stats = None
         self._overrides = None
         
@@ -75,8 +79,8 @@ class CCurves:
 
         return ccurves
     
-    def _format_for_info(self):
-        """create info format"""
+    def _format_for_overview(self):
+        """create overview format"""
         
         # reference unformatted ccurves
         ccurves = self._ccurves
@@ -99,8 +103,8 @@ class CCurves:
         if 'stats' in ccurves.columns:
             ccurves = ccurves[ccurves.columns.drop('stats')]
         
-        # set info
-        self._info = ccurves
+        # set overview
+        self._overview = ccurves
         
         return ccurves        
     
@@ -149,15 +153,10 @@ class CustomCurves:
             self.get_ccurves()
             
         return self._ccurves
-    
-    @property
-    def custom_curves(self):
-        """alias for ccurves"""
-        return self.ccurves
         
     @ccurves.setter
     def ccurves(self, ccurves):
-        """set ccurves"""
+        """set ccurves witout option to set a name"""
         
         if ccurves is None:
             self.delete_ccurves()
@@ -174,14 +173,9 @@ class CustomCurves:
             
         else:
             raise TypeError('ccurves must be series, dataframe or None')
-            
-    @custom_curves.setter
-    def custom_curves(self, ccurves):
-        """alias for ccurves setter"""
-        self.ccurves = ccurves
     
     def get_ccurves(self):
-        """get ccurves infomation"""
+        """get ccurves overview"""
         
         # raise without scenario id
         self._raise_scenario_id()
@@ -198,11 +192,7 @@ class CustomCurves:
         # set ccurves
         self._ccurves = CCurves(ccurves)
         
-        return self.ccurves.info    
-    
-    def get_custom_curves(self):
-        """alias for get ccurves"""
-        return self.get_ccurves()
+        return self.ccurves.overview    
     
     def get_ccurve(self, key):
         """return specific custum_curve"""
@@ -210,18 +200,17 @@ class CustomCurves:
         # validate key
         key = self._validate_key(key)
         
-        return self.ccurves.info.loc[key]
+        return self.ccurves.overview.loc[key]
     
-    def get_custom_curve(self, key):
-        """alias for get ccurve"""
-        return self.get_ccurve(key)
-    
-    def upload_ccurve(self, curve, key, name=None):
-        """upload custom curve"""
-                
-        # raise without scenario id
-        self._raise_scenario_id()
-    
+    def __upload_ccurve(self, curve, key=None, name=None):
+        """upload without raising or resetting"""
+        
+        # default to series name
+        if key is None:
+            if isinstance(curve, pandas.Series):
+                if curve.name is not None:
+                    key = curve.name
+                        
         # validate key
         key = self._validate_key(key)
     
@@ -231,11 +220,7 @@ class CustomCurves:
     
         # check ccurve
         curve = self._check_ccurve(curve, key)
-        
-        # set default name
-        if name is None:
-            name = curve.name
-        
+                
         # convert date to string
         curve = curve.to_string(index=False)
 
@@ -249,7 +234,16 @@ class CustomCurves:
         
         # make request
         self.put(post, data=form, headers=headers)
+    
+    def upload_ccurve(self, curve, key=None, name=None):
+        """upload custom curve"""
+                
+        # raise without scenario id
+        self._raise_scenario_id()
         
+        # upload ccurve
+        self.__upload_ccurve(curve, key, name)
+                
         # reset session
         self._reset_session()
     
@@ -257,30 +251,31 @@ class CustomCurves:
         """alias for upload ccurve"""
         self.upload_ccurve(curve, key, name)
     
-    def upload_ccurves(self, ccurves, names=None):
+    def upload_ccurves(self, ccurves, name=None):
         """upload multiple ccurves at once"""
+                
+        # raise without scenario id
+        self._raise_scenario_id()
         
         # delete all ccurves
         if ccurves is None:
             self.delete_ccurves()
         
-        # default to None
-        if names is None:
-            names = [None for _ in ccurves.columns]
+        """
+        TO DO:
+        ------
+        Consider to use gather and make this async as well.
+        """
         
-        # upload ccurves
-        for nr, key in enumerate(ccurves.columns):
-            self.upload_ccurve(ccurves[key], key, names[nr])
+        # upload all ccurves to ETM
+        function = self.__upload_ccurve
+        [function(ccurves[key], key, name) for key in ccurves.columns]
+                
+        # reset session
+        self._reset_session()
     
-    def upload_custom_curves(self, ccurves, names=None):
-        """alias for upload ccurves"""
-        self.upload_ccurves(ccurves, names)
-    
-    def delete_ccurve(self, key):
-        """delate an uploaded ccurve"""
-        
-        # raise without scenario id
-        self._raise_scenario_id()
+    def __delete_ccurve(self, key):
+        """delete without raising or resetting"""
         
         # validate key
         key = self._validate_key(key)
@@ -292,25 +287,61 @@ class CustomCurves:
         # make request
         self.delete(post, headers=headers)
         
-        # reset session
-        self._reset_session()
+    def delete_ccurve(self, key):
+        """delate an uploaded ccurve"""
         
-    def delete_custom_curve(self, key):
-        """alias for delete ccurve"""
-        self.delete_ccurve(key)
+        # raise without scenario id
+        self._raise_scenario_id()
+        
+        # check if key is attached
+        ccurves = self.ccurves()
+        attached = ccurves.attached[ccurves.attached]
+        
+        # if key is attached
+        if attached.loc[key]:
+            
+            # delete ccurve and reset
+            self.__delete_ccurve(key)
+            self._reset_session()
+
+        else:
+            # warn user for attempt
+            msg = (f'attempted to unattach "{key}", ' +
+                   'while already unattached')
+            warnings.warn(msg)
         
     def delete_ccurves(self):
         """delete all custom curves"""
         
-        attached = self.ccurves.attached
-        for key, active in attached.iteritems():
-            if active is True:
-                self.delete_ccurve(key)
-                    
-    def delete_custom_curves(self):
-        """alias for delete ccurves"""
-        self.delete_ccurves()
+        # raise without scenario id
+        self._raise_scenario_id()
         
+        # check if key is attached
+        ccurves = self.ccurves()
+        attached = ccurves.attached[ccurves.attached]
+        
+        """
+        TO DO:
+        ------
+        Consider to use gather and make this async as well.
+        """
+        
+        # if key is attached
+        if attached.shape[0] > 0:
+
+            # delete all ccurves
+            function = self.__delete_ccurve
+            [function(key) for key in attached.index]
+            
+            # reset session
+            self._reset_session()
+        
+        else:
+            # warn user for attempt
+            msg = ('attempted to unattach all ccurves, ' +
+                   'while already unattached')
+            warnings.warn(msg)
+                
     def _check_ccurve(self, curve, key):
         """check if a ccurve is compatible"""
                 
@@ -335,8 +366,12 @@ class CustomCurves:
     def _validate_key(self, key):
         """check if key is valid ccurve"""
         
+        # raise for None
+        if key is None:
+            raise KeyError('No key specified for ccurve')
+        
         # check if key in ccurve index
-        if key not in self.ccurves.info.index:
+        if key not in self.ccurves.overview.index:
             raise KeyError(f'"{key}" is not a valid ccurve key')
             
         return key

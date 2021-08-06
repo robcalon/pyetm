@@ -4,29 +4,47 @@ import nest_asyncio
 class Context:
     
     @property
-    def _context(self):
-        
-        # get context
-        if self.__context is None:
-            self._get_context()
-            
-        return self.__context
+    def _ipython(self):
+        return self.__ipython
     
-    @_context.setter
-    def _context(self, context):
-        self.__context = context
-        self._apply_context()
-            
-    def _get_context(self):
-        """get context in which object is created"""
+    @_ipython.setter
+    def _ipython(self, boolean):
         
-        self.__context == 'native'
+        # check type
+        if not isinstance(boolean, bool):
+            raise TypeError('must be boolean type')
+        
+        self.__ipython = boolean
+        self._apply_context()
+    
+#     @property
+#     def _context(self):
+        
+#         # get context
+#         if self.__context is None:
+#             self._get_context()
+            
+#         return self.__context
+    
+#     @_context.setter
+#     def _context(self, context):
+#         self.__context = context
+#         self._apply_context()
+            
+#     def _get_context(self):
+#         """get context in which object is created"""
+        
+#         self.__context == 'native'
         
     def _apply_context(self):
         """apply context specific settings"""
         
-        # notebook settings
-        if self._context == 'notebook':
+#         # notebook settings
+#         if self._context == 'notebook':
+#             nest_asyncio.apply()
+
+        # ipython setting
+        if self._ipython:
             nest_asyncio.apply()
         
         try:
