@@ -126,7 +126,7 @@ class UserValues:
         cbound = parameters[~parameters['permitted_values'].isna()]
         
         # raise errors if
-        for key, values in cbound.iterrows():
+        for key, value in cbound.iterrows():
             if value.user not in value.permitted_values:
                 raise ValueError(f'"{key}" value is not permitted in ETM')
                 

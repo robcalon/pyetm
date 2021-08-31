@@ -218,6 +218,10 @@ class CustomCurves:
         if curve is None:
             self.delete_ccurve(key)
     
+        # set key as name
+        if name is None:
+            name = key
+    
         # check ccurve
         curve = self._check_ccurve(curve, key)
                 
@@ -231,7 +235,7 @@ class CustomCurves:
         # prepare request
         headers = {'Connection': 'close'}
         post = f'/scenarios/{self.scenario_id}/custom_curves/{key}'
-        
+
         # make request
         self.put(post, data=form, headers=headers)
     
