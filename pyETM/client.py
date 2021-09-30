@@ -7,10 +7,10 @@ from .scenario import Scenario
 from .ccurves import CustomCurves
 from .gqueries import GQueries
 from .interpolate import Interpolate
-
+from .utils import Utils
 
 class Client(Curves, Engine, Header, HTTPClient, Parameters, 
-                Scenario, CustomCurves, GQueries, Interpolate):
+             Scenario, CustomCurves, GQueries, Interpolate, Utils):
     
     def __init__(self, scenario_id=None, beta_engine=False, 
                  ipython=False, reset=False, proxy=None):
