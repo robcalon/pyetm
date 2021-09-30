@@ -22,9 +22,14 @@ class HourlyHydrogenCurves:
         headers = {'Connection':'close'}
         post = f'/scenarios/{self.scenario_id}/curves/hydrogen'
         
-        # request response and convert to df
+        # request response and extract data
         resp = self.get(post, headers=headers)
-        curves = pandas.read_csv(io.StringIO(resp))
+        data = io.StringIO(resp)
+        
+        # convert data to dataframe and set DateTime
+        curves = pandas.read_csv(data, index_col='Time', 
+                                 parse_dates=True).asfreq('H')
+        curves.index.name = 'DateTime'
         
         # set corresponsing parameter property
         self._hourly_hydrogen_curves = curves
