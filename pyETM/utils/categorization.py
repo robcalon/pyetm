@@ -37,7 +37,7 @@ class Categorization:
         
         # fetch curves or raise error
         if hasattr(self, attribute):
-            curves = getattr(self, attribute)
+            curves = getattr(self, attribute).copy(deep=True)
         
         else:
             # attribute not implemented
@@ -73,6 +73,7 @@ class Categorization:
         
         # apply mapping to curves
         curves.columns = curves.columns.map(mapping)
+        curves.columns.names = midx.names
         
         # aggregate over levels
         levels = curves.columns.names
