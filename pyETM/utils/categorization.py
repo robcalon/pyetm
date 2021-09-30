@@ -94,10 +94,6 @@ class Categorization:
         # subset carrier from mapping
         mapping = mapping.xs(carrier, level='ETM_CARRIER')
         
-        # subset carrier from mapping and remove ETM_CARRIER
-        mapping = mapping[(mapping.ETM_CARRIER == carrier)]
-        mapping.drop('ETM_CARRIER', axis=1)
-        
         # check if passed curves contains columns not specified in cat 
         for item in curves.columns[~curves.columns.isin(mapping.index)]:
             raise KeyError(f'"{item}" is not present in the ' + 
