@@ -174,6 +174,20 @@ class CustomCurves:
         else:
             raise TypeError('ccurves must be series, dataframe or None')
     
+    @property
+    def validate_ccurves(self):
+        """validate ccurves key before uploading"""
+        return self._validate_ccurves
+    
+    @validate_ccurves.setter
+    def validate_ccurves(self, boolean):
+        """set validate ccurves boolean"""
+        
+        if not isinstance(boolean, bool):
+            raise TypeError('"validate_ccurves" must be of type boolean')
+            
+        self._validate_ccurves = boolean
+    
     def get_ccurves(self):
         """get ccurves overview"""
         

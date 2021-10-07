@@ -1,4 +1,4 @@
-from .categorization import Categorization
+from .categorization import Categorization, categorize_curves
 
 class Utils(Categorization):
     

@@ -11,19 +11,7 @@ from .utils import Utils
 
 class Client(Curves, Engine, Header, HTTPClient, Parameters, 
              Scenario, CustomCurves, GQueries, Interpolate, Utils):
-    
-    @property
-    def validate_ccurves(self):
-        return self._validate_ccurves
-    
-    @validate_ccurves.setter
-    def validate_ccurves(self, boolean):
-        
-        if not isinstance(boolean, bool):
-            raise TypeError('"validate_ccurves" must be of type boolean')
-            
-        self._validate_ccurves = boolean
-    
+       
     def __init__(self, scenario_id=None, beta_engine=False, 
                  ipython=False, reset=False, proxy=None, 
                  validate_ccurves=True):
@@ -62,7 +50,6 @@ class Client(Curves, Engine, Header, HTTPClient, Parameters,
         # set class parameters
         self.beta_engine = beta_engine
         self._ipython = ipython
-#         self._context = context
         self.scenario_id = scenario_id
         
         # set default gqueries
