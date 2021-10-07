@@ -82,6 +82,9 @@ def categorize_curves(curves, carrier, mapping, columns=None,
         DataFrame with the categorized curves of the 
         specified carrier.
     """
+    
+    # copy curves
+    curves = curves.copy()
 
     # load categorization
     if isinstance(mapping, str):
