@@ -14,15 +14,15 @@ class Client(Curves, Engine, Header, HTTPClient, Parameters,
     
     @property
     def validate_ccurves(self):
-        return self.__validate_ccurves
+        return self._validate_ccurves
     
     @validate_ccurves.setter
-    def validate_ccurveS(self, boolean):
+    def validate_ccurves(self, boolean):
         
         if not isinstance(boolean, bool):
             raise TypeError('"validate_ccurves" must be of type boolean')
             
-        self.__validate_ccurves = boolean
+        self._validate_ccurves = boolean
     
     def __init__(self, scenario_id=None, beta_engine=False, 
                  ipython=False, reset=False, proxy=None, 
@@ -72,7 +72,8 @@ class Client(Curves, Engine, Header, HTTPClient, Parameters,
         if not reset and scenario_id is not None:
             self.reset_scenario()
             
-        self.validate_ccurves is validate_ccurves
+        # set validate ccurves key argument
+        self.validate_ccurves = validate_ccurves
                 
     def __str__(self):
         return f'BaseClient({self.scenario_id})'
