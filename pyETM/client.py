@@ -12,8 +12,21 @@ from .utils import Utils
 class Client(Curves, Engine, Header, HTTPClient, Parameters, 
              Scenario, CustomCurves, GQueries, Interpolate, Utils):
     
+    @property
+    def validate_ccurves(self):
+        return self.__validate_ccurves
+    
+    @validate_ccurves.setter
+    def validate_ccurveS(self, boolean):
+        
+        if not isinstance(boolean, bool):
+            raise TypeError('"validate_ccurves" must be of type boolean')
+            
+        self.__validate_ccurves = boolean
+    
     def __init__(self, scenario_id=None, beta_engine=False, 
-                 ipython=False, reset=False, proxy=None):
+                 ipython=False, reset=False, proxy=None, 
+                 validate_ccurves=True):
         """Client which connects to ETM
         
         Parameters
@@ -29,7 +42,10 @@ class Client(Curves, Engine, Header, HTTPClient, Parameters,
         reset : bool, default False
             Reset scenario on initalization.
         proxy : str, default None
-            proxy address to pass to the aiohttp client.
+            Proxy address to pass to the aiohttp client.
+        validate_ccurves : bool, default True
+            Validate the key of a passed custom curve. Can be set
+            to False when attempting to upload internal curves. 
             
         Returns
         -------
@@ -55,6 +71,8 @@ class Client(Curves, Engine, Header, HTTPClient, Parameters,
         # reset scenario on intialization
         if not reset and scenario_id is not None:
             self.reset_scenario()
+            
+        self.validate_ccurves is validate_ccurves
                 
     def __str__(self):
         return f'BaseClient({self.scenario_id})'

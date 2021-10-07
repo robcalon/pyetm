@@ -376,6 +376,9 @@ class CustomCurves:
         
         # check if key in ccurve index
         if key not in self.ccurves.overview.index:
-            raise KeyError(f'"{key}" is not a valid ccurve key')
+            
+            # only raise when validation is requested
+            if self.validate_ccurves is True:
+                raise KeyError(f'"{key}" is not a valid ccurve key')
             
         return key
