@@ -56,7 +56,7 @@ class Client(Curves, Engine, Header, HTTPClient, Parameters,
         self.gqueries = []
         
         # reset scenario on intialization
-        if not reset and scenario_id is not None:
+        if reset and scenario_id is not None:
             self.reset_scenario()
             
         # set validate ccurves key argument
