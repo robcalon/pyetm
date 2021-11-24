@@ -1,0 +1,4 @@
+include requirements.txt
+include pyETM/utils/buildings/data/G2A_parameters.csv
+include pyETM/utils/households/data/house_properties.csv
+include pyETM/utils/households/data/thermostat_values.csv

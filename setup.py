@@ -3,9 +3,12 @@ from setuptools import setup, find_packages
 with open('README.md', 'rb') as file:
     README = file.read().decode('UTF-8')
 
+with open('requirements.txt') as file:
+    requires = [[l.strip() for l in file.readlines() if not l.startswith("#")]]
+    
 setup(
     name='pyETM',
-    version='0.2.2',    
+    version='0.3.0',    
     description='Python-ETM Connector',
     long_description=README,
     long_description_content_type='text/markdown',
@@ -14,10 +17,7 @@ setup(
     author_email='robcalon@protonmail.com',
     license='MIT',
     python_requires='>=3.7',
-    install_requires=['numpy>=0.11',
-                      'pandas>=0.17',
-                      'aiohttp',
-                      'nest_asyncio'],
+    install_requires=requires,
     packages=find_packages(),
     include_package_data=True,
     classifiers=[
