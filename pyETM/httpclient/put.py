@@ -15,11 +15,7 @@ class Put:
             async with session.put(url, proxy=proxy, **kwargs) as response:
 
                 # check response
-                valid = await self._check_response(response)
-                            
-                # check validity
-                if not valid is True:
-                    raise ValueError('check failed without raising error.')
+                await self._check_response(response)
 
                 # decode response
                 decoded = await response.json(encoding='utf-8')

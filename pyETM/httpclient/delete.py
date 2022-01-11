@@ -13,12 +13,9 @@ class Delete:
         # delete request at url
         async with aiohttp.ClientSession() as session:
             async with session.delete(url, proxy=proxy, **kwargs) as response:                
+                
                 # check response
-                valid = await self._check_response(response)
-                        
-                # check validity
-                if not valid is True:
-                    raise ValueError('check failed without raising error.')
+                await self._check_response(response)
                     
         return response
     
