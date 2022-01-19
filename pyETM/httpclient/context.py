@@ -1,7 +1,33 @@
+import os
+import sys
 import asyncio
 import nest_asyncio
 
 class Context:
+    
+    @property
+    def proxy(self):
+        return self.__proxy
+        
+    @proxy.setter
+    def proxy(self, proxy):
+        
+        if not isinstance(proxy, str):
+            raise TypeError('proxy must be of type string')
+        
+        if proxy == 'auto':
+        
+            # check environment variables for proxy settings
+            if os.environ.get('HTTPS_PROXY') != '':
+                proxy = os.environ.get('HTTPS_PROXY')
+
+            elif os.environ.get('HTTP_PROXY') != '':
+                proxy = os.environ.get('HTTP_PROXY')
+                
+            else:
+                proxy = None
+
+        self.__proxy = proxy
     
     @property
     def _ipython(self):
@@ -10,13 +36,15 @@ class Context:
     @_ipython.setter
     def _ipython(self, boolean):
         
-        # check type
+        if boolean == 'auto':
+            boolean = 'ipython' in sys.modules
+        
         if not isinstance(boolean, bool):
             raise TypeError('"ipython" must be of type boolean')
         
         self.__ipython = boolean
         self._apply_context()
-        
+            
     def _apply_context(self):
         """apply context specific settings"""
         

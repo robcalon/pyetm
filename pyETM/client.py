@@ -13,8 +13,8 @@ class Client(Curves, Engine, Header, HTTPClient, Parameters,
              Scenario, CustomCurves, GQueries, Interpolate, Utils):
        
     def __init__(self, scenario_id=None, beta_engine=False, 
-                 ipython=False, reset=False, proxy=None, 
-                 validate_ccurves=True):
+                 reset=False, validate_ccurves=True, ipython='auto', 
+                 proxy='auto'):
         """Client which connects to ETM
         
         Parameters
@@ -24,16 +24,18 @@ class Client(Curves, Engine, Header, HTTPClient, Parameters,
             a limited number of methods when scenario_id is set to None.
         beta_engine : bool, default False
             Connect to the beta-engine instead of the production-engine.
-        ipython : bool, default False
-            Set to True When the client is called in an IPython environment 
-            to nest the asyncio event loop.
-        reset : bool, default False
-            Reset scenario on initalization.
-        proxy : str, default None
-            Proxy address to pass to the aiohttp client.
         validate_ccurves : bool, default True
             Validate the key of a passed custom curve. Can be set
             to False when attempting to upload internal curves. 
+        reset : bool, default False
+            Reset scenario on initalization.
+        ipython : bool, default 'auto'
+            Set to True When the client is called in an IPython environment 
+            to nest the asyncio event loop. When set to 'auto', tries to
+            detect if ipython is running in client.
+        proxy : str, default auto
+            Proxy address to pass to the aiohttp client. When set to 'auto',
+            enviornment variabels are searched to detect a HTTP(S)_PROXY.
             
         Returns
         -------
@@ -63,7 +65,7 @@ class Client(Curves, Engine, Header, HTTPClient, Parameters,
         self.validate_ccurves = validate_ccurves
                 
     def __str__(self):
-        return f'BaseClient({self.scenario_id})'
+        return f'Client({self.scenario_id})'
     
     def __enter__(self):
         return self

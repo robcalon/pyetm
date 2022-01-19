@@ -52,7 +52,7 @@ class ScenarioID:
         # ignore None tests
         if scenario_id is None:
             return scenario_id
-        
+                
         # prepare validation post
         post = f'/scenarios/{scenario_id}'
         headers = {'Connection': 'close'}
