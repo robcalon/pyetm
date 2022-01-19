@@ -81,7 +81,7 @@ class Client(Curves, Engine, Header, HTTPClient, Parameters,
         
         # reset parameters
         self._user_parameters = None
-        self._flexibility_order = None
+        # self._flexibility_order = None
         self._heat_network_order = None
         self._application_demands = None
         self._energy_flows = None

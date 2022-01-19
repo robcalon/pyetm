@@ -12,8 +12,8 @@ class Scenario:
 #         self.set_scenario(scenario)
         
     def reset_scenario(self, **kwargs):
-        """Resets user values, flexibility order and heat network order
-        to their default configurations."""
+        """Resets user values and heat network order
+        to default settings."""
         
         # set reset parameter
         data = {"reset": True}
@@ -28,19 +28,19 @@ class Scenario:
         # reinitialize connected scenario
         self._reset_session()
         
-    def get_scenario_templates(self, **kwargs):
-        """get the available scenario templated within the ETM"""
+#     def get_scenario_templates(self, **kwargs):
+#         """get the available scenario templated within the ETM"""
         
-        # prepare post
-        headers = {'Connection':'close'}
-        post = '/scenarios/templates'
+#         # prepare post
+#         headers = {'Connection':'close'}
+#         post = '/scenarios/templates'
         
-        # request response and convert to df
-        resp = self.get(post, headers=headers, **kwargs)
-        templates = pandas.DataFrame.from_dict(json.loads(resp))        
-        templates['id'] = templates['id'].astype(str)
+#         # request response and convert to df
+#         resp = self.get(post, headers=headers, **kwargs)
+#         templates = pandas.DataFrame.from_dict(json.loads(resp))        
+#         templates['id'] = templates['id'].astype(str)
         
-        return templates
+#         return templates
     
     def create_scenario_copy(self, scenario_id, **kwargs):
         """Create a new scenario that is a copy of an existing scenario
