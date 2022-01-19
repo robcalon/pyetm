@@ -9,9 +9,9 @@ class Categorization:
         
         Parameters
         ----------
-        carrier : str
-            The carrier for which the hourly curves are
-            categorized.
+        carrier : str or DataFrame
+            The carrier-name or hourly curves for which the 
+            categorization is applied.
         mapping : DataFrame or str
             DataFrame with mapping of ETM_IDs. The DataFrame must 
             contain a ETM_ID and ETM_CARRIER column. Alternatively 
@@ -32,25 +32,31 @@ class Categorization:
             specified carrier.
         """
         
-        # make client attribute from carrier
-        attribute = f'hourly_{carrier}_curves'
+        # fetch relevant curves
+        if isinstance(carrier, str):
 
-        # fetch curves or raise error
-        if hasattr(self, attribute):
-            curves = getattr(self, attribute).copy(deep=True)
+            # make client attribute from carrier
+            attribute = f'hourly_{carrier}_curves'
 
-        else:
-            # attribute not implemented
-            raise NotImplementedError(f'"{attribute}" not implemented')
+            # fetch curves or raise error
+            if hasattr(self, attribute):
+                carrier = getattr(self, attribute)
+
+            else:
+                # attribute not implemented
+                raise NotImplementedError(f'"{attribute}" not implemented')
+        
+        if not isinstance(carrier, pandas.DataFrame):
+            raise TypeError('carrier must be of type string or DataFrame')
         
         # use categorization function
-        curves = categorize_curves(curves, carrier, mapping, columns, 
+        curves = categorize_curves(carrier, mapping, columns, 
                                    include_index, *args, **kwargs)
     
         return curves
 
 
-def categorize_curves(curves, carrier, mapping, columns=None, 
+def categorize_curves(curves, mapping, columns=None, 
                       include_index=False, *args, **kwargs):
     """Categorize the hourly curves for a specific dataframe 
     with a specific mapping.
@@ -58,11 +64,8 @@ def categorize_curves(curves, carrier, mapping, columns=None,
     Parameters
     ----------
     curves : DataFrame
-        The carrier curves to which the categorization is
-        applied.
-    carrier : str
-        The carrier for which the hourly curves are
-        categorized.
+        The hourly curves for which the 
+        categorization is applied.
     mapping : DataFrame or str
         DataFrame with mapping of ETM_IDs. The DataFrame must 
         contain a ETM_ID and ETM_CARRIER column. Alternatively 
@@ -90,16 +93,15 @@ def categorize_curves(curves, carrier, mapping, columns=None,
     if isinstance(mapping, str):
         mapping = pandas.read_csv(mapping, *args, **kwargs)
 
-    # ensure correct midx
-    cols = ['ETM_ID', 'ETM_CARRIER']
-    if mapping.index.names != cols:
-
-        # attempt to construct required index
-        drop = isinstance(mapping.index, pandas.RangeIndex)            
-        mapping = mapping.reset_index(drop=drop).set_index(cols)
-
-    # subset carrier from mapping
-    mapping = mapping.xs(carrier, level='ETM_CARRIER')
+    if isinstance(mapping, pandas.Series):
+        columns = [mapping.name]
+        mapping = mapping.to_frame()
+        
+    # ensure correct index
+    if mapping.index.name != 'ETM_key':
+        
+        drop = isinstance(mapping.index, pandas.RangeIndex)
+        mapping = mapping.reset_index(drop=drop).set_index('ETM_key')
 
     # check if passed curves contains columns not specified in cat 
     for item in curves.columns[~curves.columns.isin(mapping.index)]:
@@ -117,27 +119,41 @@ def categorize_curves(curves, carrier, mapping, columns=None,
         # check columns argument
         if isinstance(columns, str):
             columns = [columns]
-
+        
         # subset categorization
         mapping = mapping[columns]
-
+        
     # include index in mapping
     if include_index is True:
 
         # append index as column to mapping
-        keys = mapping.index.to_series(name='ETM_ID')
+        keys = mapping.index.to_series(name='ETM_key')
         mapping = pandas.concat([mapping, keys], axis=1)
 
-    # make multiindex and midx mapper
-    midx = pandas.MultiIndex.from_frame(mapping)
-    mapping = dict(zip(mapping.index, midx))
+    if len(mapping.columns) == 1:
 
-    # apply mapping to curves
-    curves.columns = curves.columns.map(mapping)
-    curves.columns.names = midx.names
+        # extract column
+        column = columns[0]
+        
+        # apply mapping to curves
+        curves.columns = curves.columns.map(mapping[column])
+        curves.columns.name = column
+        
+        # aggregate over mapping
+        curves = curves.groupby(by=column, axis=1).sum()
+        
+    else:
 
-    # aggregate over levels
-    levels = curves.columns.names
-    curves = curves.groupby(level=levels, axis=1).sum()
+        # make multiindex and midx mapper
+        midx = pandas.MultiIndex.from_frame(mapping)
+        mapping = dict(zip(mapping.index, midx))
+
+        # apply mapping to curves
+        curves.columns = curves.columns.map(mapping)
+        curves.columns.names = midx.names
+
+        # aggregate over levels
+        levels = curves.columns.names
+        curves = curves.groupby(level=levels, axis=1).sum()
 
     return curves

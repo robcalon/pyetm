@@ -30,7 +30,7 @@ class UserParameters:
         # request response and convert to df
         resp = self.get(post, headers=headers, **kwargs)
         uparams = pandas.DataFrame.from_dict(json.loads(resp), orient='index')
-
+        
         # add user to column when absent
         if 'user' not in uparams.columns:
             uparams.insert(loc=5, column='user', value=numpy.nan)
