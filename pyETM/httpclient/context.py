@@ -37,7 +37,7 @@ class Context:
     def _ipython(self, boolean):
         
         if boolean == 'auto':
-            boolean = 'ipython' in sys.modules
+            boolean = 'ipykernel' in sys.modules
         
         if not isinstance(boolean, bool):
             raise TypeError('"ipython" must be of type boolean')
