@@ -13,9 +13,9 @@ class Categorization:
             The carrier-name or hourly curves for which the 
             categorization is applied.
         mapping : DataFrame or str
-            DataFrame with mapping of ETM_IDs. The DataFrame must 
-            contain a ETM_ID and ETM_CARRIER column. Alternatively 
-            a string to a csv-file can be passed.
+            DataFrame with mapping of ETM keys in index and mapping 
+            values in columns. Alternatively a string to a csv-file
+            can be passed.
         columns : list, default None
             List of column names and order that will be included
             in the mapping. Defaults to all columns in mapping.
@@ -67,9 +67,9 @@ def categorize_curves(curves, mapping, columns=None,
         The hourly curves for which the 
         categorization is applied.
     mapping : DataFrame or str
-        DataFrame with mapping of ETM_IDs. The DataFrame must 
-        contain a ETM_ID and ETM_CARRIER column. Alternatively 
-        a string to a csv-file can be passed.
+        DataFrame with mapping of ETM keys in index and mapping 
+        values in columns. Alternatively a string to a csv-file
+        can be passed.
     columns : list, default None
         List of column names and order that will be included
         in the mapping. Defaults to all columns in mapping.
@@ -97,12 +97,6 @@ def categorize_curves(curves, mapping, columns=None,
         columns = [mapping.name]
         mapping = mapping.to_frame()
         
-    # ensure correct index
-    if mapping.index.name != 'ETM_key':
-        
-        drop = isinstance(mapping.index, pandas.RangeIndex)
-        mapping = mapping.reset_index(drop=drop).set_index('ETM_key')
-
     # check if passed curves contains columns not specified in cat 
     for item in curves.columns[~curves.columns.isin(mapping.index)]:
         raise KeyError(f'"{item}" is not present in the ' + 

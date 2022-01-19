@@ -42,4 +42,4 @@ class Templates:
         # set index name
         mapping.index.name = 'ETM_key'
 
-        return mapping.reset_index()
+        return mapping
