@@ -95,7 +95,7 @@ class UserValues:
         
         # raise errors
         for key in errors.index:
-            raise KeyError(f'"{key}" is not a disabled user value')
+            raise KeyError(f'"{key}" is a disabled user value')
         
         return uvalues
         
