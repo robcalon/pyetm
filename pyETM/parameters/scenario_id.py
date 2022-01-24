@@ -1,5 +1,7 @@
 import copy
-import warnings
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ScenarioID:
     
@@ -36,7 +38,7 @@ class ScenarioID:
         
         # warn about changed id
         if all((c1, c2, c3)) is True:
-            warnings.warn(f'scenario_id changed to {self.scenario_id}')
+            logger.warning(f'scenario_id changed to {self.scenario_id}')
         
     def check_scenario_id(self, scenario_id, **kwargs):
         """check if scenario id responds"""

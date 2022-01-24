@@ -150,7 +150,7 @@ class UserValues:
                                 
             else:
                 groups = list(unbalanced.index)
-                raise ValueError(f'Sharegroup(s) "{groups}" do not ' + 
+                raise ValueError(f'sharegroups "{groups}" do not ' + 
                                  'add up to 100 percent')
         
     def _get_sharegroup(self, key):
