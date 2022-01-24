@@ -63,6 +63,10 @@ class Client(Curves, Engine, Header, HTTPClient, Parameters,
             
         # set validate ccurves key argument
         self.validate_ccurves = validate_ccurves
+        
+        # reset session?
+        self._reset_session()
+        
                 
     def __str__(self):
         return f'Client({self.scenario_id})'
@@ -80,8 +84,7 @@ class Client(Curves, Engine, Header, HTTPClient, Parameters,
         self._scenario_header = None
         
         # reset parameters
-        self._user_parameters = None
-        # self._flexibility_order = None
+        self._input_values = None
         self._heat_network_order = None
         self._application_demands = None
         self._energy_flows = None

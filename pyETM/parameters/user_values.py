@@ -3,7 +3,8 @@ import pandas
 class UserValues:
     
     @property
-    def user_values(self):        
+    def user_values(self):
+        """all user set values without non-user defined parameters"""
         return self.get_user_values()
     
     @user_values.setter
@@ -71,18 +72,20 @@ class UserValues:
             uvalues = uvalues.user
             
         # check for invalid key and values
-        uvalues = self._check_user_value_keys(uvalues)
-        uvalues = self._check_user_value_values(uvalues)
+        self._check_user_value_keys(uvalues)
+        self._check_user_value_values(uvalues)
+        self._check_share_groups(uvalues)
         
         return uvalues
         
     def _check_user_value_keys(self, uvalues):
         """check if passed user values can be set in ETM."""
         
-        parameters = self.user_parameters
+        # use input values to include disabled 
+        ivalues = self.input_values
         
         # check for unsupported names
-        invalid = ~uvalues.index.isin(parameters.index)
+        invalid = ~uvalues.index.isin(ivalues.index)
         errors = uvalues[invalid]
         
         # raise errors
@@ -90,15 +93,13 @@ class UserValues:
             raise KeyError(f'"{key}" is not a valid user value')
         
         # check for disabled parameters
-        disabled = parameters.index[parameters.disabled == True]
+        disabled = ivalues.index[ivalues.disabled == True]
         errors = uvalues[uvalues.index.isin(disabled)]
         
         # raise errors
         for key in errors.index:
-            raise KeyError(f'"{key}" is not a disabled user value')
-        
-        return uvalues
-        
+            raise KeyError(f'"{key}" is a (recently) disabled user value')
+                            
     def _check_user_value_values(self, uvalues):
         """check if passed user values are inside the ETM bounds."""
         
@@ -130,4 +131,33 @@ class UserValues:
             if value.user not in value.permitted_values:
                 raise ValueError(f'"{key}" value is not permitted in ETM')
                 
-        return uvalues
+    def _check_share_groups(self, uvalues, debug=False):
+        """check if share groups are balanced"""
+            
+        # get grouper from user parameters
+        groups = self.user_parameters.share_group
+        percentage = uvalues.groupby(groups).sum()
+        
+        # set float and round for small errors
+        percentage = percentage.astype('float64').round(5)
+
+        # check unbalanced share groups
+        if (percentage != 100).any():
+            unbalanced = percentage[(percentage != 100)]
+            
+            if debug is True:
+                return unbalanced
+                                
+            else:
+                groups = list(unbalanced.index)
+                raise ValueError(f'Sharegroup(s) "{groups}" do not ' + 
+                                 'add up to 100 percent')
+        
+    def _get_sharegroup(self, key):
+        """return subset of parameters in share group"""
+
+        # get user and scenario parameters
+        uparams = self.user_parameters
+        sparams = self.scenario_parameters
+        
+        return sparams[uparams.share_group == key]
