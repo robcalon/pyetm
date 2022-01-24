@@ -11,7 +11,7 @@ class UtilParameters:
         # get continious parameters
         cvalues = cvalues[~cvalues.index.isin(keys)]
     
-        return cvalues
+        return cvalues.astype('float64')
     
     @property
     def _dvalues(self):
