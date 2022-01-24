@@ -4,9 +4,12 @@ class UtilParameters:
     def _cvalues(self):
         """continous user values"""
         
-        # get continious parameters
+        # get relevant parameters
+        keys = self._dvalues.index
         cvalues = self.scenario_parameters
-        cvalues = cvalues[~cvalues.index.isin(self._dvalues)]
+
+        # get continious parameters
+        cvalues = cvalues[~cvalues.index.isin(keys)]
     
         return cvalues
     
