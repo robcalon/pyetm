@@ -16,3 +16,10 @@ class ScenarioParameters:
     @scenario_parameters.setter
     def scenario_parameters(self, sparams):
         self.change_user_values(uvalues)
+        
+    def _check_scenario_parameters(self):
+        """Utility function to check the validity of the scenario 
+        parameters that are set in the scenario."""
+        
+        sparams = self.scenario_parameters
+        self._check_user_values(sparams)
