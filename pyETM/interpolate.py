@@ -1,7 +1,13 @@
 class Interpolate:
 
     def interpolate(self, ryear, connect=False):
-            """create interpolated scenario for ryear"""
+            """Create interpolated scenario for ryear, based on the build-in
+            interpolation function of the ETM-engine.
+            
+            This function works only for a 2050 scenario and interpolates 
+            from the start year of the scenario. Use the interpolator in 
+            the utils folder to interpolate between two specific scenarios.
+            """
 
             if isinstance(ryear, str):
                 ryear = int(ryear)

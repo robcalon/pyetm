@@ -8,7 +8,7 @@ with open('requirements.txt') as file:
     
 setup(
     name='pyETM',
-    version='0.3.5',    
+    version='0.3.6',    
     description='Python-ETM Connector',
     long_description=README,
     long_description_content_type='text/markdown',
