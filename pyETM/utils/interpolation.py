@@ -63,6 +63,13 @@ class Interpolator:
             if not isinstance(client, pyETM.Client):
                 raise TypeError('client must be of type pyETM.client.Client')
         
+        # validate area codes and sort area codes
+        self._validate_area_codes(clients)
+        clients = self._sort_clients(clients)
+
+        # check scenario parameters
+        self._validate_scenario_parameters(clients)
+        
         # set client list
         self.__clients = clients
         
@@ -73,7 +80,8 @@ class Interpolator:
         ----------
         clients : list
             List of pyETM.client.Client objects that
-            are used to interpolate the scenario."""
+            are used to interpolate the scenario. Clients 
+            are by end year on initialization."""
         
         # set clients
         self.clients = clients        
@@ -109,16 +117,13 @@ class Interpolator:
 
         make sure to check share groups after interpolation"""
 
-        # validate area codes and sort area codes
-        self._validate_area_codes(self.clients)
-        clients = self._sort_clients(self.clients)
 
         # get end years of client to make annual series
-        years = [client.end_year for client in clients]
+        years = [client.end_year for client in self.clients]
         columns = [x for x in range(min(years), max(years) + 1)]
 
         # get continous and discrete values for clients
-        cvalues = [client._cvalues for client in clients]
+        cvalues = [client._cvalues for client in self.clients]
         cvalues = pandas.concat(cvalues, axis=1, keys=years)
         
         # make cvalues dataframe and interpolate
@@ -126,7 +131,7 @@ class Interpolator:
         cvalues = cvalues.interpolate(method=cfill, axis=1)
         
         # get dvalues from passed clients
-        dvalues = [client._dvalues for client in clients]
+        dvalues = [client._dvalues for client in self.clients]
         dvalues = pandas.concat(dvalues, axis=1, keys=years)
 
         # merge cvalues and dvalues
@@ -160,3 +165,15 @@ class Interpolator:
 
         if len(numpy.unique(codes)) != 1:
             raise ValueError("different area codes in passed clients")
+    
+    def _validate_scenario_parameters(self, clients):
+        """check if all set scenario paremeters are okay"""
+        
+        for client in clients:
+            try:
+                client._check_scenario_parameters()
+                
+            except ValueError:
+                raise ValueError('errors in scenario parameters of ' +
+                                 f'{client}, diagnose client with ' +
+                                 'client._check_scenario_parameters()')
