@@ -67,7 +67,49 @@ class Client(Curves, Engine, Header, HTTPClient, Parameters,
         # reset session?
         self._reset_session()
         
+    @classmethod
+    def from_scenario_parameters(cls, end_year, area_code, title=None, 
+                        protected=False, uvalues=None, ccurves=None, 
+                        heat_network_order=None, **kwargs):
+        """create new scenario from parameters on Client initalization"""
+        
+        # initialize new scenario
+        client = cls(scenario_id=None, **kwargs)
+        client.create_new_scenario(end_year, area_code, title, protected)
+        
+        # set user values
+        if uvalues is not None:
+            client.user_values = uvalues
+            
+        # set ccurves
+        if ccurves is not None:
+            client.ccurves = ccurves
+            
+        # set heat network order
+        if heat_network_order is not None:
+            client.heat_network_order = heat_network_order
+            
+        return client
                 
+    @classmethod
+    def from_existing_scenario(cls, scenario_id, title=None, 
+                               protected=False, **kwargs):
+        """create new scenario as copy of existing scenario"""
+        
+        # initialize client
+        client = cls(scenario_id=None, **kwargs)
+        client.create_scenario_copy(scenario_id)
+
+        # set scenario title
+        if title is not None:
+            client.title = title
+            
+        # set protected
+        if protected == True:
+            client.protected = protected
+        
+        return client
+        
     def __str__(self):
         return f'Client({self.scenario_id})'
     
