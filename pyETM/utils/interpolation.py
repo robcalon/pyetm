@@ -117,7 +117,6 @@ class Interpolator:
 
         make sure to check share groups after interpolation"""
 
-
         # get end years of client to make annual series
         years = [client.end_year for client in self.clients]
         columns = [x for x in range(min(years), max(years) + 1)]
