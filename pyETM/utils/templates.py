@@ -10,11 +10,11 @@ class Templates:
 
         # carrier for which columns are fetched
         if carriers is None:
-            carriers = ['electricity', 'network_gas', 'hydrogen', 'heat_network']
+            carriers = ['electricity', 'heat', 'hydrogen', 'methane']
 
         if not isinstance(carriers, list):
             raise TypeError('carriers must be of type list')
-
+        
         # regex mapping for product group
         productmap = {
             '^.*[.]output [(]MW[)]$': 'supply',

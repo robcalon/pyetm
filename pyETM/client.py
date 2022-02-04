@@ -11,7 +11,7 @@ from .utils import Utils
 
 class Client(Curves, Engine, Header, HTTPClient, Parameters, 
              Scenario, CustomCurves, GQueries, Interpolate, Utils):
-       
+        
     def __init__(self, scenario_id=None, beta_engine=False, 
                  reset=False, validate_ccurves=True, ipython='auto', 
                  proxy='auto'):
@@ -141,7 +141,7 @@ class Client(Curves, Engine, Header, HTTPClient, Parameters,
         # reset curves
         self._hourly_electricity_curves = None
         self._hourly_electricity_price_curve = None
-        self._hourly_heat_network_curves = None
-        self._hourly_household_heat_curves = None
+        self._hourly_heat_curves = None
+        self._hourly_household_curves = None
         self._hourly_hydrogen_curves = None
-        self._hourly_network_gas_curves = None
+        self._hourly_methane_curves = None

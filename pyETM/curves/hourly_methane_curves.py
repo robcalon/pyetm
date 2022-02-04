@@ -1,26 +1,26 @@
 import io
 import pandas
 
-class HourlyHeatNetworkCurves:
+class HourlyMethaneCurves:
     
     @property
-    def hourly_heat_network_curves(self):
+    def hourly_methane_curves(self):
         
-        # get hourly heat network curves
-        if self._hourly_heat_network_curves is None:
-            self.get_hourly_heat_network_curves()
+        # get hourly network gas curves
+        if self._hourly_methane_curves is None:
+            self.get_hourly_methane_curves()
+        
+        return self._hourly_methane_curves
             
-        return self._hourly_heat_network_curves
-            
-    def get_hourly_heat_network_curves(self):
-        """get the hourly heat network curves"""
+    def get_hourly_methane_curves(self):
+        """get the hourly methane curves"""
         
         # raise without scenario id
         self._raise_scenario_id()
         
         # prepare post
         headers = {'Connection':'close'}
-        post = f'/scenarios/{self.scenario_id}/curves/heat_network'
+        post = f'/scenarios/{self.scenario_id}/curves/network_gas'
         
         # request response and extract data
         resp = self.get(post, headers=headers)
@@ -32,6 +32,6 @@ class HourlyHeatNetworkCurves:
         curves.index.name = 'DateTime'
         
         # set corresponsing parameter property
-        self._hourly_heat_network_curves = curves
+        self._hourly_methane_curves = curves
         
         return curves

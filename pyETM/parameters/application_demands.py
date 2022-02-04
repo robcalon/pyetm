@@ -24,7 +24,7 @@ class ApplicationDemands:
         
         # request response and convert to df
         resp = self.get(post, headers=headers, **kwargs)
-        demands = pandas.read_csv(io.StringIO(resp))
+        demands = pandas.read_csv(io.StringIO(resp), index_col='key')
         
         # set corresponsing parameter property
         self._application_demands = demands

@@ -24,7 +24,7 @@ class EnergyFlows:
         
         # request response and convert to df
         resp = self.get(post, headers=headers, **kwargs)
-        flows = pandas.read_csv(io.StringIO(resp))
+        flows = pandas.read_csv(io.StringIO(resp), index_col='key')
         
         # set corresponsing parameter property
         self._energy_flows = flows
