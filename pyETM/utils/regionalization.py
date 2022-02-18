@@ -68,24 +68,25 @@ def regionalize_curves(curves, reg, chunksize=500, **kwargs):
     reg : DataFrame
         Regionalization table with nodes in index and 
         sectors in columns.
-    chunksize : int, default 500
-        Number of hours regionalized at once. Regionalizing
-        large curvesets increases memory pressure.
-     
-     Return
-     ------
-     curves : DataFrame
-         Regionalized ETM curves.
-     """
+        
+    Return
+    ------
+    curves : DataFrame
+        Regionalized ETM curves.
+    """
 
     # load regioanlization
     if isinstance(reg, str):
         reg = pd.read_csv(reg, **kwargs)
+
+    # check if curves is series object
+    if isinstance(curves, pd.Series):
+        curves = curves.to_frame().T
         
     # check is reg specifies keys not in passed curves
     for item in reg.columns[~reg.columns.isin(curves.columns)]:
         raise ValueError("'%s' is not present in the passed curves" %item)
-
+        
     # check if passed curves specifies keys not specified in reg
     for item in curves.columns[~curves.columns.isin(reg.columns)]:
         raise ValueError("'%s' not present in the regionalization" %item)
@@ -96,24 +97,6 @@ def regionalize_curves(curves, reg, chunksize=500, **kwargs):
         raise ValueError(f'"{idx}" regionalization sums to ' +
                          f'{value: .3f} instead of 1.000')
 
-    def chunker(df, size): 
-        """chucks dataframe in smaller chuncks"""
-
-        chunks = len(df) // size
-        if len(df) % size != 0:
-            chunks += 1
-
-        for i in range(chunks):
-            yield df[i * size: (i + 1) * size]
-    
-    # regionalize curves chunkwize
-    curves = [_regionalize_curves(ck, reg) for ck in chunker(curves, chunksize)]
-    
-    return pd.concat(curves)
-        
-        
-def _regionalize_curves(curves, reg):
-    
     # prepare new index
     levels = [curves.index, reg.index]
     index = pd.MultiIndex.from_product(levels)
