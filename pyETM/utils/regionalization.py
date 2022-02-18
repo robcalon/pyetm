@@ -78,11 +78,15 @@ def regionalize_curves(curves, reg, chunksize=500, **kwargs):
     # load regioanlization
     if isinstance(reg, str):
         reg = pd.read_csv(reg, **kwargs)
-        
+
     # check is reg specifies keys not in passed curves
     for item in reg.columns[~reg.columns.isin(curves.columns)]:
         raise ValueError("'%s' is not present in the passed curves" %item)
 
+    # check if curves is series object
+    if isinstance(curves, pd.Series):
+        curves = curves.to_frame().T
+        
     # check if passed curves specifies keys not specified in reg
     for item in curves.columns[~curves.columns.isin(reg.columns)]:
         raise ValueError("'%s' not present in the regionalization" %item)
