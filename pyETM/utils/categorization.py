@@ -56,7 +56,7 @@ class Categorization:
         return curves
 
 
-def categorize_curves(curves, mapping, columns=None, 
+def categorize_curves(curves, mapping, columns=None,
                       include_index=False, *args, **kwargs):
     """Categorize the hourly curves for a specific dataframe 
     with a specific mapping.
@@ -92,10 +92,6 @@ def categorize_curves(curves, mapping, columns=None,
     # load categorization
     if isinstance(mapping, str):
         mapping = pandas.read_csv(mapping, *args, **kwargs)
-
-    if isinstance(mapping, pandas.Series):
-        columns = [mapping.name]
-        mapping = mapping.to_frame()
         
     # check if passed curves contains columns not specified in cat 
     for item in curves.columns[~curves.columns.isin(mapping.index)]:

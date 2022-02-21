@@ -1,7 +1,6 @@
 import logging
-
-import numpy as np
-import pandas as pd
+import numpy
+import pandas
 
 logger = logging.getLogger(__name__)
 
@@ -77,12 +76,8 @@ def regionalize_curves(curves, reg, chunksize=500, **kwargs):
 
     # load regioanlization
     if isinstance(reg, str):
-        reg = pd.read_csv(reg, **kwargs)
+        reg = pandas.read_csv(reg, **kwargs)
 
-    # check if curves is series object
-    if isinstance(curves, pd.Series):
-        curves = curves.to_frame().T
-        
     # check is reg specifies keys not in passed curves
     for item in reg.columns[~reg.columns.isin(curves.columns)]:
         raise ValueError("'%s' is not present in the passed curves" %item)
@@ -99,13 +94,13 @@ def regionalize_curves(curves, reg, chunksize=500, **kwargs):
 
     # prepare new index
     levels = [curves.index, reg.index]
-    index = pd.MultiIndex.from_product(levels)
+    index = pandas.MultiIndex.from_product(levels)
 
     # prepare new dataframe
     columns = curves.columns
-    values = np.repeat(curves.values, reg.index.size, axis=0)
+    values = numpy.repeat(curves.values, reg.index.size, axis=0)
 
     # match index structure of regionalization
-    curves = pd.DataFrame(values, index=index, columns=columns)
+    curves = pandas.DataFrame(values, index=index, columns=columns)
     
     return reg.mul(curves, level=1)
