@@ -15,7 +15,7 @@ setup(
     url='https://github.com/robcalon/pyetm',
     author='Rob Calon',
     author_email='robcalon@protonmail.com',
-    license='MIT',
+    license='EUPL-1.2',
     python_requires='>=3.7',
     install_requires=requires,
     packages=find_packages(),
