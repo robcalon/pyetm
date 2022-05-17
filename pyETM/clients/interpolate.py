@@ -1,0 +1,37 @@
+class Interpolate:
+
+    def interpolate(self, ryear, connect=False):
+            """Create interpolated scenario for ryear, based on the build-in
+            interpolation function of the ETM-engine.
+            
+            This function works only for a 2050 scenario and interpolates 
+            from the start year of the scenario. Use the interpolator in 
+            the utils folder to interpolate between two specific scenarios.
+            """
+
+            if isinstance(ryear, str):
+                ryear = int(ryear)
+
+            if not isinstance(ryear, int):
+                raise TypeError()
+
+            # check scenario end year
+            if self.end_year != 2050:
+                raise NotImplementedError('Can only interpolate based on 2050 scenarios')
+
+            # pass end year to interpolate tool
+            data = {'end_year': ryear}
+
+            # prepare post
+            headers = {'Connection': 'close'}
+            url = f'/scenarios/{self.scenario_id}/interpolate'
+
+            # get interpolated scenario id
+            scenario = self.post(url, json=data, headers=headers)
+            scenario_id = scenario['id']
+
+            # connect to new scenario
+            if connect is True:
+                self.scenario_id = scenario_id
+
+            return scenario_id

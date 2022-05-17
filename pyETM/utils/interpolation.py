@@ -33,10 +33,8 @@ def interpolate_clients(clients, cfill='linear', dfill='ffill'):
         that is inside the range of the years of the passed 
         clients. The DataFrame also includes the user values for
         the years of the passed clients."""
-    
-    interpol = Interpolator(clients)
-    
-    return interpol.interpolate(cfill, dfill)
+        
+    return Interpolator(clients).interpolate(cfill, dfill)
 
 class Interpolator:
     """Interpolator class object"""
@@ -60,7 +58,7 @@ class Interpolator:
             
         # check client in list
         for client in clients:
-            if not isinstance(client, pyETM.Client):
+            if not isinstance(client, [pyETM.Client, pyETM.AsyncClient]):
                 raise TypeError('client must be of type pyETM.client.Client')
         
         # validate area codes and sort area codes
@@ -90,10 +88,8 @@ class Interpolator:
         """Interpolates the user values of the years between the
         passed clients. Uses a seperate method for continous and
         discrete user values. 
-
         Do note that the heat network order is not returned or
         interpolated by this function.
-
         Parameters
         ----------
         cfill : string, default 'linear'
@@ -106,7 +102,6 @@ class Interpolator:
             between years of passed scenarios. Passed
             method is directly passed to fillna 
             function of a DataFrame. 
-
         Returns
         -------
         uvalues : DataFrame
@@ -114,7 +109,6 @@ class Interpolator:
             that is inside the range of the years of the passed 
             clients. The DataFrame also includes the user values for
             the years of the passed clients.
-
         make sure to check share groups after interpolation"""
 
         # get end years of client to make annual series
