@@ -1,12 +1,12 @@
 import pandas
-from pyETM.utils import categorize_curves
+from pyETM.utils import categorise_curves
 
 
-class Categorization:
+class Categorisation:
     
-    def categorize_curves(self, carrier, mapping, columns=None, 
+    def categorise_curves(self, carrier, mapping, columns=None, 
                           include_index=False, *args, **kwargs):
-        """Categorize the hourly curves for a specific carrier with a 
+        """Categorise the hourly curves for a specific carrier with a 
         specific mapping.
         
         Parameters
@@ -52,7 +52,7 @@ class Categorization:
             raise TypeError('carrier must be of type string or DataFrame')
         
         # use categorization function
-        curves = categorize_curves(carrier, mapping, columns, 
+        curves = categorise_curves(carrier, mapping, columns, 
                                    include_index, *args, **kwargs)
     
         return curves

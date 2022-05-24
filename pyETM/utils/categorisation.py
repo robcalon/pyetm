@@ -1,9 +1,15 @@
 import pandas
 
-def categorize_curves(curves, mapping, columns=None,
+def categorise_curves(curves, mapping, columns=None,
                       include_index=False, *args, **kwargs):
     """Categorize the hourly curves for a specific dataframe 
-    with a specific mapping.
+    with a specific mapping. 
+    
+    # IMPORTANT #
+    -------------
+    Assigns a negative sign to demand to ensure that demand and supply keys
+    with the same key mapping can be aggregated.
+    
     Parameters
     ----------
     curves : DataFrame
@@ -26,13 +32,14 @@ def categorize_curves(curves, mapping, columns=None,
         DataFrame with the categorized curves of the 
         specified carrier.
     """
-    
-    # copy curves
-    curves = curves.copy()
-
+        
     # load categorization
     if isinstance(mapping, str):
         mapping = pandas.read_csv(mapping, *args, **kwargs)
+    
+    if isinstance(mapping, pandas.Series):
+        mapping = mapping.to_frame()
+        columns = mapping.columns
         
     # check if passed curves contains columns not specified in cat 
     for item in curves.columns[~curves.columns.isin(mapping.index)]:
@@ -44,6 +51,13 @@ def categorize_curves(curves, mapping, columns=None,
         raise KeyError(f'"{item}" is not present in the ' +
                        f'returned ETM curves')
 
+    # copy curves
+    curves = curves.copy()
+
+    # assign negative sign to demand
+    cols = curves.columns.str.contains(".input (MW)", regex=False)
+    curves.loc[:, cols] = -curves.loc[:, cols]
+    
     # subset columns
     if columns is not None:
 
@@ -88,3 +102,48 @@ def categorize_curves(curves, mapping, columns=None,
         curves = curves.groupby(level=levels, axis=1).sum()
 
     return curves
+
+def diagnose_categorisation(mapping, curves):
+    """Diagnose categorisation keys
+    
+    Parameters
+    ----------
+    mapping : Series
+        Series with ETM keys in index and 
+        user keys as values.
+    curves : DataFrame
+        Uncategorised ETM curves."""
+    
+    print()
+    print("CATEGORISATION")
+    print("=================================")
+    
+    print('Invalid Entries in Categorization')
+    print('---------------------------------')
+    
+    # identify invalid entries
+    errors = mapping.index[~mapping.index.isin(curves.columns)]
+
+    # print okay
+    if errors.empty:
+        print("-")
+        
+    else:
+        # print errors
+        for key in errors:
+            print(key)
+
+    print('Missing Entries in Categorization')
+    print('---------------------------------')
+    
+    # identify missing entries
+    errors = curves.columns[~curves.columns.isin(mapping.index)]
+
+    # print okay
+    if errors.empty:
+        print("-")
+        
+    else:
+        # print errors
+        for key in errors:
+            print(key)
