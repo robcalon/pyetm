@@ -56,7 +56,7 @@ class BaseClient(Curves, Header, Parameters, Scenario,
             client.protected = protected
         
         return client
-        
+    
     def __str__(self):
         return f'BaseClient({self.scenario_id})'
     
@@ -141,9 +141,11 @@ class Client(BaseClient, RequestsCore):
         # reset session?
         self._reset_session()
 
-    def __str__(self):
-        return f'Client({self.scenario_id})'
+    def __repr__(self):
+        return f"Client({self.scenario_id})"
         
+    def __str__(self):
+        return repr(self)
 
 class AsyncClient(BaseClient, AIOHTTPCore):
         
@@ -201,6 +203,8 @@ class AsyncClient(BaseClient, AIOHTTPCore):
         # reset session?
         self._reset_session()
 
-    def __str__(self):
+    def __repr__(self):
         return f'AsyncClient({self.scenario_id})'
 
+    def __str__(self):
+        return repr(self)

@@ -18,11 +18,7 @@ class Header():
     
     @property
     def created_at(self):
-        
-        # get scenario header
-        if self._scenario_header is None:
-            self._get_scenario_header()
-        
+                
         # get created at
         datetime = self._scenario_header['created_at']
         datetime = pandas.to_datetime(datetime, utc=True)
@@ -31,29 +27,33 @@ class Header():
     
     @property
     def display_group(self):
-        
-        # get scenario header
-        if self._scenario_header is None:
-            self._get_scenario_header()
-        
         return self._scenario_header['display_group']
 
     @property
+    def end_year(self):            
+        return self._scenario_header['end_year']
+    
+    @property
+    def esdl_exportable(self):
+        return self._scenario_header['esdl_exportable']
+    
+    @property
+    def keep_compatible(self):
+        return self._scenario_header['keep_compatible']
+    
+    @keep_compatible.setter
+    def keep_compatible(self, boolean):
+        
+        # format header and update
+        header = {'keep_compatible': boolean}
+        self._change_scenario_header(header)
+    
+    @property
     def ordering(self):
-        
-        # get scenario header
-        if self._scenario_header is None:
-            self._get_scenario_header()
-        
         return self._scenario_header['ordering']
     
     @property
     def protected(self):
-        
-        # get scenario header
-        if self._scenario_header is None:
-            self._get_scenario_header()
-        
         return self._scenario_header['protected']
     
     @protected.setter
@@ -64,48 +64,34 @@ class Header():
         self._change_scenario_header(header)
         
     @property
+    def read_only(self):
+        return self._scenario_header['read_only']
+        
+    @read_only.setter
+    def read_only(self, boolean):
+        
+        # format header and update
+        header = {'read_only': boolean}
+        self._change_scenario_header(header)
+        
+    @property
     def scaling(self):
-        
-        # get scenario header
-        if self._scenario_header is None:
-            self._get_scenario_header()
-        
         return self._scenario_header['scaling']
     
     @property
     def source(self):
-        
-        # get scenario header
-        if self._scenario_header is None:
-            self._get_scenario_header()
-        
         return self._scenario_header['source']
     
     @property
     def start_year(self):
-        
-        # get scenario header
-        if self._scenario_header is None:
-            self._get_scenario_header()
-        
         return self._scenario_header['start_year']
     
     @property
     def template(self):
-        
-        # get scenario header
-        if self._scenario_header is None:
-            self._get_scenario_header()
-        
         return str(self._scenario_header['template'])
     
     @property
     def title(self):
-        
-        # get scenario header
-        if self._scenario_header is None:
-            self._get_scenario_header()
-            
         return self._scenario_header['title']
     
     @title.setter
@@ -116,12 +102,16 @@ class Header():
         self._change_scenario_header(header)
         
     @property
+    def updated_at(self):
+                
+        # get created at
+        datetime = self._scenario_header['updated_at']
+        datetime = pandas.to_datetime(datetime, utc=True)
+        
+        return datetime
+        
+    @property
     def url(self):
-        
-        # get scenario header
-        if self._scenario_header is None:
-            self._get_scenario_header()
-        
         return self._scenario_header['url']
     
     def _get_scenario_header(self, **kwargs):
