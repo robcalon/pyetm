@@ -1,4 +1,4 @@
-import pandas
+import pandas as pd
 
 def categorise_curves(curves, mapping, columns=None,
                       include_index=False, *args, **kwargs):
@@ -24,7 +24,7 @@ def categorise_curves(curves, mapping, columns=None,
         in the mapping. Defaults to all columns in mapping.
     include_index : bool, default False
         Include the original ETM keys in the resulting mapping.
-    *args and **kwargs arguments are passed to pandas.read_csv when
+    *args and **kwargs arguments are passed to pd.read_csv when
     a filename is passed in the mapping argument.
     Return
     ------
@@ -35,9 +35,9 @@ def categorise_curves(curves, mapping, columns=None,
         
     # load categorization
     if isinstance(mapping, str):
-        mapping = pandas.read_csv(mapping, *args, **kwargs)
+        mapping = pd.read_csv(mapping, *args, **kwargs)
     
-    if isinstance(mapping, pandas.Series):
+    if isinstance(mapping, pd.Series):
         mapping = mapping.to_frame()
         columns = mapping.columns
         
@@ -73,7 +73,7 @@ def categorise_curves(curves, mapping, columns=None,
 
         # append index as column to mapping
         keys = mapping.index.to_series(name='ETM_key')
-        mapping = pandas.concat([mapping, keys], axis=1)
+        mapping = pd.concat([mapping, keys], axis=1)
 
     if len(mapping.columns) == 1:
 
@@ -90,7 +90,7 @@ def categorise_curves(curves, mapping, columns=None,
     else:
 
         # make multiindex and midx mapper
-        midx = pandas.MultiIndex.from_frame(mapping)
+        midx = pd.MultiIndex.from_frame(mapping)
         mapping = dict(zip(mapping.index, midx))
 
         # apply mapping to curves

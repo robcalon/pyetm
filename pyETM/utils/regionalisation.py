@@ -1,6 +1,6 @@
 import logging
-import numpy
-import pandas
+import numpy as np
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -9,7 +9,7 @@ def _validate_regionalisation(curves, reg, **kwargs):
     
     # load regionalization
     if isinstance(reg, str):
-        reg = pandas.read_csv(reg, **kwargs)
+        reg = pd.read_csv(reg, **kwargs)
 
     # check is reg specifies keys not in passed curves
     for item in reg.columns[~reg.columns.isin(curves.columns)]:
@@ -30,7 +30,7 @@ def _validate_regionalisation(curves, reg, **kwargs):
 def regionalise_curves(curves, reg, node=None, 
                        sector=None, hours=None, **kwargs):
     """Return the residual power of the curves based on a regionalisation table.
-    The kwargs are passed to pandas.read_csv when the regionalisation argument
+    The kwargs are passed to pd.read_csv when the regionalisation argument
     is a passed as a filestring.
     
     Parameters
@@ -58,6 +58,10 @@ def regionalise_curves(curves, reg, node=None,
     # validate regionalisation
     curves, reg = _validate_regionalisation(curves, reg, **kwargs)
                 
+    """consider warning for curves that do not sum up to zero, 
+    as this leads to incorrect regionalisations. Assigning a negative
+    sign to demand only happens during categorisation."""        
+    
     # handle node subsetting
     if node is not None:
         
@@ -94,7 +98,7 @@ def regionalise_curves(curves, reg, node=None,
 
 def regionalise_node(curves, reg, node, sector=None, hours=None, **kwargs):
     """Return the sector profiles for a node specified in the regionalisation
-    table. The kwargs are passed to pandas.read_csv when the regionalisation 
+    table. The kwargs are passed to pd.read_csv when the regionalisation 
     argument is a passed as a filestring.
     
     Parameters
@@ -140,14 +144,14 @@ def regionalise_node(curves, reg, node, sector=None, hours=None, **kwargs):
     
     # prepare new index
     levels = [reg.index, curves.index]
-    index = pandasMultiIndex.from_product(levels, names=None)
+    index = pd.MultiIndex.from_product(levels, names=None)
 
     # prepare new dataframe
     columns = curves.columns
-    values = numpyrepeat(curves.values, reg.index.size, axis=0)
+    values = np.repeat(curves.values, reg.index.size, axis=0)
 
     # match index structure of regionalization
-    curves = pandasDataFrame(values, index=index, columns=columns)
+    curves = pd.DataFrame(values, index=index, columns=columns)
         
     return reg.mul(curves, level=0) 
 
