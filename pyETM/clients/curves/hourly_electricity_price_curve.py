@@ -22,7 +22,7 @@ class HourlyElectricityPriceCurve:
         post = f'/scenarios/{self.scenario_id}/curves/electricity_price'
         
         # request response and extract data
-        resp = self.get(post, decoder="text", headers=headers)
+        resp = self.get(post, decoder="bytes", headers=headers)
         
         # convert data to dataframe and set DateTime
         curves = pandas.read_csv(resp, index_col='Time', 
