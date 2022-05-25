@@ -188,20 +188,20 @@ def diagnose_regionalisation(reg, keys, warn=True):
 
     # print okay
     if not errors.empty:
-        diagnosis["invalid_entries"] = set(errors)
+        diagnosis["invalid"] = set(errors)
          
     # identify missing entries
     errors = keys[~keys.isin(reg.columns)]
 
     if not errors.empty:
-        diagnosis["missing_entries"] = set(errors)
+        diagnosis["missing"] = set(errors)
 
     # identify invalid entries
     errors = round(reg.sum(axis=0), 3)
     errors = errors[errors != 1]
    
     if not errors.empty:
-        diagnosis["invalid_totals"] = errors.to_dict()
+        diagnosis["sumerror"] = errors.to_dict()
         
     if bool(diagnosis) & warn:
         logger.warning("regionalisation contains errors")

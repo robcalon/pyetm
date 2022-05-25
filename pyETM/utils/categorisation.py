@@ -130,14 +130,14 @@ def diagnose_categorisation(mapping, curves, warn=True):
 
     # store errors
     if not errors.empty:
-        diagnosis["invalid_entries"] = set(errors)
+        diagnosis["invalid"] = set(errors)
     
     # identify missing entries
     errors = curves.columns[~curves.columns.isin(mapping.index)]
 
     # store errors
     if not errors.empty:
-        diagnosis["missing_entries"] = set(errors)
+        diagnosis["missing"] = set(errors)
         
     # raise warning
     if bool(diagnosis) & warn:
