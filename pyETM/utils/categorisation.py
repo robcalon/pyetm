@@ -131,8 +131,8 @@ def diagnose_categorisation(mapping, curves):
     else:
         # print errors
         for key in errors:
-            print(key)
-
+            print(f"- {key}")
+            
     print('Missing Entries in Categorization')
     print('---------------------------------')
     
@@ -146,4 +146,4 @@ def diagnose_categorisation(mapping, curves):
     else:
         # print errors
         for key in errors:
-            print(key)
+            print(f"- {key}")

@@ -196,8 +196,8 @@ def diagnose_regionalisation(reg, mapping):
     else:
         # print errors
         for key in errors:
-            print(key)
-    
+            print(f"- {key}")
+            
     print("Missing Entries in Regionalisation")
     print("----------------------------------")
 
@@ -211,8 +211,8 @@ def diagnose_regionalisation(reg, mapping):
     else:
         # print errors
         for key in errors:
-            print(key)
-
+            print(f"- {key}")
+            
     print("Invalid Checksums in Regionalisation")
     print("------------------------------------")
     
@@ -227,4 +227,4 @@ def diagnose_regionalisation(reg, mapping):
     else:
         # print errors
         for key, value in errors.iteritems():
-            print(f"{key} sums to {value: .3f}")
+            print(f"- {key} sums to {value: .3f}")
