@@ -1,4 +1,7 @@
+import logging
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 def categorise_curves(curves, mapping, columns=None,
                       include_index=False, *args, **kwargs):
@@ -103,49 +106,41 @@ def categorise_curves(curves, mapping, columns=None,
 
     return curves
 
-def diagnose_categorisation(mapping, curves):
+def diagnose_categorisation(mapping, curves, warn=True):
     """Diagnose categorisation keys
     
     Parameters
     ----------
-    mapping : Series
-        Series with ETM keys in index and 
-        user keys as values.
+    mapping : dict or Series
+        ETM keys in index and user keys as values.
     curves : DataFrame
-        Uncategorised ETM curves."""
+        Uncategorised ETM curves.
+    warn : bool, default True
+        Raise warning if check failed."""
     
-    print()
-    print("CATEGORISATION")
-    print("=================================")
+    # initialize dict
+    diagnosis = {}
     
-    print()
-    print('Invalid Entries in Categorization')
-    print('---------------------------------')
+    # convert dict to series
+    if isinstance(mapping, dict):
+        mapping = pd.Series(mapping)
     
     # identify invalid entries
     errors = mapping.index[~mapping.index.isin(curves.columns)]
 
-    # print okay
-    if errors.empty:
-        print("-")
-        
-    else:
-        # print errors
-        for key in errors:
-            print(f"- {key}")
-    
-    print()
-    print('Missing Entries in Categorization')
-    print('---------------------------------')
+    # store errors
+    if not errors.empty:
+        diagnosis["invalid_entries"] = set(errors)
     
     # identify missing entries
     errors = curves.columns[~curves.columns.isin(mapping.index)]
 
-    # print okay
-    if errors.empty:
-        print("-")
+    # store errors
+    if not errors.empty:
+        diagnosis["missing_entries"] = set(errors)
         
-    else:
-        # print errors
-        for key in errors:
-            print(f"- {key}")
+    # raise warning
+    if bool(diagnosis) & warn:
+        logger.warning("regionalisation contains errors")
+        
+    return diagnosis

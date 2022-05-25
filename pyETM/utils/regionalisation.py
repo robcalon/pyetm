@@ -94,7 +94,7 @@ def regionalise_curves(curves, reg, node=None,
     if hours is not None:
         curves = curves.loc[hours]
         
-    return reg.dot(curves.T)
+    return curves.dot(reg.T)
 
 def regionalise_node(curves, reg, node, sector=None, hours=None, **kwargs):
     """Return the sector profiles for a node specified in the regionalisation
@@ -153,81 +153,57 @@ def regionalise_node(curves, reg, node, sector=None, hours=None, **kwargs):
     # match index structure of regionalization
     curves = pd.DataFrame(values, index=index, columns=columns)
         
-    return reg.mul(curves, level=0) 
+    return reg.mul(curves, level=0)
 
-def diagnose_regionalisation(reg, mapping):
+def diagnose_regionalisation(reg, keys, warn=True):
     """Diagnoses regionalisation keys
     
     Parameters
     ----------
     reg : DataFrame
         Regionalisation table with nodes in index
-        and sectors in columns
-    mapping : listlike or DataFrame
-        Used keys for curves, assumes that corresponding
-        curves are passed if of type DataFrame and uses
-        columns as keys."""
+        and sectors in columns.
+    keys : listlike
+        Column keys of hourly curves to which the 
+        regionalisation will be applied.
+    warn : bool, default True
+        Raise warning if check failed."""
     
-    # assumes curves are passed
-    if isinstance(mapping, pd.DataFrame):
-        mapping = mapping.columns
+    # initialize dict
+    diagnosis = {}
+    
+    # assume hourly curves are passed
+    if isinstance(keys, pd.DataFrame):
+        keys = keys.columns
         
     # get mapping from mapping table column
-    if isinstance(mapping, pd.Series):
-        mapping = mapping.unique()
+    if isinstance(keys, pd.Series):
+        keys = keys.unique()
 
     # convert listlike to index
-    mapping = pd.Index(mapping)
-        
-    print()
-    print("REGIONALISATION")
-    print("==================================")
-        
-    print()
-    print("Invalid Entries in Regionalisation")
-    print("----------------------------------")
-
-    # identify invalid entries
-    errors = reg.columns[~reg.columns.isin(mapping)]
-
-    # print okay
-    if errors.empty:
-        print("-")
-        
-    else:
-        # print errors
-        for key in errors:
-            print(f"- {key}")
-    
-    print()
-    print("Missing Entries in Regionalisation")
-    print("----------------------------------")
-
-    # identify missing entries
-    errors = mapping[~mapping.isin(reg.columns)]
-
-    # print okay
-    if errors.empty:
-        print("-")
-        
-    else:
-        # print errors
-        for key in errors:
-            print(f"- {key}")
+    keys = pd.Index(keys)
             
-    print()
-    print("Invalid Checksums in Regionalisation")
-    print("------------------------------------")
-    
+    # identify invalid entries
+    errors = reg.columns[~reg.columns.isin(keys)]
+
+    # print okay
+    if not errors.empty:
+        diagnosis["invalid_entries"] = set(errors)
+         
+    # identify missing entries
+    errors = keys[~keys.isin(reg.columns)]
+
+    if not errors.empty:
+        diagnosis["missing_entries"] = set(errors)
+
     # identify invalid entries
     errors = round(reg.sum(axis=0), 3)
     errors = errors[errors != 1]
    
-    # print okay
-    if errors.empty:
-        print("-")
+    if not errors.empty:
+        diagnosis["invalid_totals"] = errors.to_dict()
         
-    else:
-        # print errors
-        for key, value in errors.iteritems():
-            print(f"- {key} sums to {value: .3f}")
+    if bool(diagnosis) & warn:
+        logger.warning("regionalisation contains errors")
+        
+    return diagnosis
