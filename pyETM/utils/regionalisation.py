@@ -183,6 +183,7 @@ def diagnose_regionalisation(reg, mapping):
     print("REGIONALISATION")
     print("==================================")
         
+    print()
     print("Invalid Entries in Regionalisation")
     print("----------------------------------")
 
@@ -197,7 +198,8 @@ def diagnose_regionalisation(reg, mapping):
         # print errors
         for key in errors:
             print(f"- {key}")
-            
+    
+    print()
     print("Missing Entries in Regionalisation")
     print("----------------------------------")
 
@@ -213,6 +215,7 @@ def diagnose_regionalisation(reg, mapping):
         for key in errors:
             print(f"- {key}")
             
+    print()
     print("Invalid Checksums in Regionalisation")
     print("------------------------------------")
     

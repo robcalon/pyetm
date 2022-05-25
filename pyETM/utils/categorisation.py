@@ -118,6 +118,7 @@ def diagnose_categorisation(mapping, curves):
     print("CATEGORISATION")
     print("=================================")
     
+    print()
     print('Invalid Entries in Categorization')
     print('---------------------------------')
     
@@ -132,7 +133,8 @@ def diagnose_categorisation(mapping, curves):
         # print errors
         for key in errors:
             print(f"- {key}")
-            
+    
+    print()
     print('Missing Entries in Categorization')
     print('---------------------------------')
     
