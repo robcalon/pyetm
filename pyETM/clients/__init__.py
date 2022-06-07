@@ -17,9 +17,7 @@ class BaseClient(Curves, Header, Parameters, Scenario,
                                  protected=False, uvalues=None, ccurves=None, 
                                  heat_network_order=None, **kwargs):
         """create new scenario from parameters on Client initalization"""
-        
-        super().__init__()
-        
+                
         # initialize new scenario
         client = cls(scenario_id=None, **kwargs)
         client.create_new_scenario(end_year, area_code, title, protected)
