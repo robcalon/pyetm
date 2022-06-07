@@ -9,11 +9,9 @@ class Interpolate:
             the utils folder to interpolate between two specific scenarios.
             """
 
-            if isinstance(ryear, str):
-                ryear = int(ryear)
-
+            # convert reference year to integer
             if not isinstance(ryear, int):
-                raise TypeError()
+                ryear = int(ryear)
 
             # check scenario end year
             if self.end_year != 2050:
