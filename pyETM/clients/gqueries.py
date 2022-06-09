@@ -73,7 +73,7 @@ class GQueries:
         self._raise_scenario_id()
                 
         # create gquery request
-        data = {'detailed': True, 'gqueries': self.gqueries}
+        data = {'gqueries': self.gqueries}
         
         # prepare post
         headers = {'Connection': 'close'}
