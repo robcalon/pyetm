@@ -15,6 +15,9 @@ class GQueries:
         # put string in list
         if isinstance(gqueries, str):
             gqueries = [gqueries]
+            
+        if not isinstance(gqueries, list):
+            gqueries = list(gqueries)
         
         # set gqueries
         self._gqueries = gqueries
