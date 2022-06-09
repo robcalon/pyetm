@@ -203,16 +203,16 @@ class AIOHTTPCore:
             async with session.delete(url, **kwargs) as resp:
                 return await self.__handle_response(resp, decoder=decoder)
             
-    def delete(self, url, decoder="json", **kwargs):
+    def delete(self, url, decoder="text", **kwargs):
         """make delete request"""
         return asyncio.run(self.__delete, decoder, proxy=self.proxy, **kwargs)
     
-    def put_series(self, url, series, name=None, **kwargs):
-        """put series object"""
+    def upload_series(self, url, series, name=None, **kwargs):
+        """upload series object"""
         
         # set key as name
         if name is None:
-            name = series.key
+            name = "not specified"
         
         # convert values to string
         data = series.to_string(index=False)

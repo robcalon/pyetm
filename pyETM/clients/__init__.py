@@ -13,14 +13,17 @@ class BaseClient(Curves, Header, Parameters, Scenario,
                  CustomCurves, GQueries, Interpolate, Utils):
 
     @classmethod
-    def from_scenario_parameters(cls, end_year, area_code, title=None,
-                                 protected=False, uvalues=None, ccurves=None, 
-                                 heat_network_order=None, **kwargs):
+    def from_scenario_parameters(cls, end_year, area_code, metadata=None,
+                                 keep_compatible=False, read_only=False, 
+                                 uvalues=None, heat_network_order=None, 
+                                 ccurves=None, **kwargs):
         """create new scenario from parameters on Client initalization"""
                 
         # initialize new scenario
         client = cls(scenario_id=None, **kwargs)
-        client.create_new_scenario(end_year, area_code, title, protected)
+        client.create_new_scenario(end_year, area_code, metadata=metadata, 
+                                   keep_compatible=keep_compatible, 
+                                   read_only=read_only)
         
         # set user values
         if uvalues is not None:
@@ -37,8 +40,9 @@ class BaseClient(Curves, Header, Parameters, Scenario,
         return client
                 
     @classmethod
-    def from_existing_scenario(cls, scenario_id, title=None, 
-                               protected=False, **kwargs):
+    def from_existing_scenario(cls, scenario_id, metadata=None, 
+                               keep_compatible=False, read_only=False,
+                               **kwargs):
         """create new scenario as copy of existing scenario"""
         
         # initialize client
@@ -46,13 +50,13 @@ class BaseClient(Curves, Header, Parameters, Scenario,
         client.create_scenario_copy(scenario_id)
 
         # set scenario title
-        if title is not None:
-            client.title = title
+        if metadata is not None:
+            client.metadata = metadata
             
-        # set protected
-        if protected == True:
-            client.protected = protected
-        
+        # set protection settings
+        client.keep_compatible = keep_compatible
+        client.read_only = read_only
+                    
         return client
     
     def __str__(self):

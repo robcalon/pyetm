@@ -134,7 +134,7 @@ class RequestsCore:
             with session.get(url, proxies=self.proxies, **kwargs) as resp:
                 return self.__handle_response(resp, decoder=decoder)
             
-    def delete(self, url, decoder="json", **kwargs):
+    def delete(self, url, decoder="text", **kwargs):
         """make delete request"""
         
         # make target url
@@ -145,12 +145,12 @@ class RequestsCore:
             with session.delete(url, proxies=self.proxies, **kwargs) as resp:
                 return self.__handle_response(resp, decoder=decoder)
             
-    def put_series(self, url, series, name=None, **kwargs):
-        """put series object"""
+    def upload_series(self, url, series, name=None, **kwargs):
+        """upload series object"""
         
         # set key as name
         if name is None:
-            name = series.key
+            name = "not specified"
 
         # convert series to string
         data = series.to_string(index=False)
