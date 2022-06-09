@@ -3,9 +3,11 @@ import io
 import logging
 import requests
 
-from urllib.parse import urljoin
-
 logger = logging.getLogger(__name__)
+
+
+class UnprossesableEntityError(Exception):
+    pass
 
 
 class RequestsCore:
@@ -69,17 +71,22 @@ class RequestsCore:
             if response.status_code == 422:
                 
                 try:
-                    # get error message(s)
-                    error = response.json().get("errors")
-
-                    # make error report
-                    logger.warning("Unprocessable Entity/Entities:")
-                    for message in error:
-                        logger.warning(f"> {message}")
+                    # decode error message(s)
+                    errors = response.json().get("errors")
                     
                 except:
-                    pass
-                                        
+                    # no message returned
+                    errors = None
+                    
+                # trigger special raise
+                if errors:
+                    
+                    # create error report
+                    base = "ETEngine returned the following error message(s):"
+                    msg = """%s\n > {}""".format("\n > ".join(errors)) %base
+
+                    raise UnprossesableEntityError(msg)
+                                                        
             # raise status error
             response.raise_for_status()
                                

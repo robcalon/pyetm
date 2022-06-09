@@ -10,6 +10,10 @@ import nest_asyncio
 logger = logging.getLogger(__name__)
 
 
+class UnprossesableEntityError(Exception):
+    pass
+
+
 class AIOHTTPCore:
     
     @property
@@ -107,23 +111,28 @@ class AIOHTTPCore:
         
         # check response
         if not (response.status <= 400):
-                        
+                                    
             # get debug message
             if response.status == 422:
                 
                 try:
-                    # get error message(s)
-                    error = await response.json()
-                    error = error.get("errors")
-
-                    # make error report
-                    logger.warning("Unprocessable Entity/Entities:")
-                    for message in error:
-                        logger.warning(f"> {message}")
+                    # decode error message(s)
+                    errors = await response.json()
+                    errors = errors.get("errors")
                     
                 except:
-                    pass
-                                        
+                    # no message returned
+                    errors = None
+                    
+                # trigger special raise
+                if errors:
+                    
+                    # create error report
+                    base = "ETEngine returned the following error message(s):"
+                    msg = """%s\n > {}""".format("\n > ".join(errors)) %base
+
+                    raise UnprossesableEntityError(msg)
+                                                        
             # raise status error
             response.raise_for_status()
                         
