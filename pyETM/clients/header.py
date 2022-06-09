@@ -1,4 +1,4 @@
-import pandas
+import pandas as pd
 
 
 class Header():
@@ -21,7 +21,7 @@ class Header():
                 
         # get created at
         datetime = self._scenario_header['created_at']
-        datetime = pandas.to_datetime(datetime, utc=True)
+        datetime = pd.to_datetime(datetime, utc=True)
         
         return datetime
     
@@ -117,7 +117,7 @@ class Header():
                 
         # get created at
         datetime = self._scenario_header['updated_at']
-        datetime = pandas.to_datetime(datetime, utc=True)
+        datetime = pd.to_datetime(datetime, utc=True)
         
         return datetime
         
