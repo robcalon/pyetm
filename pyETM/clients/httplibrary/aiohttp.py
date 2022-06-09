@@ -105,10 +105,26 @@ class AIOHTTPCore:
     async def __handle_response(self, response, decoder=None):
         """handle API response"""
         
-        ### SYMETRIC WITH REQUESTS ###
-
         # check response
         if not (response.status <= 400):
+                        
+            # get debug message
+            if response.status == 422:
+                
+                try:
+                    # get error message(s)
+                    error = await response.json()
+                    error = error.get("errors")
+
+                    # make error report
+                    logger.warning("Unprocessable Entity/Entities:")
+                    for message in error:
+                        logger.warning(f"> {message}")
+                    
+                except:
+                    pass
+                                        
+            # raise status error
             response.raise_for_status()
                         
         if decoder == "json":

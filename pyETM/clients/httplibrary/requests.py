@@ -61,13 +61,28 @@ class RequestsCore:
     
     def __handle_response(self, response, decoder=None):
         """handle API response"""
-        
-        ### SYMETRIC WITH AIOHTTP ###
-        
+                
         # check response
         if not response.ok:
-            response.raise_for_status()
             
+            # get debug message
+            if response.status_code == 422:
+                
+                try:
+                    # get error message(s)
+                    error = response.json().get("errors")
+
+                    # make error report
+                    logger.warning("Unprocessable Entity/Entities:")
+                    for message in error:
+                        logger.warning(f"> {message}")
+                    
+                except:
+                    pass
+                                        
+            # raise status error
+            response.raise_for_status()
+                               
         if decoder == "json":
             return response.json()
         
