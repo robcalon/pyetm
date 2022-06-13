@@ -1,3 +1,14 @@
+# detect text files
 * text=auto
-*.py text
-*.csv text
+
+# configuration files
+./MANIFEST.in text
+
+# python sources
+*.py    text diff=python
+*.pxd   text diff=python
+*.pyx   text diff=python
+*.pyi   text diff=python
+
+# data files
+*.csv   text
