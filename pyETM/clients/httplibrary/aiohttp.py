@@ -1,9 +1,9 @@
 import os
-import sys
 import io
+import re
+import sys
 import logging
 import asyncio
-
 import aiohttp
 import nest_asyncio
 
@@ -160,7 +160,8 @@ class AIOHTTPCore:
             
     def post(self, url, decoder="json", **kwargs):
         """make post request"""
-        return asyncio.run(self.__post(url, decoder, proxy=self.proxy, **kwargs))
+        return asyncio.run(self.__post(url, decoder, proxy=self.proxy, 
+                                       **kwargs))
     
     async def __put(self, url, decoder=None, **kwargs):
         """make put request"""
@@ -205,7 +206,32 @@ class AIOHTTPCore:
             
     def delete(self, url, decoder="text", **kwargs):
         """make delete request"""
-        return asyncio.run(self.__delete, decoder, proxy=self.proxy, **kwargs)
+        return asyncio.run(self.__delete(decoder, proxy=self.proxy, **kwargs))
+    
+    async def __get_session_id(self, scenario_id, **kwargs):
+        """get a session_id for a pro-environment scenario"""
+
+        # get address
+        host = "https://pro.energytransitionmodel.com"
+        url = f"{host}/saved_scenarios/{scenario_id}/load"
+
+        # get request
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url=url, **kwargs) as resp:
+
+                # await content
+                content = await resp.text()
+
+        # get session id
+        pattern = '"api_session_id":([0-9]{6,7})'
+        session_id = re.search(pattern, content)
+
+        return session_id.group(1)
+
+    def _get_session_id(self, scenario_id, **kwargs):
+        """get a session_id for a pro-environment scenario"""
+        return asyncio.run(self.__get_session_id(scenario_id, proxy=self.proxy, 
+                                                 **kwargs))
     
     def upload_series(self, url, series, name=None, **kwargs):
         """upload series object"""

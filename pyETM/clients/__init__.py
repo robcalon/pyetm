@@ -59,6 +59,16 @@ class BaseClient(Curves, Header, Parameters, Scenario,
                     
         return client
     
+    @classmethod
+    def from_saved_scenario_id(cls, scenario_id, **kwargs):
+        """initialize a session with a saved scenario id"""
+        
+        # initialize client
+        client = cls(scenario_id=None, **kwargs)
+        session_id = client._get_session_id(scenario_id)
+        
+        return cls(session_id, **kwargs)
+    
     def __str__(self):
         return f'BaseClient({self.scenario_id})'
     
@@ -95,7 +105,7 @@ class BaseClient(Curves, Header, Parameters, Scenario,
 
 class Client(BaseClient, RequestsCore):
         
-    def __init__(self, scenario_id=None, beta_engine=False, 
+    def __init__(self, scenario_id=None, beta_engine=False,
                  reset=False, validate_ccurves=True, proxies='auto'):
         """Client which connects to ETM
         
@@ -148,6 +158,7 @@ class Client(BaseClient, RequestsCore):
         
     def __str__(self):
         return repr(self)
+
 
 class AsyncClient(BaseClient, AIOHTTPCore):
         

@@ -1,5 +1,6 @@
 import os
 import io
+import re
 import logging
 import requests
 
@@ -144,7 +145,26 @@ class RequestsCore:
         with requests.Session() as session:
             with session.delete(url, proxies=self.proxies, **kwargs) as resp:
                 return self.__handle_response(resp, decoder=decoder)
+
+    def _get_session_id(self, scenario_id, **kwargs):
+        """get a session_id for a pro-environment scenario"""    
+        # get address
+        host = "https://pro.energytransitionmodel.com"
+        url = f"{host}/saved_scenarios/{scenario_id}/load"
+
+        # get request
+        with requests.Session() as session:
+            with session.get(url=url, proxies=self.proxies, **kwargs) as resp:
+
+                # get content
+                content = resp.text
             
+        # get session id
+        pattern = '"api_session_id":([0-9]{6,7})'
+        session_id = re.search(pattern, content)
+
+        return session_id.group(1)            
+
     def upload_series(self, url, series, name=None, **kwargs):
         """upload series object"""
         
