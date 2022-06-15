@@ -1,4 +1,4 @@
-import pandas
+import pandas as pd
 
 class HourlyElectricityPriceCurve:
     
@@ -21,13 +21,12 @@ class HourlyElectricityPriceCurve:
         headers = {'Connection':'close'}
         post = f'/scenarios/{self.scenario_id}/curves/electricity_price'
         
-        # request response and extract data
-        resp = self.get(post, decoder="bytes", headers=headers)
-        
-        # convert data to dataframe and set DateTime
-        curves = pandas.read_csv(resp, index_col='Time', 
-                                 parse_dates=True).asfreq('H')
-        curves.index.name = 'DateTime'
+        # request response and convert to series
+        resp = self.get(post, decoder="bytes", headers=headers)    
+        curves = pd.read_csv(resp, index_col='Time').squeeze('columns')
+
+        # reset index
+        curves = curves.reset_index(drop=True)
         
         # set corresponsing parameter property
         self._hourly_electricity_price_curve = curves

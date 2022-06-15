@@ -1,4 +1,4 @@
-import pandas
+import pandas as pd
 
 class HourlyMethaneCurves:
     
@@ -21,14 +21,10 @@ class HourlyMethaneCurves:
         headers = {'Connection':'close'}
         post = f'/scenarios/{self.scenario_id}/curves/network_gas'
         
-        # request response and extract data
+        # request response and convert to frame
         resp = self.get(post, decoder="bytes", headers=headers)
-        
-        # convert data to dataframe and set DateTime
-        curves = pandas.read_csv(resp, index_col='Time', 
-                                 parse_dates=True).asfreq('H')
-        curves.index.name = 'DateTime'
-        
+        curves = pd.read_csv(resp, index_col='Time').reset_index(drop=True)
+                
         # set corresponsing parameter property
         self._hourly_methane_curves = curves
         

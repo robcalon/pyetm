@@ -6,10 +6,11 @@ from .gqueries import GQueries
 from .header import Header
 from .interpolate import Interpolate
 from .scenario import Scenario
+from .merit import MeritConfiguration
 from .utils import Utils
 
 
-class BaseClient(Curves, Header, Parameters, Scenario, 
+class BaseClient(Curves, Header, Parameters, Scenario, MeritConfiguration,
                  CustomCurves, GQueries, Interpolate, Utils):
 
     @classmethod
