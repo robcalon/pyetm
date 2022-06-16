@@ -175,8 +175,8 @@ class Curves:
 
         else:
             # warn user for attempt
-            msg = (f"attempted to remove '{key}', " +
-                   "while curve already unattached")
+            msg = (f"%s: attempted to remove '{key}', " +
+                   "while curve already unattached") %self
             logger.warning(msg)
         
     def delete_custom_curves(self, keys=None):
@@ -196,7 +196,7 @@ class Curves:
             # subset attached keys
             keys = [key for key in keys if key in attached]
 
-        if attached:
+        if bool(attached) & bool(keys):
         
             # delete all ccurves
             function = self.__delete_ccurve
@@ -207,8 +207,8 @@ class Curves:
         
         else:
             # warn user for attempt
-            msg = ("attempted to remove custom curves, " +
-                   "without any custom curves attached")
+            msg = ("%s: attempted to remove custom curves, " +
+                   "without any (specified) custom curves attached") %self
             logger.warning(msg)
 
     def get_custom_curve(self, key):
