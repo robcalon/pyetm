@@ -188,8 +188,13 @@ class Curves:
         # get keys that need deleting
         attached = self.get_custom_curve_keys()
         
+        # default keys
         if keys is None:
             keys = attached
+
+        else:
+            # subset attached keys
+            keys = [key for key in keys if key in attached]
 
         if attached:
         
