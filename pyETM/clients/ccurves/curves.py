@@ -59,7 +59,7 @@ class Curves:
         """delete without raising or resetting"""
         
         # validate key
-        key = self._validate_key(key)
+        key = self._validate_ccurve_key(key)
         
         # prepare request
         headers = {'Connection': 'close'}
@@ -85,7 +85,7 @@ class Curves:
         """get custom curve"""
                 
         # validate key
-        key = self._validate_key(key)
+        key = self._validate_ccurve_key(key)
             
         # prepare request
         headers = {"Connection": "close"}
@@ -111,7 +111,7 @@ class Curves:
                     key = curve.name
                         
         # validate key
-        key = self._validate_key(key)
+        key = self._validate_ccurve_key(key)
     
         # delete specified ccurve
         if curve is None:
@@ -213,7 +213,7 @@ class Curves:
 
     def get_custom_curve(self, key):
         """return specific custom curve"""
-        key = self._validate_key(key)
+        key = self._validate_ccurve_key(key)
         return self.custom_curves[key]
         
     def get_custom_curves(self):
