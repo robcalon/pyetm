@@ -144,7 +144,7 @@ class Curves:
         
         return curve
     
-    def _validate_key(self, key):
+    def _validate_ccurve_key(self, key):
         """check if key is valid ccurve"""
         
         # raise for None
