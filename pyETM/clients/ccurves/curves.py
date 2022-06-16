@@ -179,16 +179,19 @@ class Curves:
                    "while curve already unattached")
             logger.warning(msg)
         
-    def delete_custom_curves(self):
+    def delete_custom_curves(self, keys=None):
         """delete all custom curves"""
         
         # raise without scenario id
         self._raise_scenario_id()
         
         # get keys that need deleting
-        keys = self.get_custom_curve_keys()
+        attached = self.get_custom_curve_keys()
         
-        if keys:
+        if keys is None:
+            keys = attached
+
+        if attached:
         
             # delete all ccurves
             function = self.__delete_ccurve
