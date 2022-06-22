@@ -107,7 +107,7 @@ class BaseClient(Curves, Header, Parameters, Scenario, MeritConfiguration,
 class Client(BaseClient, RequestsCore):
         
     def __init__(self, scenario_id=None, beta_engine=False,
-                 reset=False, validate_ccurves=True, proxies='auto'):
+                 reset=False, proxies='auto'):
         """Client which connects to ETM
         
         Parameters
@@ -117,9 +117,6 @@ class Client(BaseClient, RequestsCore):
             a limited number of methods when scenario_id is set to None.
         beta_engine : bool, default False
             Connect to the beta-engine instead of the production-engine.
-        validate_ccurves : bool, default True
-            Validate the key of a passed custom curve. Can be set
-            to False when attempting to upload internal curves. 
         reset : bool, default False
             Reset scenario on initalization.
         proxies : str, default auto
@@ -147,10 +144,7 @@ class Client(BaseClient, RequestsCore):
         # reset scenario on intialization
         if reset and (scenario_id != None):
             self.reset_scenario()
-            
-        # set validate ccurves key argument
-        self.validate_ccurves = validate_ccurves
-        
+                
         # reset session?
         self._reset_session()
 
@@ -164,8 +158,7 @@ class Client(BaseClient, RequestsCore):
 class AsyncClient(BaseClient, AIOHTTPCore):
         
     def __init__(self, scenario_id=None, beta_engine=False, 
-                 reset=False, validate_ccurves=True, ipython='auto', 
-                 proxy='auto'):
+                 reset=False, ipython='auto', proxy='auto'):
         """Client which connects to ETM
         
         Parameters
@@ -175,9 +168,6 @@ class AsyncClient(BaseClient, AIOHTTPCore):
             a limited number of methods when scenario_id is set to None.
         beta_engine : bool, default False
             Connect to the beta-engine instead of the production-engine.
-        validate_ccurves : bool, default True
-            Validate the key of a passed custom curve. Can be set
-            to False when attempting to upload internal curves. 
         reset : bool, default False
             Reset scenario on initalization.
         ipython : bool, default 'auto'
@@ -210,10 +200,7 @@ class AsyncClient(BaseClient, AIOHTTPCore):
         # reset scenario on intialization
         if reset and (scenario_id != None):
             self.reset_scenario()
-            
-        # set validate ccurves key argument
-        self.validate_ccurves = validate_ccurves
-        
+                
         # reset session?
         self._reset_session()
 

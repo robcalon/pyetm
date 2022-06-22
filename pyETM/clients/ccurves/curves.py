@@ -152,11 +152,9 @@ class Curves:
             raise KeyError("No key specified for custom curve")
         
         # check if key in ccurve index
-        if key not in self.get_custom_curve_keys(include_unattached=True):
-            
-            # only raise when validation is requested
-            if self.validate_ccurves:
-                raise KeyError(f"'{key}' is not a valid custom curve key")
+        params = {'include_unattached': True, 'include_internal': True}
+        if key not in self.get_custom_curve_keys(**params):
+            raise KeyError(f"'{key}' is not a valid custom curve key")
             
         return key
         
@@ -216,17 +214,24 @@ class Curves:
         key = self._validate_ccurve_key(key)
         return self.custom_curves[key]
         
-    def get_custom_curves(self):
+    def get_custom_curves(self, keys=None):
         """return all attached curstom curves"""
         
         # raise without scenario id
         self._raise_scenario_id()
         
-        # iterate over attached keys
-        keys = self.get_custom_curve_keys()
+        # get keys that need deleting
+        attached = self.get_custom_curve_keys()
         
-        # check attachment
-        if keys:
+        # default keys
+        if keys is None:
+            keys = attached
+
+        else:
+            # subset attached keys
+            keys = [key for key in keys if key in attached]
+
+        if bool(attached) & bool(keys):
             
             # get attached curves
             func = self.__get_ccurve
