@@ -29,7 +29,7 @@ class Properties:
         resp = self.get(url, headers=headers, params=params)
 
         # check for response
-        if resp is True:
+        if bool(resp) == True:
 
             # convert response to frame
             ccurves = pd.DataFrame.from_records(resp, index="key")
