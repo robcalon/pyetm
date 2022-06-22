@@ -25,14 +25,24 @@ class Properties:
         headers = {'Connection': 'close'}
         url = f'/scenarios/{self.scenario_id}/custom_curves'
         
-        # request repsonse and convert to df
+        # request repsonse 
         resp = self.get(url, headers=headers, params=params)
-        ccurves = pd.DataFrame.from_records(resp, index="key")
 
-        # format datetime column
-        if "date" in ccurves.columns:
-            ccurves = self._format_datetime(ccurves)
+        # check for response
+        if resp is True:
+
+            # convert response to frame
+            ccurves = pd.DataFrame.from_records(resp, index="key")
+
+            # format datetime column
+            if "date" in ccurves.columns:
+                ccurves = self._format_datetime(ccurves)
             
+        else:
+
+            # return empty frame
+            ccurves = pd.DataFrame()
+
         return ccurves
             
     def get_custom_curve_keys(self, include_unattached: bool = False, 
