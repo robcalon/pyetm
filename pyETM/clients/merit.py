@@ -7,24 +7,23 @@ logger = logging.getLogger(__name__)
 
 class MeritConfiguration:
     
-    def _get_merit_configuration(self):
-        """get merit configuration JSON
+    def _get_merit_configuration(self, include_curves=True):
+        """get merit configuration JSON"""
         
-        TO DO
-        -----
-        - should be able to make calls with and without curves,
-        pending implementation on API
-        - consider property decorator for merit configuration."""
-        
+        # lower cased boolean for params
+        include_curves = str(include_curves).lower()
+
         # raise without scenario id
         self._raise_scenario_id()
         
-        # prepare post
+        # prepare request
         headers = {'Connection': 'close'}
+        params = {'include_curves': include_curves}
         url = f'/scenarios/{self.scenario_id}/merit'
-        
+
         # request response
-        resp = self.get(url, headers=headers)
+        resp = self.get(url, headers=headers, params=params)
+        self.__participants = resp['participants']
 
         return resp
     
@@ -59,8 +58,8 @@ class MeritConfiguration:
         if not isinstance(subset, list):
             subset = list(subset)
         
-        # get and correct response JSON
-        recs = self._get_merit_configuration()['participants']
+        # correct response JSON
+        recs = self._get_merit_configuration(False)['participants']
         recs = [rec for rec in recs if rec.get('type') in subset]
         
         def correct(rec):
@@ -71,10 +70,11 @@ class MeritConfiguration:
         # correct records to replace null with None
         recs = [correct(rec) for rec in recs]
         frame = pd.DataFrame.from_records(recs, index='key')
-
-        # format records
         frame = frame.rename_axis(None, axis=0).sort_index()
-        frame = frame.drop(columns='curve')
+
+        # drop curve column
+        if 'curve' in frame.columns:
+            frame = frame.drop(columns='curve')
 
         return frame
         
@@ -103,62 +103,7 @@ class MeritConfiguration:
 
         return curves.sort_index(axis=1)
 
-    def get_next_dispatchable_unit(self):
-        """returns the name, volume and price of 
-        the dispatchable to supply an addtional
-        unit of energy"""
-
-        # fetch participants and match ecurves
-        ladder = self.__make_dispatchables_bidladder()
-        ladder.index += '.output (MW)'
-
-        # fetch and subset relevant ecurves
-        ecurves = self.hourly_electricity_curves
-        ecurves = ecurves[ladder.index]
-
-        # find standby unit based on utilization
-        # round to prevent merit/python rounding errors
-        util = ecurves.div(ladder.capacity).round(2)
-        standby = (util < 1).idxmax(axis=1)
-
-        # map relevant properties
-        installed = standby.map(ladder.capacity)
-        dispatched = self._lookup_coords(standby, ecurves)
-
-        # evalaute available capacity and price
-        # round to prevent merit/python rounding erros
-        available = (installed - dispatched).round(2)
-        prices = standby.map(ladder.marginal_costs).round(2)
-
-        # get relevant series and column names
-        keys = ['unit', 'volume', 'price']
-        series = [standby, available, prices]
-
-        # make and correct frame
-        frame = pd.concat(series, axis=1, keys=keys)
-        frame = self.__correct_saturated_hours(frame, ladder.marginal_costs)
-
-        # reconstruct original index convention
-        frame.unit = frame.unit.str.rstrip(".output (MW)")
-
-        return frame
-
-    def __correct_saturated_hours(self, frame, bidladder):
-        """correction for cases where all dispatchables
-        are saturated and the idxmax function returns 
-        the first item on the bidladder"""
-
-        # specify where arguments
-        key, price = bidladder.idxmax(), bidladder.max()
-        condition = (frame.volume != 0.0)
-
-        # correct special cases
-        frame.unit = frame.unit.where(condition, key)
-        frame.price = frame.price.where(condition, price)
-
-        return frame
-
-    def __make_dispatchables_bidladder(self):
+    def get_dispatchables_bidladder(self):
         """make a bidladder for subset dispatchables.
         returns both marginal costs and installed capacity"""
 
@@ -166,8 +111,8 @@ class MeritConfiguration:
         units = self.get_participants(subset='dispatchable')
 
         # remove interconnectors
-        pattern = "energy_interconnector_\d?\d_imported_electricity"
-        units = units[~units.index.str.contains(pattern, regex=True)]
+        pattern = "energy_interconnector_\d{1,2}_imported_electricity"
+        units = units[~units.index.str.match(pattern)]
 
         # cap related keys
         k1 = 'availability'
@@ -179,16 +124,3 @@ class MeritConfiguration:
         units = units[['marginal_costs', 'capacity']]
 
         return units.sort_values(by='marginal_costs')
-
-    def _lookup_coords(self, coords, frame, **kwargs):
-        """lookup function to get coordinate values from dataframe"""
-
-        # reindex frame with factorized coords
-        idx, cols = pd.factorize(coords)
-        values = frame.reindex(cols, axis=1)
-
-        # lookup values
-        values = values.to_numpy()
-        values = values[np.arange(len(values)), idx]
-
-        return pd.Series(values, index=frame.index, **kwargs)

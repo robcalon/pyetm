@@ -124,6 +124,18 @@ class Header():
     @property
     def url(self):
         return self._scenario_header['url']
+
+    @property
+    def pro_url(self):
+        
+        # specify base url
+        base = 'https://pro.energytransitionmodel.com'
+
+        # update to beta server
+        if self.beta_engine:
+            base = base.replace('https://', 'https://beta-')
+
+        return base + '/scenarios/%s/load' %self.scenario_id
     
     def _get_scenario_header(self, **kwargs):
         """get header of scenario"""
