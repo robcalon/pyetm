@@ -1,5 +1,6 @@
 import logging
-import pandas as pd
+
+from pandas import DataFrame, Series, Index
 
 logger = logging.getLogger(__name__)
 
@@ -7,19 +8,23 @@ logger = logging.getLogger(__name__)
 class Properties:
     
     def __overview(self, include_unattached: bool = False, 
-            include_internal: bool = False) -> pd.DataFrame:
+            include_internal: bool = False) -> DataFrame:
         """fetch custom curve descriptives"""
         
         # raise without scenario id
         self._raise_scenario_id()
 
+        # # lower case booleans for params
+        # include_unattached = str(include_unattached).lower()
+        # include_internal = str(include_internal).lower()
+        
         params = {}
         
         if include_unattached:
-            params['include_unattached'] = include_unattached
+            params['include_unattached'] = str(include_unattached).lower()
         
         if include_internal:
-            params['include_internal'] = include_internal
+            params['include_internal'] = str(include_internal).lower()
         
         # prepare request
         headers = {'Connection': 'close'}
@@ -32,7 +37,7 @@ class Properties:
         if bool(resp) == True:
 
             # convert response to frame
-            ccurves = pd.DataFrame.from_records(resp, index="key")
+            ccurves = DataFrame.from_records(resp, index="key")
 
             # format datetime column
             if "date" in ccurves.columns:
@@ -41,22 +46,22 @@ class Properties:
         else:
 
             # return empty frame
-            ccurves = pd.DataFrame()
+            ccurves = DataFrame()
 
         return ccurves
             
     def get_custom_curve_keys(self, include_unattached: bool = False, 
-            include_internal: bool = False) -> list[str]:
+            include_internal: bool = False) -> Index:
         """get all custom curve keys"""
         
         # subset keys
         params = include_unattached, include_internal
         keys = self.__overview(*params).copy()
 
-        return keys.index.to_list()
+        return Index(keys.index, name='ccurve_keys')
         
     def get_custom_curve_settings(self, include_unattached: bool = False, 
-            include_internal: bool = False) -> pd.DataFrame:
+            include_internal: bool = False) -> DataFrame:
         """show overview of custom curve settings"""
         
         """
@@ -72,7 +77,7 @@ class Properties:
 
         # empty frame without returned keys
         if not keys:
-            return pd.DataFrame()
+            return DataFrame()
         
         # reformat overrides
         ccurves = self.__overview(*params).copy()
@@ -91,7 +96,7 @@ class Properties:
     
     def get_custom_curve_user_value_overrides(self, 
             include_unattached: bool = False, 
-            include_internal: bool = False) -> pd.DataFrame:
+            include_internal: bool = False) -> DataFrame:
         """get overrides of user value keys by custom curves"""
         
         # subset and explode overrides
