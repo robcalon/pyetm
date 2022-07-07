@@ -76,7 +76,7 @@ class Properties:
         keys = self.get_custom_curve_keys(*params)
 
         # empty frame without returned keys
-        if not keys:
+        if keys.empty:
             return DataFrame()
         
         # reformat overrides
