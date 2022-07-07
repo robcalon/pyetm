@@ -39,13 +39,17 @@ class RequestsCore:
         
         # get environment vars
         if proxies == "auto":
-            proxies = {
-                "http": os.environ.get("HTTP_PROXY"),
-                "https": os.environ.get("HTTPS_PROXY")
-            }
+
+            # get proxies from environment
+            http = os.environ.get("HTTP_PROXY")
+            https = os.environ.get("HTTPS_PROXY")
+
+            # revert to http
+            if https == "":
+                https = http
         
         # set proxies
-        self.__proxies = proxies
+        self.__proxies = {"http": http, "https": https}
     
     @property
     def base_url(self):
