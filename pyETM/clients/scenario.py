@@ -37,7 +37,8 @@ class Scenario:
         self.scenario_id = str(resp['id'])
         
     def create_new_scenario(self, end_year, area_code, 
-                            title=None, protected=False, **kwargs):
+                            metadata=None, keep_compatible=False, 
+                            read_only=False, **kwargs):
         """Create a new scenario on the ETM server. 
                 
         Parameters
@@ -61,14 +62,14 @@ class Scenario:
         # make scenario dict based on args
         scenario = {'end_year': end_year, 'area_code' : area_code}
         
-        # user specified title
-        if title is not None:
-            scenario['title'] = title
+        # set metadata
+        if metadata is not None:
+            scenario['metadata'] = metadata
             
-        # protected scenario
-        if protected is True:
-            scenario['protected'] = protected
-            
+        # set protection settings
+        scenario['keep_compatible'] = keep_compatible
+        scenario['read_only'] = read_only
+                        
         self._create_new_scenario(scenario=scenario, **kwargs)
         
     def _create_new_scenario(self, scenario=None, **kwargs):

@@ -1,4 +1,4 @@
-import pandas
+import pandas as pd
 
 class HourlyHouseholdCurves:
     
@@ -21,11 +21,9 @@ class HourlyHouseholdCurves:
         headers = {'Connection':'close'}
         post = f'/scenarios/{self.scenario_id}/curves/household_heat'
         
-        # request response and extract data
+        # request response and convert to frame
         resp = self.get(post, decoder="bytes", headers=headers)
-        
-        # convert data to dataframe and set DateTime
-        curves = pandas.read_csv(resp)
+        curves = pd.read_csv(resp)
         
         # set corresponsing parameter property
         self._hourly_household_curves = curves

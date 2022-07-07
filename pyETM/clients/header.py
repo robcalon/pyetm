@@ -1,4 +1,4 @@
-import pandas
+import pandas as pd
 
 
 class Header():
@@ -21,7 +21,7 @@ class Header():
                 
         # get created at
         datetime = self._scenario_header['created_at']
-        datetime = pandas.to_datetime(datetime, utc=True)
+        datetime = pd.to_datetime(datetime, utc=True)
         
         return datetime
     
@@ -45,23 +45,34 @@ class Header():
     def keep_compatible(self, boolean):
         
         # format header and update
-        header = {'keep_compatible': boolean}
+        header = {'keep_compatible': bool(boolean)}
+        self._change_scenario_header(header)
+    
+    @property
+    def metadata(self):
+        return self._scenario_header.get('metadata')
+    
+    @metadata.setter
+    def metadata(self, metadata):
+        
+        # format header and update
+        header = {'metadata': dict(metadata)}
         self._change_scenario_header(header)
     
     @property
     def ordering(self):
         return self._scenario_header['ordering']
     
-    @property
-    def protected(self):
-        return self._scenario_header['protected']
+#     @property
+#     def protected(self):
+#         return self._scenario_header['protected']
     
-    @protected.setter
-    def protected(self, boolean):
+#     @protected.setter
+#     def protected(self, boolean):
         
-        # format header and update
-        header = {'protected': boolean}
-        self._change_scenario_header(header)
+#         # format header and update
+#         header = {'protected': boolean}
+#         self._change_scenario_header(header)
         
     @property
     def read_only(self):
@@ -71,7 +82,7 @@ class Header():
     def read_only(self, boolean):
         
         # format header and update
-        header = {'read_only': boolean}
+        header = {'read_only': bool(boolean)}
         self._change_scenario_header(header)
         
     @property
@@ -90,29 +101,41 @@ class Header():
     def template(self):
         return str(self._scenario_header['template'])
     
-    @property
-    def title(self):
-        return self._scenario_header['title']
+#     @property
+#     def title(self):
+#         return self._scenario_header['title']
     
-    @title.setter
-    def title(self, title):
+#     @title.setter
+#     def title(self, title):
         
-        # format title and update
-        header = {'title': title}
-        self._change_scenario_header(header)
+#         # format title and update
+#         header = {'title': title}
+#         self._change_scenario_header(header)
         
     @property
     def updated_at(self):
                 
         # get created at
         datetime = self._scenario_header['updated_at']
-        datetime = pandas.to_datetime(datetime, utc=True)
+        datetime = pd.to_datetime(datetime, utc=True)
         
         return datetime
         
     @property
     def url(self):
         return self._scenario_header['url']
+
+    @property
+    def pro_url(self):
+        
+        # specify base url
+        base = 'https://pro.energytransitionmodel.com'
+
+        # update to beta server
+        if self.beta_engine:
+            base = base.replace('https://', 'https://beta-')
+
+        return base + '/scenarios/%s/load' %self.scenario_id
     
     def _get_scenario_header(self, **kwargs):
         """get header of scenario"""
@@ -137,7 +160,7 @@ class Header():
         data = {"scenario": header}
 
         # prepare request
-        headers = {'Connection':'close'}
+        headers = {'detailed': 'true', 'Connection':'close'}
         url = f'/scenarios/{self.scenario_id}'
         
         # evaluate request

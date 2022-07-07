@@ -1,4 +1,4 @@
-import pandas
+import pandas as pd
 
 
 class GQueries:
@@ -15,6 +15,9 @@ class GQueries:
         # put string in list
         if isinstance(gqueries, str):
             gqueries = [gqueries]
+            
+        if not isinstance(gqueries, list):
+            gqueries = list(gqueries)
         
         # set gqueries
         self._gqueries = gqueries
@@ -41,7 +44,7 @@ class GQueries:
         gqueries = gqueries[gqueries.unit == 'curve']
         
         # subset future column and convert to series
-        gqueries =  gqueries.future.apply(pandas.Series)
+        gqueries =  gqueries.future.apply(pd.Series)
     
         return gqueries.T
         
@@ -70,7 +73,7 @@ class GQueries:
         self._raise_scenario_id()
                 
         # create gquery request
-        data = {'detailed': True, 'gqueries': self.gqueries}
+        data = {'gqueries': self.gqueries}
         
         # prepare post
         headers = {'Connection': 'close'}
@@ -78,7 +81,10 @@ class GQueries:
         
         # evaluate post
         response = self.put(url, json=data, headers=headers, **kwargs)
-        gquery_results = pandas.DataFrame.from_dict(response['gqueries'], orient='index')
+        
+        # transform into dataframe
+        records = response['gqueries']
+        gquery_results = pd.DataFrame.from_dict(records, orient='index')
         
         # set gquery results
         self._gquery_results = gquery_results

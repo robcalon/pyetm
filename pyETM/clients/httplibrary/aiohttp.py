@@ -1,13 +1,17 @@
 import os
-import sys
 import io
+import re
+import sys
 import logging
 import asyncio
-
 import aiohttp
 import nest_asyncio
 
 logger = logging.getLogger(__name__)
+
+
+class UnprossesableEntityError(Exception):
+    pass
 
 
 class AIOHTTPCore:
@@ -105,10 +109,31 @@ class AIOHTTPCore:
     async def __handle_response(self, response, decoder=None):
         """handle API response"""
         
-        ### SYMETRIC WITH REQUESTS ###
-
         # check response
         if not (response.status <= 400):
+                                    
+            # get debug message
+            if response.status == 422:
+                
+                try:
+                    # decode error message(s)
+                    errors = await response.json()
+                    errors = errors.get("errors")
+                    
+                except:
+                    # no message returned
+                    errors = None
+                    
+                # trigger special raise
+                if errors:
+                    
+                    # create error report
+                    base = "ETEngine returned the following error message(s):"
+                    msg = """%s\n > {}""".format("\n > ".join(errors)) %base
+
+                    raise UnprossesableEntityError(msg)
+                                                        
+            # raise status error
             response.raise_for_status()
                         
         if decoder == "json":
@@ -135,7 +160,8 @@ class AIOHTTPCore:
             
     def post(self, url, decoder="json", **kwargs):
         """make post request"""
-        return asyncio.run(self.__post(url, decoder, proxy=self.proxy, **kwargs))
+        return asyncio.run(self.__post(url, decoder, proxy=self.proxy, 
+                                       **kwargs))
     
     async def __put(self, url, decoder=None, **kwargs):
         """make put request"""
@@ -178,16 +204,41 @@ class AIOHTTPCore:
             async with session.delete(url, **kwargs) as resp:
                 return await self.__handle_response(resp, decoder=decoder)
             
-    def delete(self, url, decoder="json", **kwargs):
+    def delete(self, url, decoder="text", **kwargs):
         """make delete request"""
-        return asyncio.run(self.__delete, decoder, proxy=self.proxy, **kwargs)
+        return asyncio.run(self.__delete(decoder, proxy=self.proxy, **kwargs))
     
-    def put_series(self, url, series, name=None, **kwargs):
-        """put series object"""
+    async def __get_session_id(self, scenario_id, **kwargs):
+        """get a session_id for a pro-environment scenario"""
+
+        # get address
+        host = "https://pro.energytransitionmodel.com"
+        url = f"{host}/saved_scenarios/{scenario_id}/load"
+
+        # get request
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url=url, **kwargs) as resp:
+
+                # await content
+                content = await resp.text()
+
+        # get session id
+        pattern = '"api_session_id":([0-9]{6,7})'
+        session_id = re.search(pattern, content)
+
+        return session_id.group(1)
+
+    def _get_session_id(self, scenario_id, **kwargs):
+        """get a session_id for a pro-environment scenario"""
+        return asyncio.run(self.__get_session_id(scenario_id, proxy=self.proxy, 
+                                                 **kwargs))
+    
+    def upload_series(self, url, series, name=None, **kwargs):
+        """upload series object"""
         
         # set key as name
         if name is None:
-            name = series.key
+            name = "not specified"
         
         # convert values to string
         data = series.to_string(index=False)

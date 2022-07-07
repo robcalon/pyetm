@@ -1,11 +1,14 @@
 import os
 import io
+import re
 import logging
 import requests
 
-from urllib.parse import urljoin
-
 logger = logging.getLogger(__name__)
+
+
+class UnprossesableEntityError(Exception):
+    pass
 
 
 class RequestsCore:
@@ -36,13 +39,17 @@ class RequestsCore:
         
         # get environment vars
         if proxies == "auto":
-            proxies = {
-                "http": os.environ.get("HTTP_PROXY"),
-                "https": os.environ.get("HTTPS_PROXY")
-            }
+
+            # get proxies from environment
+            http = os.environ.get("HTTP_PROXY")
+            https = os.environ.get("HTTPS_PROXY")
+
+            # revert to http
+            if https == "":
+                https = http
         
         # set proxies
-        self.__proxies = proxies
+        self.__proxies = {"http": http, "https": https}
     
     @property
     def base_url(self):
@@ -61,13 +68,33 @@ class RequestsCore:
     
     def __handle_response(self, response, decoder=None):
         """handle API response"""
-        
-        ### SYMETRIC WITH AIOHTTP ###
-        
+                
         # check response
         if not response.ok:
-            response.raise_for_status()
             
+            # get debug message
+            if response.status_code == 422:
+                
+                try:
+                    # decode error message(s)
+                    errors = response.json().get("errors")
+                    
+                except:
+                    # no message returned
+                    errors = None
+                    
+                # trigger special raise
+                if errors:
+                    
+                    # create error report
+                    base = "ETEngine returned the following error message(s):"
+                    msg = """%s\n > {}""".format("\n > ".join(errors)) %base
+
+                    raise UnprossesableEntityError(msg)
+                                                        
+            # raise status error
+            response.raise_for_status()
+                               
         if decoder == "json":
             return response.json()
         
@@ -112,7 +139,7 @@ class RequestsCore:
             with session.get(url, proxies=self.proxies, **kwargs) as resp:
                 return self.__handle_response(resp, decoder=decoder)
             
-    def delete(self, url, decoder="json", **kwargs):
+    def delete(self, url, decoder="text", **kwargs):
         """make delete request"""
         
         # make target url
@@ -122,13 +149,32 @@ class RequestsCore:
         with requests.Session() as session:
             with session.delete(url, proxies=self.proxies, **kwargs) as resp:
                 return self.__handle_response(resp, decoder=decoder)
+
+    def _get_session_id(self, scenario_id, **kwargs):
+        """get a session_id for a pro-environment scenario"""    
+        # get address
+        host = "https://pro.energytransitionmodel.com"
+        url = f"{host}/saved_scenarios/{scenario_id}/load"
+
+        # get request
+        with requests.Session() as session:
+            with session.get(url=url, proxies=self.proxies, **kwargs) as resp:
+
+                # get content
+                content = resp.text
             
-    def put_series(self, url, series, name=None, **kwargs):
-        """put series object"""
+        # get session id
+        pattern = '"api_session_id":([0-9]{6,7})'
+        session_id = re.search(pattern, content)
+
+        return session_id.group(1)            
+
+    def upload_series(self, url, series, name=None, **kwargs):
+        """upload series object"""
         
         # set key as name
         if name is None:
-            name = series.key
+            name = "not specified"
 
         # convert series to string
         data = series.to_string(index=False)

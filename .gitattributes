@@ -1,0 +1,20 @@
+# detect text files
+* text=auto
+
+# configuration files
+./MANIFEST.in text
+
+# documents
+*.txt text
+
+# data files
+*.csv   text
+
+# python sources
+*.py    text diff=python
+*.pxd   text diff=python
+*.pyx   text diff=python
+*.pyi   text diff=python
+
+# notebooks
+*.ipynb filter=jupyter_clear_output

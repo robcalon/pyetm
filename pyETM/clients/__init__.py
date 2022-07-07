@@ -6,21 +6,25 @@ from .gqueries import GQueries
 from .header import Header
 from .interpolate import Interpolate
 from .scenario import Scenario
+from .merit import MeritConfiguration
 from .utils import Utils
 
 
-class BaseClient(Curves, Header, Parameters, Scenario, 
+class BaseClient(Curves, Header, Parameters, Scenario, MeritConfiguration,
                  CustomCurves, GQueries, Interpolate, Utils):
 
     @classmethod
-    def from_scenario_parameters(cls, end_year, area_code, title=None,
-                                 protected=False, uvalues=None, ccurves=None, 
-                                 heat_network_order=None, **kwargs):
+    def from_scenario_parameters(cls, end_year, area_code, metadata=None,
+                                 keep_compatible=False, read_only=False, 
+                                 uvalues=None, heat_network_order=None, 
+                                 ccurves=None, **kwargs):
         """create new scenario from parameters on Client initalization"""
                 
         # initialize new scenario
         client = cls(scenario_id=None, **kwargs)
-        client.create_new_scenario(end_year, area_code, title, protected)
+        client.create_new_scenario(end_year, area_code, metadata=metadata, 
+                                   keep_compatible=keep_compatible, 
+                                   read_only=read_only)
         
         # set user values
         if uvalues is not None:
@@ -37,8 +41,9 @@ class BaseClient(Curves, Header, Parameters, Scenario,
         return client
                 
     @classmethod
-    def from_existing_scenario(cls, scenario_id, title=None, 
-                               protected=False, **kwargs):
+    def from_existing_scenario(cls, scenario_id, metadata=None, 
+                               keep_compatible=False, read_only=False,
+                               **kwargs):
         """create new scenario as copy of existing scenario"""
         
         # initialize client
@@ -46,14 +51,24 @@ class BaseClient(Curves, Header, Parameters, Scenario,
         client.create_scenario_copy(scenario_id)
 
         # set scenario title
-        if title is not None:
-            client.title = title
+        if metadata is not None:
+            client.metadata = metadata
             
-        # set protected
-        if protected == True:
-            client.protected = protected
-        
+        # set protection settings
+        client.keep_compatible = keep_compatible
+        client.read_only = read_only
+                    
         return client
+    
+    @classmethod
+    def from_saved_scenario_id(cls, scenario_id, **kwargs):
+        """initialize a session with a saved scenario id"""
+        
+        # initialize client
+        client = cls(scenario_id=None, **kwargs)
+        session_id = client._get_session_id(scenario_id)
+        
+        return cls(session_id, **kwargs)
     
     def __str__(self):
         return f'BaseClient({self.scenario_id})'
@@ -91,8 +106,8 @@ class BaseClient(Curves, Header, Parameters, Scenario,
 
 class Client(BaseClient, RequestsCore):
         
-    def __init__(self, scenario_id=None, beta_engine=False, 
-                 reset=False, validate_ccurves=True, proxies='auto'):
+    def __init__(self, scenario_id=None, beta_engine=False,
+                 reset=False, proxies='auto'):
         """Client which connects to ETM
         
         Parameters
@@ -102,9 +117,6 @@ class Client(BaseClient, RequestsCore):
             a limited number of methods when scenario_id is set to None.
         beta_engine : bool, default False
             Connect to the beta-engine instead of the production-engine.
-        validate_ccurves : bool, default True
-            Validate the key of a passed custom curve. Can be set
-            to False when attempting to upload internal curves. 
         reset : bool, default False
             Reset scenario on initalization.
         proxies : str, default auto
@@ -132,10 +144,7 @@ class Client(BaseClient, RequestsCore):
         # reset scenario on intialization
         if reset and (scenario_id != None):
             self.reset_scenario()
-            
-        # set validate ccurves key argument
-        self.validate_ccurves = validate_ccurves
-        
+                
         # reset session?
         self._reset_session()
 
@@ -145,11 +154,11 @@ class Client(BaseClient, RequestsCore):
     def __str__(self):
         return repr(self)
 
+
 class AsyncClient(BaseClient, AIOHTTPCore):
         
     def __init__(self, scenario_id=None, beta_engine=False, 
-                 reset=False, validate_ccurves=True, ipython='auto', 
-                 proxy='auto'):
+                 reset=False, ipython='auto', proxy='auto'):
         """Client which connects to ETM
         
         Parameters
@@ -159,9 +168,6 @@ class AsyncClient(BaseClient, AIOHTTPCore):
             a limited number of methods when scenario_id is set to None.
         beta_engine : bool, default False
             Connect to the beta-engine instead of the production-engine.
-        validate_ccurves : bool, default True
-            Validate the key of a passed custom curve. Can be set
-            to False when attempting to upload internal curves. 
         reset : bool, default False
             Reset scenario on initalization.
         ipython : bool, default 'auto'
@@ -194,10 +200,7 @@ class AsyncClient(BaseClient, AIOHTTPCore):
         # reset scenario on intialization
         if reset and (scenario_id != None):
             self.reset_scenario()
-            
-        # set validate ccurves key argument
-        self.validate_ccurves = validate_ccurves
-        
+                
         # reset session?
         self._reset_session()
 
