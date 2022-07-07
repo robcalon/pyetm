@@ -26,7 +26,8 @@ class Curves:
         """set custom curves without option to set a name"""
 
         # check for old custom curves
-        if self.get_custom_curve_keys():
+        keys = self.get_custom_curve_keys()
+        if not keys.empty:
         
             # remove old custom curves
             self.delete_custom_curves()
