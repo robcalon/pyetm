@@ -47,9 +47,12 @@ class RequestsCore:
             # revert to http
             if https == "":
                 https = http
+
+            # create proxies dict
+            proxies = {'http': http, 'https': https}
         
         # set proxies
-        self.__proxies = {"http": http, "https": https}
+        self.__proxies = proxies
     
     @property
     def base_url(self):
