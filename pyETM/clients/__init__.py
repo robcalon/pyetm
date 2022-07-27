@@ -107,7 +107,7 @@ class BaseClient(Curves, Header, Parameters, Scenario, MeritConfiguration,
 class Client(BaseClient, RequestsCore):
         
     def __init__(self, scenario_id=None, beta_engine=False,
-                 reset=False, proxies='auto'):
+                 reset=False, **kwargs):
         """Client which connects to ETM
         
         Parameters
@@ -130,10 +130,10 @@ class Client(BaseClient, RequestsCore):
         """
         
         super().__init__()
-        
-        # set proxy server
-        self.proxies = proxies
-        
+
+        # create session
+        self._create_session(**kwargs)
+
         # set class parameters
         self.beta_engine = beta_engine
         self.scenario_id = scenario_id
@@ -157,7 +157,7 @@ class Client(BaseClient, RequestsCore):
 
 class AsyncClient(BaseClient, AIOHTTPCore):
         
-    def __init__(self, scenario_id=None, beta_engine=False, 
+    def __init__(self, scenario_id=None, beta_engine=False, queue=None,
                  reset=False, ipython='auto', proxy='auto'):
         """Client which connects to ETM
         
@@ -168,6 +168,8 @@ class AsyncClient(BaseClient, AIOHTTPCore):
             a limited number of methods when scenario_id is set to None.
         beta_engine : bool, default False
             Connect to the beta-engine instead of the production-engine.
+        queue : queue
+            Queue for mutliprocessing applications. (not implemented yet)
         reset : bool, default False
             Reset scenario on initalization.
         ipython : bool, default 'auto'
