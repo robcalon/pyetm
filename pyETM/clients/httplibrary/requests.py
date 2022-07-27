@@ -13,44 +13,57 @@ class UnprossesableEntityError(Exception):
 
 class RequestsCore:
     
+    @classmethod
+    def _create_session(cls, **kwargs):
+        """create session to connect with API
+        
+        For now only support for following environment settings from 
+        the requests module:
+        
+        proxies: dict (optional), default None
+            Dictionary mapping protocol or protocol and 
+            hostname to the URL of the proxy.
+        stream: boolean (optional), default False 
+            Whether to immediately download the response content.
+        verify: boolean or string (optional), default True
+            Either a boolean, in which case it controls whether we verify
+            the server's TLS certificate, or a string, in which case it must 
+            be a path to a CA bundle to use. When set to False, requests will 
+            accept any TLS certificate presented by the server, and will ignore 
+            hostname mismatches and/or expired certificates, which will make 
+            your application vulnerable to man-in-the-middle (MitM) attacks. 
+            Setting verify to False may be useful during local development or 
+            testing.
+        cert: string or tuple (optional) 
+            If string; path to ssl client cert file (.pem). 
+            If tuple; ('cert', 'key') pair."""
+
+        # check for unsupported kwargs
+        supported = ['proxies', 'stream', 'verify', 'cert']
+        invalid = [k for k in kwargs.keys() if k not in supported]
+
+        if invalid:
+            # raise error
+            raise KeyError(f"passed kwarg(s) '{invalid}' not (yet) supported")
+
+        # create session
+        cls._session_kwargs = kwargs
+        cls._session = requests.Session()
+
     @property
     def beta_engine(self):
+        """connects to beta-engine when False and to production-engine
+        when True.""" 
         return self.__beta_engine
         
     @beta_engine.setter
-    def beta_engine(self, boolean):
-
-        # check instance
-        if not isinstance(boolean, bool):
-            raise TypeError('beta_engine must be a boolean')
+    def beta_engine(self, boolean: bool):
+        """set beta engine attribute"""
             
-        # set boolean
-        self.__beta_engine = boolean
-        
-        # reset session
+        # set boolean and reset session
+        self.__beta_engine = bool(boolean)
         self._reset_session()
-    
-    @property
-    def proxies(self):
-        return self.__proxies
-    
-    @proxies.setter
-    def proxies(self, proxies):
         
-        # get environment vars
-        if proxies == "auto":
-
-            # get proxies from environment
-            http = os.environ.get("HTTP_PROXY")
-            https = os.environ.get("HTTPS_PROXY")
-
-            # revert to http
-            if https == "":
-                https = http
-        
-        # set proxies
-        self.__proxies = {"http": http, "https": https}
-    
     @property
     def base_url(self):
         """"base url for carbon transition model"""
@@ -65,21 +78,63 @@ class RequestsCore:
     def __make_url(self, url):
         """join url with base url"""
         return self.base_url + url
-    
-    def __handle_response(self, response, decoder=None):
-        """handle API response"""
-                
+
+    def __request(self, method, url, **kwargs):
+        """make request to connected session."""
+
+        retries = 5
+        while retries:
+
+            try:
+
+                # merge session and passed kwargs
+                kwargs = {**self._session_kwargs, **kwargs}
+                return self._session.request(method, url, **kwargs)
+
+            except requests.ConnectionError as error:
+                retries -= 1
+
+        raise error
+
+    def __decode(self, resp, decoder):
+        """decode the response to specified type"""
+
+        # no decoding
+        if decoder is None:
+            return resp
+
+        # json decoding
+        if decoder == "json":
+            return resp.json()
+        
+        # text decoding
+        if decoder == "text":
+            return resp.text
+        
+        # bytes decoding
+        if decoder == "bytes":
+            return io.BytesIO(resp.content)
+
+    def _request(self, method, url, decoder=None, **kwargs):
+        """request and handle API response"""
+
+        # get session response
+        resp = self.__request(method, url, **kwargs)
+
         # check response
-        if not response.ok:
+        if not resp.ok:
             
             # get debug message
-            if response.status_code == 422:
+            if resp.status_code == 422:
                 
                 try:
+                    
                     # decode error message(s)
-                    errors = response.json().get("errors")
+                    msg = self.__decode(resp, "json")
+                    errors = msg.get("errors")
                     
                 except:
+                    
                     # no message returned
                     errors = None
                     
@@ -93,81 +148,45 @@ class RequestsCore:
                     raise UnprossesableEntityError(msg)
                                                         
             # raise status error
-            response.raise_for_status()
-                               
-        if decoder == "json":
-            return response.json()
-        
-        if decoder == "text":
-            return response.text
-        
-        if decoder == "bytes":
-            return io.BytesIO(response.content)
-        
-        return response        
-        
-    def post(self, url, decoder="json", **kwargs):
-        """make post request"""
-        
-        # make target url
-        url = self.__make_url(url)
-        
-        # post request
-        with requests.Session() as session:
-            with session.post(url=url, proxies=self.proxies, **kwargs) as resp:
-                return self.__handle_response(resp, decoder=decoder)
-                    
-    def put(self, url, decoder="json", **kwargs):
-        """make put request"""
-        
-        # make target url
-        url = self.__make_url(url)
-        
-        # put request
-        with requests.Session() as session:
-            with session.put(url=url, proxies=self.proxies, **kwargs) as resp:
-                return self.__handle_response(resp, decoder=decoder)
-
-    def get(self, url, decoder="json", **kwargs):
-        """make get request"""
-        
-        # make target url
-        url = self.__make_url(url)
-
-        # get request
-        with requests.Session() as session:
-            with session.get(url, proxies=self.proxies, **kwargs) as resp:
-                return self.__handle_response(resp, decoder=decoder)
-            
-    def delete(self, url, decoder="text", **kwargs):
-        """make delete request"""
-        
-        # make target url
-        url = self.__make_url(url)
-
-        # delete request
-        with requests.Session() as session:
-            with session.delete(url, proxies=self.proxies, **kwargs) as resp:
-                return self.__handle_response(resp, decoder=decoder)
+            resp.raise_for_status()
+                                       
+        return self.__decode(resp, decoder)        
 
     def _get_session_id(self, scenario_id, **kwargs):
         """get a session_id for a pro-environment scenario"""    
-        # get address
+
+        # make pro url
         host = "https://pro.energytransitionmodel.com"
         url = f"{host}/saved_scenarios/{scenario_id}/load"
 
-        # get request
-        with requests.Session() as session:
-            with session.get(url=url, proxies=self.proxies, **kwargs) as resp:
-
-                # get content
-                content = resp.text
+        # extract content from url
+        content = self._request("GET", url, decoder='text', **kwargs)
             
-        # get session id
+        # get session id from content
         pattern = '"api_session_id":([0-9]{6,7})'
         session_id = re.search(pattern, content)
 
-        return session_id.group(1)            
+        return session_id.group(1)  
+
+    def delete(self, url: str, decoder: str = 'text', **kwargs):
+        """delete request to api"""
+        url = self.__make_url(url)
+        return self._request("DELETE", url, decoder=decoder, **kwargs)
+
+    def get(self, url: str, decoder: str = 'json', **kwargs):
+        """get request to api"""
+        url = self.__make_url(url)
+        return self._request("GET", url, decoder=decoder, **kwargs)
+            
+    def post(self, url: str, decoder: str = 'json', **kwargs):
+        """post request to api"""
+        url = self.__make_url(url)
+        return self._request("POST", url, decoder=decoder, **kwargs)
+
+    def put(self, url: str, decoder: str = 'json', **kwargs):
+        """put request to api"""
+        url = self.__make_url(url)
+        return self._request("PUT", url, decoder=decoder, **kwargs)
 
     def upload_series(self, url, series, name=None, **kwargs):
         """upload series object"""
