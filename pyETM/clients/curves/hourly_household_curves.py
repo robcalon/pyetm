@@ -22,7 +22,7 @@ class HourlyHouseholdCurves:
         post = f'/scenarios/{self.scenario_id}/curves/household_heat'
         
         # request response and convert to frame
-        resp = self.get(post, decoder="bytes", headers=headers)
+        resp = self.get(post, decoder="BytesIO", headers=headers)
         curves = pd.read_csv(resp)
         
         # set corresponsing parameter property

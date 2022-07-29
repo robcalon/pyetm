@@ -1,10 +1,9 @@
+from __future__ import annotations
+
 import logging
 import pandas as pd
 
-from pandas import DataFrame, Series, Index
-from typing import Optional, Iterable
-
-from pyrsistent import s
+from collections.abc import Iterable
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +11,7 @@ logger = logging.getLogger(__name__)
 class Curves:
         
     @property
-    def custom_curves(self) -> DataFrame:
+    def custom_curves(self) -> pd.DataFrame:
         """fetch custom curves"""
         
         # get custom curves
@@ -22,7 +21,7 @@ class Curves:
         return self._ccurves
         
     @custom_curves.setter
-    def custom_curves(self, ccurves: DataFrame) -> None:
+    def custom_curves(self, ccurves: pd.DataFrame) -> None:
         """set custom curves without option to set a name"""
 
         # check for old custom curves
@@ -33,7 +32,7 @@ class Curves:
             self.delete_custom_curves()
         
         # set single custom curve
-        if isinstance(ccurves, Series):
+        if isinstance(ccurves, pd.Series):
 
             if ccurves.name is not None:
                 self.upload_custom_curve(ccurves, ccurves.name)
@@ -41,7 +40,7 @@ class Curves:
             else:
                 raise KeyError("passed custom curve has no name")
 
-        elif isinstance(ccurves, DataFrame):
+        elif isinstance(ccurves, pd.DataFrame):
             self.upload_custom_curves(ccurves)
 
         else:
@@ -60,7 +59,7 @@ class Curves:
         # make request
         self.delete(url, headers=headers)
         
-    def _format_datetime(self, ccurves: DataFrame) -> DataFrame:
+    def _format_datetime(self, ccurves: pd.DataFrame) -> pd.DataFrame:
         """format datetime"""
         
         # format datetime
@@ -73,7 +72,7 @@ class Curves:
 
         return ccurves  
     
-    def __get_ccurve(self, key: str) -> Series:
+    def __get_ccurve(self, key: str) -> pd.Series:
         """get custom curve"""
                 
         # validate key
@@ -89,15 +88,15 @@ class Curves:
         
         return curve
         
-    def __upload_ccurve(self, curve: Series, key: Optional[str] = None, 
-            name: Optional[str] = None) -> None:
+    def __upload_ccurve(self, curve: pd.Series, key: str | None = None, 
+            name: str | None = None) -> None:
         """upload without raising or resetting"""
         
         # resolve None
         if key is None:
             
             # check series object
-            if isinstance(curve, Series):
+            if isinstance(curve, pd.Series):
                 
                 # use series name
                 if curve.name is not None:
@@ -120,16 +119,16 @@ class Curves:
         # make request
         self.upload_series(url, curve, name=name, headers=headers)
         
-    def _check_ccurve(self, curve: Series, key: str) -> Series:
+    def _check_ccurve(self, curve: pd.Series, key: str) -> pd.Series:
         """check if a ccurve is compatible"""
           
         # subset columns from frame
-        if isinstance(curve, DataFrame):
+        if isinstance(curve, pd.DataFrame):
             curve = curve[key]
             
         # assume list-like
-        if not isinstance(curve, Series):
-            curve = Series(curve, name=key)
+        if not isinstance(curve, pd.Series):
+            curve = pd.Series(curve, name=key)
         
         # check length
         if not len(curve) == 8760:
@@ -171,7 +170,7 @@ class Curves:
             logger.warning(msg)
         
     def delete_custom_curves(self, 
-            keys: Optional[Iterable[str]] = None) -> None:
+            keys: Iterable[str] | None = None) -> None:
         """delete all custom curves"""
         
         # raise without scenario id
@@ -182,8 +181,8 @@ class Curves:
             keys = []
 
         # convert iterable
-        if not isinstance(keys, Index):
-            keys = Index(keys)
+        if not isinstance(keys, pd.Index):
+            keys = pd.Index(keys)
 
         # get keys that need deleting
         attached = self.get_custom_curve_keys()
@@ -218,7 +217,7 @@ class Curves:
         return self.custom_curves[key]
         
     def get_custom_curves(self, 
-            keys: Optional[Iterable[str]] = None) -> DataFrame:
+            keys: Iterable[str] | None = None) -> pd.DataFrame:
         """return all attached curstom curves"""
         
         # raise without scenario id
@@ -229,8 +228,8 @@ class Curves:
             keys = []
 
         # convert iterable
-        if not isinstance(keys, Index):
-            keys = Index(keys)
+        if not isinstance(keys, pd.Index):
+            keys = pd.Index(keys)
             
         # get keys that need deleting
         attached = self.get_custom_curve_keys()
@@ -253,15 +252,15 @@ class Curves:
         else:
             
             # empty dataframe
-            ccurves = DataFrame()
+            ccurves = pd.DataFrame()
         
         # assign ccurves
         self._ccurves = ccurves
         
         return ccurves[keys]
              
-    def upload_custom_curve(self, curve: Series, key: Optional[str] = None, 
-            name: Optional[str] = None) -> None:
+    def upload_custom_curve(self, curve: pd.Series, key: str | None = None, 
+            name: str | None = None) -> None:
         """upload custom curve"""
                 
         # raise without scenario id
@@ -273,8 +272,8 @@ class Curves:
         # reset session
         self._reset_session()
     
-    def upload_custom_curves(self, ccurves: DataFrame, 
-            names: Optional[list[str]] = None) -> None:
+    def upload_custom_curves(self, ccurves: pd.DataFrame, 
+            names: list[str] | None = None) -> None:
         """upload multiple ccurves at once"""
                 
         # raise without scenario id

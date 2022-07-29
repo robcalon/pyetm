@@ -1,4 +1,4 @@
-import pandas
+import pandas as pd
 
 class EnergyFlows:
     
@@ -22,8 +22,8 @@ class EnergyFlows:
         url = f'/scenarios/{self.scenario_id}/energy_flow'
         
         # request response and convert to df
-        resp = self.get(url, decoder="bytes", headers=headers, **kwargs)
-        flows = pandas.read_csv(resp, index_col='key')
+        resp = self.get(url, decoder="BytesIO", headers=headers, **kwargs)
+        flows = pd.read_csv(resp, index_col='key')
         
         # set corresponsing parameter property
         self._energy_flows = flows

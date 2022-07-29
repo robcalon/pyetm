@@ -1,6 +1,5 @@
 import logging
-
-from pandas import DataFrame, Series, Index
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -8,7 +7,7 @@ logger = logging.getLogger(__name__)
 class Properties:
     
     def __overview(self, include_unattached: bool = False, 
-            include_internal: bool = False) -> DataFrame:
+            include_internal: bool = False) -> pd.DataFrame:
         """fetch custom curve descriptives"""
         
         # raise without scenario id
@@ -37,7 +36,7 @@ class Properties:
         if bool(resp) == True:
 
             # convert response to frame
-            ccurves = DataFrame.from_records(resp, index="key")
+            ccurves = pd.DataFrame.from_records(resp, index="key")
 
             # format datetime column
             if "date" in ccurves.columns:
@@ -46,22 +45,22 @@ class Properties:
         else:
 
             # return empty frame
-            ccurves = DataFrame()
+            ccurves = pd.DataFrame()
 
         return ccurves
             
     def get_custom_curve_keys(self, include_unattached: bool = False, 
-            include_internal: bool = False) -> Index:
+            include_internal: bool = False) -> pd.Index:
         """get all custom curve keys"""
         
         # subset keys
         params = include_unattached, include_internal
         keys = self.__overview(*params).copy()
 
-        return Index(keys.index, name='ccurve_keys')
+        return pd.Index(keys.index, name='ccurve_keys')
         
     def get_custom_curve_settings(self, include_unattached: bool = False, 
-            include_internal: bool = False) -> DataFrame:
+            include_internal: bool = False) -> pd.DataFrame:
         """show overview of custom curve settings"""
         
         """
@@ -77,7 +76,7 @@ class Properties:
 
         # empty frame without returned keys
         if keys.empty:
-            return DataFrame()
+            return pd.DataFrame()
         
         # reformat overrides
         ccurves = self.__overview(*params).copy()
@@ -96,7 +95,7 @@ class Properties:
     
     def get_custom_curve_user_value_overrides(self, 
             include_unattached: bool = False, 
-            include_internal: bool = False) -> DataFrame:
+            include_internal: bool = False) -> pd.DataFrame:
         """get overrides of user value keys by custom curves"""
         
         # subset and explode overrides

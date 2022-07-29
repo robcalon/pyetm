@@ -1,0 +1,2 @@
+class UnprossesableEntityError(Exception):
+    pass

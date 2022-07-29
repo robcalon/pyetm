@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from pyETM.clients.httplibrary import requests
+
 from .curves import Curves
 from .httplibrary import RequestsCore, AIOHTTPCore
 from .parameters import Parameters
@@ -8,6 +12,37 @@ from .interpolate import Interpolate
 from .scenario import Scenario
 from .merit import MeritConfiguration
 from .utils import Utils
+
+import ssl
+import logging
+import requests
+import asyncio
+import threading
+
+from yarl import URL
+from collections.abc import Mapping
+from typing import TYPE_CHECKING
+
+from pyETM.optional import import_optional_dependency
+
+logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    import aiohttp
+
+"""create a thread in which a dedicated loop 
+can run as an alternative to nesting, as this
+causes issues. This implementation is adapted
+from https://stackoverflow.com/a/69514930"""
+
+def _start_loop(loop):
+    asyncio.set_event_loop(loop)
+    loop.run_forever()
+
+# create thread in which a new loop can run
+_LOOP = asyncio.new_event_loop()
+_LOOP_THREAD = threading.Thread(target=_start_loop, 
+        args=[_LOOP], daemon=True)
 
 
 class BaseClient(Curves, Header, Parameters, Scenario, MeritConfiguration,
@@ -72,13 +107,7 @@ class BaseClient(Curves, Header, Parameters, Scenario, MeritConfiguration,
     
     def __str__(self):
         return f'BaseClient({self.scenario_id})'
-    
-    def __enter__(self):
-        return self
-    
-    def __exit__(self, *args, **kwargs):
-        return None
-    
+        
     def _reset_session(self):
         """reset stored scenario properties"""
                 
@@ -106,8 +135,10 @@ class BaseClient(Curves, Header, Parameters, Scenario, MeritConfiguration,
 
 class Client(BaseClient, RequestsCore):
         
-    def __init__(self, scenario_id=None, beta_engine=False,
-                 reset=False, **kwargs):
+    def __init__(self, scenario_id: int = None, beta_engine: bool = False,
+            reset: bool = False, proxies: dict | None = None, 
+            stream: bool = False, verify: bool | str = True, 
+            cert: str | tuple | None = None):
         """Client which connects to ETM
         
         Parameters
@@ -119,9 +150,23 @@ class Client(BaseClient, RequestsCore):
             Connect to the beta-engine instead of the production-engine.
         reset : bool, default False
             Reset scenario on initalization.
-        proxies : str, default auto
-            Proxy addresses to pass to the requests client. When set to 'auto',
-            environment variables are searched to detect HTTP(S)_PROXY.
+        proxies: dict, default None
+            Dictionary mapping protocol or protocol and 
+            hostname to the URL of the proxy.
+        stream: boolean, default False 
+            Whether to immediately download the response content.
+        verify: boolean or string, default True
+            Either a boolean, in which case it controls whether we verify
+            the server's TLS certificate, or a string, in which case it must 
+            be a path to a CA bundle to use. When set to False, requests will 
+            accept any TLS certificate presented by the server, and will ignore 
+            hostname mismatches and/or expired certificates, which will make 
+            your application vulnerable to man-in-the-middle (MitM) attacks. 
+            Setting verify to False may be useful during local development or 
+            testing.
+        cert: string or tuple, default None 
+            If string; path to ssl client cert file (.pem). 
+            If tuple; ('cert', 'key') pair.
 
         Returns
         -------
@@ -131,8 +176,13 @@ class Client(BaseClient, RequestsCore):
         
         super().__init__()
 
-        # create session
-        self._create_session(**kwargs)
+        # set environment kwargs for method requests
+        self._request_env = {
+            "proxies": proxies, "stream": stream,
+            "verify": verify, "cert": cert}
+
+        # set session
+        self._session = requests.Session()
 
         # set class parameters
         self.beta_engine = beta_engine
@@ -147,6 +197,8 @@ class Client(BaseClient, RequestsCore):
                 
         # reset session?
         self._reset_session()
+
+        logger.info("initialised: '%s'", self)
 
     def __repr__(self):
         return f"Client({self.scenario_id})"
@@ -154,11 +206,30 @@ class Client(BaseClient, RequestsCore):
     def __str__(self):
         return repr(self)
 
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, *args, **kwargs):
+        return None
+
 
 class AsyncClient(BaseClient, AIOHTTPCore):
-        
-    def __init__(self, scenario_id=None, beta_engine=False, queue=None,
-                 reset=False, ipython='auto', proxy='auto'):
+    
+    @property
+    def _loop(self):
+        return _LOOP
+
+    @property
+    def _loop_thread(self):
+        return _LOOP_THREAD
+
+    def __init__(self, scenario_id: int | None = None, 
+            beta_engine: bool = False, 
+            reset: bool = False, proxy: str | URL | None = None, 
+            proxy_auth: aiohttp.BasicAuth | None = None, 
+            ssl: ssl.SSLContext | bool | aiohttp.Fingerprint | None = None, 
+            proxy_headers: Mapping | None = None, 
+            trust_env: bool = False):
         """Client which connects to ETM
         
         Parameters
@@ -168,32 +239,51 @@ class AsyncClient(BaseClient, AIOHTTPCore):
             a limited number of methods when scenario_id is set to None.
         beta_engine : bool, default False
             Connect to the beta-engine instead of the production-engine.
-        queue : queue
-            Queue for mutliprocessing applications. (not implemented yet)
         reset : bool, default False
             Reset scenario on initalization.
-        ipython : bool, default 'auto'
-            Set to True When the client is called in an IPython environment 
-            to nest the asyncio event loop. When set to 'auto', tries to
-            detect if ipython is running in client.
-        proxy : str, default auto
-            Proxy address to pass to the aiohttp client. When set to 'auto',
-            environment variables are searched to detect HTTP_PROXY.
-            
+        proxy: str or URL, default None
+            Proxy URL
+        proxy_auth : aiohttp.BasicAuth, default None
+            An object that represents proxy HTTP Basic authorization.
+        ssl: None, False, aiohttp.Fingerprint or ssl.SSLContext, default None
+            SSL validation mode. None for default SSL check 
+            (ssl.create_default context() is used), False for skip 
+            SSL certificate validation, aiohttp.Fingerprint for fingerprint 
+            validation, ssl.SSLContext for custom SSL certificate validation. 
+        proxy_headers: Mapping, default None
+            HTTP headers to send to the proxy if the parameter proxy has 
+            been provided.
+        trust_env : bool, default False
+            Should get proxies information from HTTP_PROXY / HTTPS_PROXY 
+            environment variables or ~/.netrc file if present.
+
         Returns
         -------
         self :  Client
             Object that connects to ETM API.
         """
-                
-        super().__init__()
-            
-        # set proxy server
-        self.proxy = proxy
         
+        # super class
+        super().__init__()
+
+        # set environment kwargs for session construction
+        self._session_env = {
+            "trust_env": trust_env}
+
+        # set environment kwargs for method requests
+        self._request_env = {
+            "proxy": proxy, "proxy_auth": proxy_auth,
+            "ssl": ssl, "proxy_headers": proxy_headers}
+
+        # start loop thread if not already running
+        if not self._loop_thread.is_alive():
+            self._loop_thread.start()
+
+        # set session
+        self._session = None
+
         # set class parameters
         self.beta_engine = beta_engine
-        self._ipython = ipython
         self.scenario_id = scenario_id
         
         # set default gqueries
@@ -206,8 +296,44 @@ class AsyncClient(BaseClient, AIOHTTPCore):
         # reset session?
         self._reset_session()
 
+        logger.info("initialised: '%s'", self)
+
     def __repr__(self):
         return f'AsyncClient({self.scenario_id})'
 
     def __str__(self):
         return repr(self)
+
+    def __enter__(self) -> AIOHTTPCore:
+        """enter context manager"""
+
+        # specify coroutine and get future
+        coro = self._start_session()
+        asyncio.run_coroutine_threadsafe(coro, self._loop).result()
+        
+        logger.debug('session_created by context manager')
+
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        """exit context manager"""
+
+        # specify coroutine and get future
+        coro = self._close_session()
+        asyncio.run_coroutine_threadsafe(coro, self._loop).result()
+        
+        logger.debug('session destroyed by context manager')
+
+    async def __aenter__(self) -> AIOHTTPCore:
+        """enter async context manager"""
+        
+        # start up session
+        await self._start_session()
+        logger.debug('session created by async context manager')
+
+        return self
+
+    async def __aexit__(self, *args, **kwargs) -> None:
+        """exit async context manager"""
+        await self._close_session()
+        logger.debug('session destroyed by async context manager')
