@@ -1,4 +1,4 @@
-import pandas
+import pandas as pd
 
 class ApplicationDemands:
     
@@ -22,8 +22,8 @@ class ApplicationDemands:
         url = f'/scenarios/{self.scenario_id}/application_demands'
         
         # request response and convert to df
-        resp = self.get(url, decoder="bytes", headers=headers, **kwargs)
-        demands = pandas.read_csv(resp, index_col='key')
+        resp = self.get(url, decoder="BytesIO", headers=headers, **kwargs)
+        demands = pd.read_csv(resp, index_col='key')
         
         # set corresponsing parameter property
         self._application_demands = demands

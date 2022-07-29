@@ -1,27 +1,32 @@
-import os
+from __future__ import annotations
+
 import io
 import re
-import sys
+import json
 import logging
 import asyncio
-import aiohttp
-import nest_asyncio
+
+import pandas as pd
+
+from typing import TYPE_CHECKING
+
+from pyETM.types import Decoder, Method
+from pyETM.exceptions import UnprossesableEntityError
+from pyETM.optional import import_optional_dependency
+
+if TYPE_CHECKING:
+    import aiohttp
 
 logger = logging.getLogger(__name__)
-
-
-class UnprossesableEntityError(Exception):
-    pass
-
 
 class AIOHTTPCore:
     
     @property
-    def beta_engine(self):
+    def beta_engine(self) -> bool:
         return self.__beta_engine
         
     @beta_engine.setter
-    def beta_engine(self, boolean):
+    def beta_engine(self, boolean: bool) -> None:
 
         # check instance
         if not isinstance(boolean, bool):
@@ -32,67 +37,9 @@ class AIOHTTPCore:
         
         # reset session
         self._reset_session()
-    
+
     @property
-    def proxy(self):
-        return self.__proxy
-    
-    @proxy.setter
-    def proxy(self, proxy):
-        
-        # detect proxy
-        if proxy == "auto":
-            proxy = os.environ.get("HTTP_PROXY", None)
-        
-        # empty proxy
-        if proxy == "":
-            proxy = None
-        
-        # set proxy
-        self.__proxy = proxy
-        
-    @property
-    def _ipython(self):
-        return self.__ipython
-    
-    @_ipython.setter
-    def _ipython(self, boolean):
-        
-        # detect ipython usage
-        if boolean == "auto":
-            boolean = "ipykernel" in sys.modules
-        
-        # typecheck boolean
-        if not isinstance(boolean, bool):
-            raise TypeError("'ipython' must be of type boolean")
-        
-        # set boolean
-        self.__ipython = boolean
-        
-        # apply context
-        self.__apply_context()
-    
-    def __apply_context(self):
-        """apply context specific settings"""
-        
-        if self._ipython:
-            
-            # nest asyncio
-            nest_asyncio.apply()
-            
-        try:
-            
-            # check for available loop
-            loop = asyncio.get_event_loop()
-                
-        except RuntimeError:
-            
-            # create new event loop
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-    @property
-    def base_url(self):
+    def base_url(self) -> str:
         """"base url for carbon transition model"""
         
         # return beta engine url
@@ -101,141 +48,174 @@ class AIOHTTPCore:
         
         # return production engine url
         return "https://engine.energytransitionmodel.com/api/v3"
-        
-    def __make_url(self, url):
+
+    def __make_url(self, url: str) -> str:
         """join url with base url"""
         return self.base_url + url
-                
-    async def __handle_response(self, response, decoder=None):
-        """handle API response"""
-        
-        # check response
-        if not (response.status <= 400):
-                                    
-            # get debug message
-            if response.status == 422:
-                
-                try:
-                    # decode error message(s)
-                    errors = await response.json()
-                    errors = errors.get("errors")
-                    
-                except:
-                    # no message returned
-                    errors = None
-                    
-                # trigger special raise
-                if errors:
-                    
-                    # create error report
-                    base = "ETEngine returned the following error message(s):"
-                    msg = """%s\n > {}""".format("\n > ".join(errors)) %base
 
-                    raise UnprossesableEntityError(msg)
-                                                        
-            # raise status error
-            response.raise_for_status()
+    async def _start_session(self):
+        """start up session"""
+        
+        if TYPE_CHECKING:
+            # import aiohttp
+            import aiohttp
+
+        else:
+            # optional module import
+            aiohttp = import_optional_dependency('aiohttp')
+
+        self._session = aiohttp.ClientSession(**self._session_env)
+
+    async def _close_session(self):
+        """clean up session"""
+
+        # close and remove session
+        await self._session.close()
+        self._session = None        
+        
+    async def _async_request(self, method: Method, url: str, 
+            decoder: Decoder = 'bytes', **kwargs):
+        """make request to api session"""
+
+        if TYPE_CHECKING:
+            # import aiohttp
+            import aiohttp
+
+        else:
+            # optional module import
+            aiohttp = import_optional_dependency('aiohttp')
+
+        retries = 5
+        while retries:
+
+            try:
+
+                # merge kwargs with session envioronment kwargs
+                kwargs = {**self._request_env, **kwargs}
+                context = bool(self._session)
+
+                # create context
+                if not context:
+                    await self._start_session()
+                    logger.debug('single use session created')
+
+                # make method request
+                request = getattr(self._session, method)
+                async with request(url, **kwargs) as resp:
+
+                    # check response
+                    if not (resp.status <= 400):
+                                                
+                        # report error messages
+                        if resp.status == 422:
+                            self.__error_report(resp)
                         
-        if decoder == "json":
-            return await response.json(encoding="utf-8")
-        
-        if decoder == "text":
-            return await response.text(encoding="utf-8")
-        
-        if decoder == "bytes":
-            return await io.BytesIO(response.read())
+                        # raise for status
+                        resp.raise_for_status()
 
-        return await response    
-                            
-    async def __post(self, url, decoder=None, **kwargs):
-        """make post request"""
-        
-        # make target url
-        url = self.__make_url(url)
-        
-        # post request
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url=url, **kwargs) as resp:
-                return await self.__handle_response(resp, decoder=decoder)
+                    # bytes decoding
+                    if decoder == "bytes":
+                        resp = await resp.read()
+
+                    # bytes as BytesIO
+                    elif decoder == "BytesIO":
+                        byts = await resp.read()
+                        resp = io.BytesIO(byts)
+
+                    # json decoding
+                    elif decoder == "json":
+                        resp = await resp.json(encoding="utf-8")
+                    
+                    # text decoding
+                    elif decoder == "text":
+                        resp = await resp.text(encoding="utf-8")
+
+                    else:
+                        msg = "decoding method '%s' not implemented" %method
+                        raise NotImplementedError(msg)
+
+            # except connectionerrors and retry
+            except aiohttp.ClientConnectorError as error:
+                retries -= 1
+
+            finally:
+                
+                # close non contextual session
+                if not context:
+                    await self._close_session()
+                    logger.debug('single use session destroyed')
+
+            # raise error after retries
+            if not retries:
+                raise error
+
+            logger.debug("processed '%s' request with '%s' decoder", 
+                    method, decoder)
+
+            # return decoded response
+            return resp
+
+    async def __error_report(self, resp: aiohttp.ClientResponse) -> None:
+        """create error report when api returns error messages."""
+
+        try:
+
+            # attempt decode error message(s)
+            msg = await resp.json(encoding="utf-8")
+            errors = msg.get("errors")
             
-    def post(self, url, decoder="json", **kwargs):
-        """make post request"""
-        return asyncio.run(self.__post(url, decoder, proxy=self.proxy, 
-                                       **kwargs))
-    
-    async def __put(self, url, decoder=None, **kwargs):
-        """make put request"""
-        
-        # make target url
-        url = self.__make_url(url)
-        
-        # put request
-        async with aiohttp.ClientSession() as session:
-            async with session.put(url=url, **kwargs) as resp:
-                return await self.__handle_response(resp, decoder=decoder)
+        except json.decoder.JSONDecodeError:
+            
+            # no message returned
+            errors = None
+            
+        # trigger special raise
+        if errors:
+            
+            # create error report
+            base = "ETEngine returned the following error(s):"
+            msg = """%s\n > {}""".format("\n > ".join(errors)) %base
 
-    def put(self, url, decoder="json", **kwargs):
+            raise UnprossesableEntityError(msg)
+                                                            
+    def _request(self, method: Method, url: str, 
+            decoder: Decoder = "bytes", **kwargs):
+        """request and handle api response"""
+
+        # specify coroutine and get future
+        coro = self._async_request(method, url, decoder, **kwargs)
+        future = asyncio.run_coroutine_threadsafe(coro, self._loop)
+
+        return future.result()
+            
+    def delete(self, url: str, decoder: Decoder = "text", **kwargs):
+        """delete request to api"""
+        return self._request("delete", self.__make_url(url), decoder, **kwargs)
+
+    def get(self, url: str, decoder: Decoder = "json", **kwargs):
+        """make get request"""
+        return self._request("get", self.__make_url(url), decoder, **kwargs)
+
+    def post(self, url: str, decoder: Decoder = "json", **kwargs):
+        """make post request"""
+        return self._request("post", self.__make_url(url), decoder, **kwargs)
+
+    def put(self, url: str, decoder: Decoder = "json", **kwargs):
         """make put reqiest"""
-        return asyncio.run(self.__put(url, decoder, proxy=self.proxy, **kwargs))
-            
-    async def __get(self, url, decoder=None, **kwargs):
-        """make get request"""
-        
-        # make target url
-        url = self.__make_url(url)
-
-        # get request
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, **kwargs) as resp:
-                return await self.__handle_response(resp, decoder=decoder)
-            
-    def get(self, url,  decoder="json",**kwargs):
-        """make get request"""
-        return asyncio.run(self.__get(url, decoder, proxy=self.proxy, **kwargs))
-            
-    async def __delete(self, url, decoder=None, **kwargs):
-        """make delete request"""
-        
-        # make target url
-        url = self.__make_url(url)
-
-        # delete request
-        async with aiohttp.ClientSession() as session:
-            async with session.delete(url, **kwargs) as resp:
-                return await self.__handle_response(resp, decoder=decoder)
-            
-    def delete(self, url, decoder="text", **kwargs):
-        """make delete request"""
-        return asyncio.run(self.__delete(decoder, proxy=self.proxy, **kwargs))
-    
-    async def __get_session_id(self, scenario_id, **kwargs):
-        """get a session_id for a pro-environment scenario"""
-
-        # get address
-        host = "https://pro.energytransitionmodel.com"
-        url = f"{host}/saved_scenarios/{scenario_id}/load"
-
-        # get request
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url=url, **kwargs) as resp:
-
-                # await content
-                content = await resp.text()
-
-        # get session id
-        pattern = '"api_session_id":([0-9]{6,7})'
-        session_id = re.search(pattern, content)
-
-        return session_id.group(1)
-
-    def _get_session_id(self, scenario_id, **kwargs):
-        """get a session_id for a pro-environment scenario"""
-        return asyncio.run(self.__get_session_id(scenario_id, proxy=self.proxy, 
-                                                 **kwargs))
-    
-    def upload_series(self, url, series, name=None, **kwargs):
+        return self._request("put", self.__make_url(url), decoder, **kwargs)
+                
+    def upload_series(self, url: str, series: pd.Series, 
+            name: str | None = None, **kwargs):
         """upload series object"""
         
+        if TYPE_CHECKING:
+            # import aiohttp
+            import aiohttp
+
+        else:
+            # optional module import
+            aiohttp = import_optional_dependency('aiohttp')
+
         # set key as name
         if name is None:
             name = "not specified"
@@ -248,3 +228,18 @@ class AIOHTTPCore:
         form.add_field("file", data, filename=name)
 
         return self.put(url, data=form, **kwargs)
+
+    def _get_session_id(self, scenario_id: int, **kwargs) -> int:
+
+        # make pro url
+        host = "https://pro.energytransitionmodel.com"
+        url = f"{host}/saved_scenarios/{scenario_id}/load"
+
+        # extract content from url
+        content = self._request("get", url, decoder='text', **kwargs)
+            
+        # get session id from content
+        pattern = '"api_session_id":([0-9]{6,7})'
+        session_id = re.search(pattern, content)
+
+        return int(session_id.group(1))

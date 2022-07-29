@@ -1,4 +1,4 @@
-import pandas
+import pandas as pd
 
 class ProductionParameters:
     
@@ -17,8 +17,8 @@ class ProductionParameters:
         url = f'/scenarios/{self.scenario_id}/production_parameters'
         
         # request response and convert to df
-        resp = self.get(url, decoder="bytes", headers=headers, **kwargs)
-        parameters = pandas.read_csv(resp)
+        resp = self.get(url, decoder="BytesIO", headers=headers, **kwargs)
+        parameters = pd.read_csv(resp)
         
         # set corresponsing parameter property
         self._production_parameters = parameters
