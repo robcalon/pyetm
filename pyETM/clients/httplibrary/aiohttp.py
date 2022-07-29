@@ -134,9 +134,18 @@ class AIOHTTPCore:
                         msg = "decoding method '%s' not implemented" %method
                         raise NotImplementedError(msg)
 
+                    logger.debug("processed '%s' request with '%s' decoder", 
+                            method, decoder)
+
+                    return resp
+
             # except connectionerrors and retry
             except aiohttp.ClientConnectorError as error:
                 retries -= 1
+
+                # raise after retries
+                if not retries:
+                    raise error
 
             finally:
                 
@@ -144,16 +153,6 @@ class AIOHTTPCore:
                 if not context:
                     await self._close_session()
                     logger.debug('single use session destroyed')
-
-            # raise error after retries
-            if not retries:
-                raise error
-
-            logger.debug("processed '%s' request with '%s' decoder", 
-                    method, decoder)
-
-            # return decoded response
-            return resp
 
     async def __error_report(self, resp: aiohttp.ClientResponse) -> None:
         """create error report when api returns error messages."""

@@ -20,11 +20,11 @@ file_handler = logging.FileHandler(file, mode='w+')
 file_handler.setFormatter(formatter)
 file_handler.setLevel(logging.INFO)
 
-# create stream handler
-stream_handler = logging.StreamHandler()
-stream_handler.setFormatter(formatter)
-stream_handler.setLevel(logging.WARNING)
+# # create stream handler
+# stream_handler = logging.StreamHandler()
+# stream_handler.setFormatter(formatter)
+# stream_handler.setLevel(logging.WARNING)
 
 # add handlers
 modulelogger.addHandler(file_handler)
-modulelogger.addHandler(stream_handler)
+# modulelogger.addHandler(stream_handler)
