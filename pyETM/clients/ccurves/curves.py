@@ -83,7 +83,7 @@ class Curves:
         url = f'/scenarios/{self.scenario_id}/custom_curves/{key}'
         
         # request response and convert to series 
-        resp = self.get(url, headers=headers, decoder='bytes')
+        resp = self.get(url, headers=headers, decoder='BytesIO')
         curve = pd.read_csv(resp, header=None, names=[key]).squeeze('columns')
         
         return curve
