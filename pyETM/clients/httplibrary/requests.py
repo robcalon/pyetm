@@ -101,7 +101,9 @@ class RequestsCore:
             except requests.exceptions.ConnectionError as error:
                 retries -= 1
                 
-            raise error
+                # raise after retries
+                if not retries:
+                    raise error
 
     def __error_report(self, resp: requests.Response) -> None:
         """create error report when api returns error messages."""
