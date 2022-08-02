@@ -8,7 +8,7 @@ with open('README.md', 'rb') as file:
     
 setup(
     name='pyETM',
-    version='0.6.2',    
+    version='0.6.3',    
     description='Python-ETM Connector',
     long_description=README,
     long_description_content_type='text/markdown',
