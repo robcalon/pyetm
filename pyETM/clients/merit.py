@@ -110,10 +110,6 @@ class MeritConfiguration:
         # get all dispatchable units
         units = self.get_participants(subset='dispatchable')
 
-        # remove interconnectors
-        pattern = "energy_interconnector_\d{1,2}_imported_electricity"
-        units = units[~units.index.str.match(pattern)]
-
         # cap related keys
         k1 = 'availability'
         k2 = 'number_of_units'
