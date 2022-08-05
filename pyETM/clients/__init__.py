@@ -7,7 +7,6 @@ import threading
 
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
-from pyETM.clients.httplibrary import requests
 
 from .curves import Curves
 from .httplibrary import RequestsCore, AIOHTTPCore
