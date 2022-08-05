@@ -8,7 +8,7 @@ with open('README.md', 'rb') as file:
     
 setup(
     name='pyETM',
-    version='0.6.3',    
+    version='0.6.4',    
     description='Python-ETM Connector',
     long_description=README,
     long_description_content_type='text/markdown',
@@ -17,7 +17,7 @@ setup(
     author_email='robcalon@protonmail.com',
     license='EUPL-1.2',
     python_requires='>=3.7',
-    install_requires=["numpy>=0.11", "pandas>=0.24"],
+    install_requires=["pandas>=1.3.3", "typing_extensions>=4.3.0"],
     extras_require={"async": ["aiohttp>=3.8.1"]},
     packages=find_packages(),
     include_package_data=True,

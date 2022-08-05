@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from pyETM.clients.httplibrary import requests
+import logging
+import requests
+import asyncio
+import threading
+
+from collections.abc import Mapping
+from typing import TYPE_CHECKING
 
 from .curves import Curves
 from .httplibrary import RequestsCore, AIOHTTPCore
@@ -13,22 +19,14 @@ from .scenario import Scenario
 from .merit import MeritConfiguration
 from .utils import Utils
 
-import ssl
-import logging
-import requests
-import asyncio
-import threading
+if TYPE_CHECKING:
 
-from yarl import URL
-from collections.abc import Mapping
-from typing import TYPE_CHECKING
+    import ssl
+    import aiohttp
 
-from pyETM.optional import import_optional_dependency
+    from yarl import URL
 
 logger = logging.getLogger(__name__)
-
-if TYPE_CHECKING:
-    import aiohttp
 
 """create a thread in which a dedicated loop 
 can run as an alternative to nesting, as this
