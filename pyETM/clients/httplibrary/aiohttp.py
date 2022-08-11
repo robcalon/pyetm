@@ -4,9 +4,9 @@ import io
 import json
 import logging
 import asyncio
-
 import pandas as pd
 
+from urllib.parse import urljoin
 from typing import TYPE_CHECKING
 
 from pyETM.types import Decoder, Method
@@ -20,6 +20,9 @@ logger = logging.getLogger(__name__)
 
 class AIOHTTPCore:
     
+    def _make_url(self, url: str | None = None):
+        return urljoin(self.base_url, url)
+
     async def _start_session(self):
         """start up session"""
         
@@ -154,23 +157,24 @@ class AIOHTTPCore:
 
         return future.result()
             
-    def delete(self, url: str, decoder: Decoder = "text", **kwargs):
-        """delete request to api"""
+    def delete(self, url: str | None = None, 
+            decoder: Decoder = 'text', **kwargs):
         return self._request("delete", self._make_url(url), decoder, **kwargs)
 
-    def get(self, url: str, decoder: Decoder = "json", **kwargs):
-        """make get request"""
+    def get(self, url: str | None = None, 
+            decoder: Decoder = 'json', **kwargs):
         return self._request("get", self._make_url(url), decoder, **kwargs)
-
-    def post(self, url: str, decoder: Decoder = "json", **kwargs):
-        """make post request"""
+            
+    def post(self, url: str | None = None, 
+            decoder: Decoder = 'json', **kwargs):
         return self._request("post", self._make_url(url), decoder, **kwargs)
 
-    def put(self, url: str, decoder: Decoder = "json", **kwargs):
-        """make put reqiest"""
+    def put(self, url: str | None = None, 
+            decoder: Decoder = 'json', **kwargs):
         return self._request("put", self._make_url(url), decoder, **kwargs)
-                
-    def upload_series(self, url: str, series: pd.Series, 
+
+    def upload_series(self, url: str | None = None, 
+            series: pd.Series | None = None, 
             name: str | None = None, **kwargs):
         """upload series object"""
         
@@ -182,10 +186,14 @@ class AIOHTTPCore:
             # optional module import
             aiohttp = import_optional_dependency('aiohttp')
 
+        # default to empty series
+        if series is None:
+            series = pd.Series()
+
         # set key as name
         if name is None:
             name = "not specified"
-        
+
         # convert values to string
         data = series.to_string(index=False)
         

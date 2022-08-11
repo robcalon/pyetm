@@ -7,6 +7,7 @@ import requests
 
 import pandas as pd
 
+from urllib.parse import urljoin
 from pyETM.exceptions import UnprossesableEntityError
 from pyETM.types import Decoder, Method
 
@@ -14,6 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 class RequestsCore:
+
+    def _make_url(self, url: str | None = None):
+        return urljoin(self.base_url, url)
 
     def _request(self, method: Method, url: str, 
             decoder: Decoder = 'bytes', **kwargs):
@@ -98,22 +102,31 @@ class RequestsCore:
 
             raise UnprossesableEntityError(msg)
 
-    def delete(self, url: str, decoder: Decoder = 'text', **kwargs):
+    def delete(self, url: str | None = None, 
+            decoder: Decoder = 'text', **kwargs):
         return self._request("delete", self._make_url(url), decoder, **kwargs)
 
-    def get(self, url: str, decoder: Decoder = 'json', **kwargs):
+    def get(self, url: str | None = None, 
+            decoder: Decoder = 'json', **kwargs):
         return self._request("get", self._make_url(url), decoder, **kwargs)
             
-    def post(self, url: str, decoder: Decoder = 'json', **kwargs):
+    def post(self, url: str | None = None, 
+            decoder: Decoder = 'json', **kwargs):
         return self._request("post", self._make_url(url), decoder, **kwargs)
 
-    def put(self, url: str, decoder: Decoder = 'json', **kwargs):
+    def put(self, url: str | None = None, 
+            decoder: Decoder = 'json', **kwargs):
         return self._request("put", self._make_url(url), decoder, **kwargs)
 
-    def upload_series(self, url: str, series: pd.Series, 
+    def upload_series(self, url: str | None = None, 
+            series: pd.Series | None = None, 
             name: str | None = None, **kwargs):
         """upload series object"""
         
+        # default to empty series
+        if series is None:
+            series = pd.Series()
+
         # set key as name
         if name is None:
             name = "not specified"
@@ -122,4 +135,4 @@ class RequestsCore:
         data = series.to_string(index=False)
         form = {"file": (name, data)}
         
-        return self.put(url, files=form, **kwargs)
+        return self.put(url=url, files=form, **kwargs)

@@ -68,10 +68,10 @@ class BaseClient(Curves, Header, Parameters, Scenario, MeritConfiguration,
         
         # return beta engine url
         if self.beta_engine:
-            return "https://beta-engine.energytransitionmodel.com/"
+            return "https://beta-engine.energytransitionmodel.com/api/v3/"
         
         # return production engine url
-        return "https://engine.energytransitionmodel.com/"
+        return "https://engine.energytransitionmodel.com/api/v3/"
 
     @classmethod
     def from_scenario_parameters(cls, end_year, area_code, metadata=None,
@@ -156,11 +156,6 @@ class BaseClient(Curves, Header, Parameters, Scenario, MeritConfiguration,
         self._hourly_household_curves = None
         self._hourly_hydrogen_curves = None
         self._hourly_methane_curves = None
-
-    def _make_url(self, url: str) -> str:
-        """join url with base url"""
-        url = "/api/v3/%s" %url
-        return urllib.parse.urljoin(self.base_url, url)
 
     def _get_session_id(self, scenario_id: int, **kwargs) -> int:
         """get a session_id for a pro-environment scenario"""    
