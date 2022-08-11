@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import io
-import re
 import json
 import logging
 import requests
@@ -15,35 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 class RequestsCore:
-    
-    @property
-    def beta_engine(self) -> bool:
-        """connects to beta-engine when False and to production-engine
-        when True.""" 
-        return self.__beta_engine
-        
-    @beta_engine.setter
-    def beta_engine(self, boolean: bool) -> None:
-        """set beta engine attribute"""
-            
-        # set boolean and reset session
-        self.__beta_engine = bool(boolean)
-        self._reset_session()
-        
-    @property
-    def base_url(self) -> str:
-        """"base url for carbon transition model"""
-        
-        # return beta engine url
-        if self.beta_engine:
-            return "https://beta-engine.energytransitionmodel.com/api/v3"
-        
-        # return production engine url
-        return "https://engine.energytransitionmodel.com/api/v3"
-        
-    def __make_url(self, url: str) -> str:
-        """join url with base url"""
-        return self.base_url + url
 
     def _request(self, method: Method, url: str, 
             decoder: Decoder = 'bytes', **kwargs):
@@ -129,16 +99,16 @@ class RequestsCore:
             raise UnprossesableEntityError(msg)
 
     def delete(self, url: str, decoder: Decoder = 'text', **kwargs):
-        return self._request("delete", self.__make_url(url), decoder, **kwargs)
+        return self._request("delete", self._make_url(url), decoder, **kwargs)
 
     def get(self, url: str, decoder: Decoder = 'json', **kwargs):
-        return self._request("get", self.__make_url(url), decoder, **kwargs)
+        return self._request("get", self._make_url(url), decoder, **kwargs)
             
     def post(self, url: str, decoder: Decoder = 'json', **kwargs):
-        return self._request("post", self.__make_url(url), decoder, **kwargs)
+        return self._request("post", self._make_url(url), decoder, **kwargs)
 
     def put(self, url: str, decoder: Decoder = 'json', **kwargs):
-        return self._request("put", self.__make_url(url), decoder, **kwargs)
+        return self._request("put", self._make_url(url), decoder, **kwargs)
 
     def upload_series(self, url: str, series: pd.Series, 
             name: str | None = None, **kwargs):
@@ -153,19 +123,3 @@ class RequestsCore:
         form = {"file": (name, data)}
         
         return self.put(url, files=form, **kwargs)
-
-    def _get_session_id(self, scenario_id: int, **kwargs) -> int:
-        """get a session_id for a pro-environment scenario"""    
-
-        # make pro url
-        host = "https://pro.energytransitionmodel.com"
-        url = f"{host}/saved_scenarios/{scenario_id}/load"
-
-        # extract content from url
-        content = self._request("GET", url, decoder='text', **kwargs)
-            
-        # get session id from content
-        pattern = '"api_session_id":([0-9]{6,7})'
-        session_id = re.search(pattern, content)
-
-        return int(session_id.group(1))

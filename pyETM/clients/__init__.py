@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+import urllib
 import logging
 import requests
 import asyncio
@@ -45,6 +47,31 @@ _LOOP_THREAD = threading.Thread(target=_start_loop,
 
 class BaseClient(Curves, Header, Parameters, Scenario, MeritConfiguration,
                  CustomCurves, GQueries, Interpolate, Utils):
+
+    @property
+    def beta_engine(self) -> bool:
+        """connects to beta-engine when False and to production-engine
+        when True.""" 
+        return self.__beta_engine
+        
+    @beta_engine.setter
+    def beta_engine(self, boolean: bool) -> None:
+        """set beta engine attribute"""
+            
+        # set boolean and reset session
+        self.__beta_engine = bool(boolean)
+        self._reset_session()
+        
+    @property
+    def base_url(self) -> str:
+        """"base url for carbon transition model"""
+        
+        # return beta engine url
+        if self.beta_engine:
+            return "https://beta-engine.energytransitionmodel.com/"
+        
+        # return production engine url
+        return "https://engine.energytransitionmodel.com/"
 
     @classmethod
     def from_scenario_parameters(cls, end_year, area_code, metadata=None,
@@ -129,7 +156,27 @@ class BaseClient(Curves, Header, Parameters, Scenario, MeritConfiguration,
         self._hourly_household_curves = None
         self._hourly_hydrogen_curves = None
         self._hourly_methane_curves = None
-        
+
+    def _make_url(self, url: str) -> str:
+        """join url with base url"""
+        url = "/api/v3/%s" %url
+        return urllib.parse.urljoin(self.base_url, url)
+
+    def _get_session_id(self, scenario_id: int, **kwargs) -> int:
+        """get a session_id for a pro-environment scenario"""    
+
+        # make pro url
+        host = "https://pro.energytransitionmodel.com"
+        url = f"{host}/saved_scenarios/{scenario_id}/load"
+
+        # extract content from url
+        content = self._request("get", url, decoder='text', **kwargs)
+            
+        # get session id from content
+        pattern = '"api_session_id":([0-9]{6,7})'
+        session_id = re.search(pattern, content)
+
+        return int(session_id.group(1))
 
 class Client(BaseClient, RequestsCore):
         

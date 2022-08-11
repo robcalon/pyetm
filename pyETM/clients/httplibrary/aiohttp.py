@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import io
-import re
 import json
 import logging
 import asyncio
@@ -21,38 +20,6 @@ logger = logging.getLogger(__name__)
 
 class AIOHTTPCore:
     
-    @property
-    def beta_engine(self) -> bool:
-        return self.__beta_engine
-        
-    @beta_engine.setter
-    def beta_engine(self, boolean: bool) -> None:
-
-        # check instance
-        if not isinstance(boolean, bool):
-            raise TypeError('beta_engine must be a boolean')
-            
-        # set boolean
-        self.__beta_engine = boolean
-        
-        # reset session
-        self._reset_session()
-
-    @property
-    def base_url(self) -> str:
-        """"base url for carbon transition model"""
-        
-        # return beta engine url
-        if self.beta_engine:
-            return "https://beta-engine.energytransitionmodel.com/api/v3"
-        
-        # return production engine url
-        return "https://engine.energytransitionmodel.com/api/v3"
-
-    def __make_url(self, url: str) -> str:
-        """join url with base url"""
-        return self.base_url + url
-
     async def _start_session(self):
         """start up session"""
         
@@ -189,19 +156,19 @@ class AIOHTTPCore:
             
     def delete(self, url: str, decoder: Decoder = "text", **kwargs):
         """delete request to api"""
-        return self._request("delete", self.__make_url(url), decoder, **kwargs)
+        return self._request("delete", self._make_url(url), decoder, **kwargs)
 
     def get(self, url: str, decoder: Decoder = "json", **kwargs):
         """make get request"""
-        return self._request("get", self.__make_url(url), decoder, **kwargs)
+        return self._request("get", self._make_url(url), decoder, **kwargs)
 
     def post(self, url: str, decoder: Decoder = "json", **kwargs):
         """make post request"""
-        return self._request("post", self.__make_url(url), decoder, **kwargs)
+        return self._request("post", self._make_url(url), decoder, **kwargs)
 
     def put(self, url: str, decoder: Decoder = "json", **kwargs):
         """make put reqiest"""
-        return self._request("put", self.__make_url(url), decoder, **kwargs)
+        return self._request("put", self._make_url(url), decoder, **kwargs)
                 
     def upload_series(self, url: str, series: pd.Series, 
             name: str | None = None, **kwargs):
@@ -227,18 +194,3 @@ class AIOHTTPCore:
         form.add_field("file", data, filename=name)
 
         return self.put(url, data=form, **kwargs)
-
-    def _get_session_id(self, scenario_id: int, **kwargs) -> int:
-
-        # make pro url
-        host = "https://pro.energytransitionmodel.com"
-        url = f"{host}/saved_scenarios/{scenario_id}/load"
-
-        # extract content from url
-        content = self._request("get", url, decoder='text', **kwargs)
-            
-        # get session id from content
-        pattern = '"api_session_id":([0-9]{6,7})'
-        session_id = re.search(pattern, content)
-
-        return int(session_id.group(1))
