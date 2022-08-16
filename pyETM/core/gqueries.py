@@ -77,10 +77,10 @@ class GQueries:
         
         # prepare post
         headers = {'Connection': 'close'}
-        url = f'/scenarios/{self.scenario_id}'
+        url = f'scenarios/{self.scenario_id}'
         
         # evaluate post
-        response = self.put(url, json=data, headers=headers, **kwargs)
+        response = self.session.put(url, json=data, headers=headers, **kwargs)
         
         # transform into dataframe
         records = response['gqueries']

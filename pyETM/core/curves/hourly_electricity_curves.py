@@ -19,10 +19,10 @@ class HourlyElectricityCurves:
         
         # prepare post
         headers = {'Connection':'close'}
-        post = f'/scenarios/{self.scenario_id}/curves/merit_order'
+        post = f'scenarios/{self.scenario_id}/curves/merit_order'
         
         # request response and convert to frame
-        resp = self.get(post, decoder="BytesIO", headers=headers)
+        resp = self.session.get(post, decoder="BytesIO", headers=headers)
         curves = pd.read_csv(resp, index_col='Time').reset_index(drop=True)
         
         # set corresponsing parameter property

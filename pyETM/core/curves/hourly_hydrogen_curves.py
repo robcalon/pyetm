@@ -19,10 +19,10 @@ class HourlyHydrogenCurves:
         
         # prepare post
         headers = {'Connection':'close'}
-        post = f'/scenarios/{self.scenario_id}/curves/hydrogen'
+        post = f'scenarios/{self.scenario_id}/curves/hydrogen'
         
         # request response and convert to frame
-        resp = self.get(post, decoder="BytesIO", headers=headers)
+        resp = self.session.get(post, decoder="BytesIO", headers=headers)
         curves = pd.read_csv(resp, index_col='Time').reset_index(drop=True)
         
         # set corresponsing parameter property

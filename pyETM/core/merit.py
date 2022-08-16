@@ -19,11 +19,10 @@ class MeritConfiguration:
         # prepare request
         headers = {'Connection': 'close'}
         params = {'include_curves': include_curves}
-        url = f'/scenarios/{self.scenario_id}/merit'
+        url = f'scenarios/{self.scenario_id}/merit'
 
         # request response
-        resp = self.get(url, headers=headers, params=params)
-        self.__participants = resp['participants']
+        resp = self.session.get(url, headers=headers, params=params)
 
         return resp
     

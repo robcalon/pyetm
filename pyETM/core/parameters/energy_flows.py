@@ -19,10 +19,11 @@ class EnergyFlows:
         
         # prepare request
         headers = {'Connection':'close'}
-        url = f'/scenarios/{self.scenario_id}/energy_flow'
+        url = f'scenarios/{self.scenario_id}/energy_flow'
         
         # request response and convert to df
-        resp = self.get(url, decoder="BytesIO", headers=headers, **kwargs)
+        resp = self.session.get(url, decoder="BytesIO", 
+                headers=headers, **kwargs)
         flows = pd.read_csv(resp, index_col='key')
         
         # set corresponsing parameter property

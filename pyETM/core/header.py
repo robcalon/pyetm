@@ -135,7 +135,7 @@ class Header():
         if self.beta_engine:
             base = base.replace('https://', 'https://beta-')
 
-        return base + '/scenarios/%s/load' %self.scenario_id
+        return base + 'scenarios/%s/load' %self.scenario_id
     
     def _get_scenario_header(self, **kwargs):
         """get header of scenario"""
@@ -145,10 +145,10 @@ class Header():
                 
         # prepare request
         headers = {'Connection':'close'}
-        url = f'/scenarios/{self.scenario_id}'
+        url = f'scenarios/{self.scenario_id}'
         
         # request response and convert to dict
-        return self.get(url, headers=headers, **kwargs)
+        return self.session.get(url, headers=headers, **kwargs)
         
     def _change_scenario_header(self, header, **kwargs):
         """change header of scenario"""
@@ -161,10 +161,10 @@ class Header():
 
         # prepare request
         headers = {'detailed': 'true', 'Connection':'close'}
-        url = f'/scenarios/{self.scenario_id}'
+        url = f'scenarios/{self.scenario_id}'
         
         # evaluate request
-        self.put(url, json=data, **kwargs)
+        self.session.put(url, json=data, **kwargs)
         
         # reinitialize scenario
         self._reset_session()

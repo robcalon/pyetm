@@ -22,10 +22,10 @@ class Interpolate:
 
             # prepare post
             headers = {'Connection': 'close'}
-            url = f'/scenarios/{self.scenario_id}/interpolate'
+            url = f'scenarios/{self.scenario_id}/interpolate'
 
             # get interpolated scenario id
-            scenario = self.post(url, json=data, headers=headers)
+            scenario = self.session.post(url, json=data, headers=headers)
             scenario_id = scenario['id']
 
             # connect to new scenario

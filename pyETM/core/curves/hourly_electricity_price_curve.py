@@ -19,10 +19,10 @@ class HourlyElectricityPriceCurve:
         
         # prepare post
         headers = {'Connection':'close'}
-        post = f'/scenarios/{self.scenario_id}/curves/electricity_price'
+        post = f'scenarios/{self.scenario_id}/curves/electricity_price'
         
         # request response and convert to series
-        resp = self.get(post, decoder="BytesIO", headers=headers)    
+        resp = self.session.get(post, decoder="BytesIO", headers=headers)    
         curves = pd.read_csv(resp, index_col='Time').squeeze('columns')
 
         # reset index

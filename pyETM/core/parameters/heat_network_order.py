@@ -23,10 +23,10 @@ class HeatNetworkOrder:
         
         # prepare request
         headers = {'Connection':'close'}
-        url = f'/scenarios/{self.scenario_id}/heat_network_order'
+        url = f'scenarios/{self.scenario_id}/heat_network_order'
         
         # request response and convert to dict
-        resp = self.get(url, headers=headers, **kwargs)
+        resp = self.session.get(url, headers=headers, **kwargs)
         order = resp["order"]
                 
         # set heat network order
@@ -53,10 +53,10 @@ class HeatNetworkOrder:
         
         # prepare request
         headers = {'Connection':'close'}
-        url = f'/scenarios/{self.scenario_id}/heat_network_order'
+        url = f'scenarios/{self.scenario_id}/heat_network_order'
         
         # evaluate request
-        self.put(url, json=data, headers=headers, **kwargs)
+        self.session.put(url, json=data, headers=headers, **kwargs)
         
         # reinitialize scenario
         self._reset_session()

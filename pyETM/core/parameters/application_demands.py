@@ -19,10 +19,11 @@ class ApplicationDemands:
         
         # prepare post
         headers = {'Connection':'close'}
-        url = f'/scenarios/{self.scenario_id}/application_demands'
+        url = f'scenarios/{self.scenario_id}/application_demands'
         
         # request response and convert to df
-        resp = self.get(url, decoder="BytesIO", headers=headers, **kwargs)
+        resp = self.session.get(url, decoder="BytesIO", 
+                headers=headers, **kwargs)
         demands = pd.read_csv(resp, index_col='key')
         
         # set corresponsing parameter property

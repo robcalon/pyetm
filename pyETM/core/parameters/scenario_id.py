@@ -57,11 +57,11 @@ class ScenarioID:
             return scenario_id
                 
         # prepare validation request
-        url = f'/scenarios/{scenario_id}'
+        url = f'scenarios/{scenario_id}'
         headers = {'Connection': 'close'}
 
         # make validation request
-        self.get(url, headers=headers, **kwargs)
+        self.session.get(url, headers=headers, **kwargs)
         
         return scenario_id
     

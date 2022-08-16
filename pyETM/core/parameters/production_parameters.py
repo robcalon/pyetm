@@ -14,10 +14,10 @@ class ProductionParameters:
         
         # prepare post
         headers = {'Connection':'close'}
-        url = f'/scenarios/{self.scenario_id}/production_parameters'
+        url = f'scenarios/{self.scenario_id}/production_parameters'
         
         # request response and convert to df
-        resp = self.get(url, decoder="BytesIO", headers=headers, **kwargs)
+        resp = self.session.get(url, decoder="BytesIO", headers=headers, **kwargs)
         parameters = pd.read_csv(resp)
         
         # set corresponsing parameter property

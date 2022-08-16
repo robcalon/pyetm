@@ -54,10 +54,10 @@ class UserValues:
         
         # prepare request
         headers = {'Connection':'close'}
-        url = f'/scenarios/{self.scenario_id}'
+        url = f'scenarios/{self.scenario_id}'
         
         # evaluate request
-        self.put(url, json=data, headers=headers)
+        self.session.put(url, json=data, headers=headers)
         
         # reinitialize scenario
         self._reset_session()
@@ -140,6 +140,10 @@ class UserValues:
     def _check_sharegroups(self, uvalues, debug=False):
         """check if share groups are balanced"""
             
+        """TO DO
+        Make this an optional check when a subset of the entire group is set. 
+        ETEngine changes other patamters, but user should be warned for that!"""
+
         # get grouper from user parameters
         groups = self.user_parameters.share_group
         percentage = uvalues.groupby(groups).sum()

@@ -27,10 +27,10 @@ class Properties:
         
         # prepare request
         headers = {'Connection': 'close'}
-        url = f'/scenarios/{self.scenario_id}/custom_curves'
+        url = f'scenarios/{self.scenario_id}/custom_curves'
         
         # request repsonse 
-        resp = self.get(url, headers=headers, params=params)
+        resp = self.session.get(url, headers=headers, params=params)
 
         # check for response
         if bool(resp) == True:

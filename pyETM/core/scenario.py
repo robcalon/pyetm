@@ -11,10 +11,10 @@ class Scenario:
         
         # prepare request
         headers = {'Connection':'close'}
-        url = f'/scenarios/{self.scenario_id}'
+        url = f'scenarios/{self.scenario_id}'
         
         # request response and convert to df
-        self.put(url, json=data, headers=headers, **kwargs)
+        self.session.put(url, json=data, headers=headers, **kwargs)
         
         # reinitialize connected scenario
         self._reset_session()
@@ -23,15 +23,16 @@ class Scenario:
         """Create a new scenario that is a copy of an existing scenario
         based on its id"""
         
-        # make scenario
+        # make and set scenario
         scenario = {'scenario_id': str(scenario_id)}
-                        
-        # request scenario details
         data = {"scenario": scenario}
+
+        # prepare request
         headers = {'Connection':'close'}
-        
+        url = 'scenarios'
+
         # request response
-        resp = self.post('/scenarios', json=data, headers=headers, **kwargs)
+        resp = self.session.post(url, json=data, headers=headers, **kwargs)
         
         # update the scenario_id
         self.scenario_id = str(resp['id'])
@@ -85,12 +86,15 @@ class Scenario:
         if scenario is None:
             scenario = {}
         
-        # prepare request
+        # set scenario parameter
         data = {"scenario": scenario}
+
+        # prepare requests
         headers = {'Connection':'close'}
-        
+        url = 'scenarios'
+
         # post scenario details
-        response = self.post('/scenarios', json=data, headers=headers, **kwargs)
+        response = self.session.post(url, json=data, headers=headers, **kwargs)
         
         # update scenario_id
         self.scenario_id = str(response['id'])

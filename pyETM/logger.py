@@ -2,7 +2,7 @@ import os
 import logging
 
 basedir = os.path.dirname(__file__)
-logdir = '%s' %basedir
+logdir = '%s/logs' %basedir
 os.makedirs(logdir, exist_ok=True)
 
 # create pyETM module logger

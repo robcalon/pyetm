@@ -25,10 +25,10 @@ class InputValues:
         
         # prepare post
         headers = {'Connection':'close'}
-        url = f'/scenarios/{self.scenario_id}/inputs'
+        url = f'scenarios/{self.scenario_id}/inputs'
 
         # request response and convert to df
-        resp = self.get(url, headers=headers, **kwargs)
+        resp = self.session.get(url, headers=headers, **kwargs)
         ivalues = pandas.DataFrame.from_dict(resp, orient='index')
         
         # add user to column when absent
