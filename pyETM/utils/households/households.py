@@ -39,7 +39,7 @@ class HouseholdProfileModel:
 
         # load thermostat values
         file = Path(__file__).parent / 'data/thermostat_values.csv'
-        thermostat = pd.read_csv(file, usecols=[insulation_type], squeeze=True)
+        thermostat = pd.read_csv(file, usecols=[insulation_type]).squeeze('columns')
                 
         # convert to dictonairy
         config = properties.to_dict()
