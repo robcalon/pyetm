@@ -142,7 +142,7 @@ class UserValues:
             
         """TO DO
         Make this an optional check when a subset of the entire group is set. 
-        ETEngine changes other patamters, but user should be warned for that!"""
+        ETEngine changes other parameters for which user should be warned."""
 
         # get grouper from user parameters
         groups = self.user_parameters.share_group

@@ -11,18 +11,17 @@ class MeritConfiguration:
         """get merit configuration JSON"""
         
         # lower cased boolean for params
-        include_curves = str(include_curves).lower()
+        include_curves = str(bool(include_curves))
 
         # raise without scenario id
         self._raise_scenario_id()
         
         # prepare request
-        headers = {'Connection': 'close'}
-        params = {'include_curves': include_curves}
+        params = {'include_curves': include_curves.lower()}
         url = f'scenarios/{self.scenario_id}/merit'
 
         # request response
-        resp = self.session.get(url, headers=headers, params=params)
+        resp = self.session.get(url, params=params)
 
         return resp
     

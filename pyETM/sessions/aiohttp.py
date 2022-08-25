@@ -290,8 +290,8 @@ class AIOHTTPSession:
                         msg = "decoding method '%s' not implemented" %method
                         raise NotImplementedError(msg)
 
-                    logger.debug("processed '%s' request with '%s' decoder", 
-                            method, decoder)
+                    # logger.debug("processed '%s' request with '%s' decoder", 
+                    #         method, decoder)
 
                     return resp
 

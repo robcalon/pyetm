@@ -19,10 +19,10 @@ class ScenarioID:
                 
     def change_scenario_id(self, scenario_id, **kwargs):
         """change the connected scenario."""
-        
+
         # check if scenario id works
         scenario_id = self.check_scenario_id(scenario_id, **kwargs)
-        
+
         # store previous scenario id
         previous = copy.deepcopy(self.scenario_id)
         
@@ -32,14 +32,14 @@ class ScenarioID:
         # reinitialize scenario
         self._reset_session()
         
-        # specify warning conditions
+        # specify log conditions
         c1 = previous is not None
         c2 = self.scenario_id is not None
         c3 = self.scenario_id != previous
         
-        # warn about changed id
+        # log changed scenario id
         if all((c1, c2, c3)) is True:
-            logger.warning(f'scenario_id changed to {self.scenario_id}')
+            logger.debug(f"scenario_id changed to '{self.scenario_id}'")
         
     def check_scenario_id(self, scenario_id, **kwargs):
         """check if scenario id responds"""
@@ -56,12 +56,9 @@ class ScenarioID:
         if scenario_id is None:
             return scenario_id
                 
-        # prepare validation request
-        url = f'scenarios/{scenario_id}'
-        headers = {'Connection': 'close'}
-
         # make validation request
-        self.session.get(url, headers=headers, **kwargs)
+        url = f'scenarios/{scenario_id}'
+        self.session.get(url, **kwargs)
         
         return scenario_id
     

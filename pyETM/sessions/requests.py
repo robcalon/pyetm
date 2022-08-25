@@ -145,19 +145,19 @@ class RequestsSession:
                         msg = "decoding method '%s' not implemented" %method
                         raise NotImplementedError(msg)
 
-                    logger.debug("processed '%s' request with '%s' decoder", 
-                            method, decoder)
+                    # logger.debug("processed '%s' request with '%s' decoder", 
+                    #         method, decoder)
 
                     return resp
 
             # except connectionerrors and retry
             except requests.exceptions.ConnectionError as error:
                 retries -= 1
-                
+
                 # raise after retries
                 if not retries:
                     raise error
-
+                
     def _error_report(self, resp: requests.Response) -> None:
         """create error report when api returns error messages."""
         

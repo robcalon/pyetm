@@ -45,7 +45,7 @@ class Header():
     def keep_compatible(self, boolean):
         
         # format header and update
-        header = {'keep_compatible': bool(boolean)}
+        header = {'keep_compatible': str(bool(boolean)).lower()}
         self._change_scenario_header(header)
     
     @property
@@ -82,7 +82,7 @@ class Header():
     def read_only(self, boolean):
         
         # format header and update
-        header = {'read_only': bool(boolean)}
+        header = {'read_only': str(bool(boolean)).lower()}
         self._change_scenario_header(header)
         
     @property
@@ -135,7 +135,7 @@ class Header():
         if self.beta_engine:
             base = base.replace('https://', 'https://beta-')
 
-        return base + 'scenarios/%s/load' %self.scenario_id
+        return base + '/scenarios/%s/load' %self.scenario_id
     
     def _get_scenario_header(self, **kwargs):
         """get header of scenario"""

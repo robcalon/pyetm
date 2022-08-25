@@ -156,7 +156,7 @@ class Client(Curves, Header, Parameters, Scenario, MeritConfiguration,
         # reset session?
         self._reset_session()
 
-        logger.info("initialised: '%s'", self)
+        logger.debug("initialised: '%s'", self)
 
     def __repr__(self):
         """reproduction string"""
