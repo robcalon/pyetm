@@ -4,12 +4,12 @@ import pandas as pd
 class GQueries:
     
     @property
-    def gqueries(self):
+    def gqueries(self) -> pd.Index:
         """returns a list of set gqueries"""
         return self._gqueries
 
     @gqueries.setter
-    def gqueries(self, gqueries):
+    def gqueries(self, gqueries: list) -> None:
         """sets gqueries list"""
 
         # put string in list
@@ -74,13 +74,10 @@ class GQueries:
                 
         # create gquery request
         data = {'gqueries': self.gqueries}
-        
-        # prepare post
-        headers = {'Connection': 'close'}
         url = f'scenarios/{self.scenario_id}'
         
         # evaluate post
-        response = self.session.put(url, json=data, headers=headers, **kwargs)
+        response = self.session.put(url, json=data, **kwargs)
         
         # transform into dataframe
         records = response['gqueries']

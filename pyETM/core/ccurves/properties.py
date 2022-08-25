@@ -1,4 +1,5 @@
 import logging
+from xml.etree.ElementInclude import include
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -20,10 +21,12 @@ class Properties:
         params = {}
         
         if include_unattached:
-            params['include_unattached'] = str(include_unattached).lower()
+            include_unattached = str(bool(include_unattached))
+            params['include_unattached'] = include_unattached.lower()
         
         if include_internal:
-            params['include_internal'] = str(include_internal).lower()
+            include_internal = str(bool(include_internal))
+            params['include_internal'] = include_internal.lower()
         
         # prepare request
         headers = {'Connection': 'close'}

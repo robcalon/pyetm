@@ -27,12 +27,9 @@ class Scenario:
         scenario = {'scenario_id': str(scenario_id)}
         data = {"scenario": scenario}
 
-        # prepare request
-        headers = {'Connection':'close'}
-        url = 'scenarios'
-
         # request response
-        resp = self.session.post(url, json=data, headers=headers, **kwargs)
+        url = 'scenarios'
+        resp = self.session.post(url, json=data, **kwargs)
         
         # update the scenario_id
         self.scenario_id = str(resp['id'])

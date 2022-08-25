@@ -24,11 +24,10 @@ class InputValues:
         self._raise_scenario_id()
         
         # prepare post
-        headers = {'Connection':'close'}
         url = f'scenarios/{self.scenario_id}/inputs'
 
         # request response and convert to df
-        resp = self.session.get(url, headers=headers, **kwargs)
+        resp = self.session.get(url, **kwargs)
         ivalues = pandas.DataFrame.from_dict(resp, orient='index')
         
         # add user to column when absent
