@@ -17,12 +17,11 @@ class HourlyHouseholdCurves:
         # raise without scenario id
         self._raise_scenario_id()
         
-        # prepare post
-        headers = {'Connection':'close'}
+        # make request
         post = f'scenarios/{self.scenario_id}/curves/household_heat'
-        
-        # request response and convert to frame
-        resp = self.session.get(post, decoder="BytesIO", headers=headers)
+        resp = self.session.get(post, decoder="BytesIO")
+
+        # convert to frame
         curves = pd.read_csv(resp)
         
         # set corresponsing parameter property

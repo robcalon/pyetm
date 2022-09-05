@@ -8,8 +8,8 @@ import requests
 import pandas as pd
 
 from urllib.parse import urljoin
-from pyETM.exceptions import UnprossesableEntityError
 from pyETM.types import Decoder, Method
+from pyETM.exceptions import UnprossesableEntityError, format_error_messages
 
 logger = logging.getLogger(__name__)
 
@@ -172,13 +172,10 @@ class RequestsSession:
             # no message returned
             errors = None
 
-        # trigger special raise
         if errors:
-            
-            # create error report
-            base = "ETEngine returned the following error(s):"
-            msg = """%s\n > {}""".format("\n > ".join(errors)) %base
 
+            # format error message(s)
+            msg = format_error_messages(errors)
             raise UnprossesableEntityError(msg)
 
     def delete(self, url: str | None = None, 

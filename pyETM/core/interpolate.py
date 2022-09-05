@@ -20,12 +20,11 @@ class Interpolate:
             # pass end year to interpolate tool
             data = {'end_year': ryear}
 
-            # prepare post
-            headers = {'Connection': 'close'}
+            # make requestd
             url = f'scenarios/{self.scenario_id}/interpolate'
+            scenario = self.session.post(url, json=data)
 
-            # get interpolated scenario id
-            scenario = self.session.post(url, json=data, headers=headers)
+            # get scenario id
             scenario_id = scenario['id']
 
             # connect to new scenario

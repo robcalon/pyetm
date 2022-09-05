@@ -160,7 +160,8 @@ class Client(Curves, Header, Parameters, Scenario, MeritConfiguration,
 
     def __repr__(self):
         """reproduction string"""
-        return f'Client({self.scenario_id})'
+        return "Client(%s, %s, %s)" %(self.area_code,
+            self.end_year, self.scenario_id)
 
     def __str__(self):
         """stringname"""

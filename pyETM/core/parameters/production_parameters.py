@@ -6,18 +6,17 @@ class ProductionParameters:
     def production_parameters(self):
         return self._production_parameters
     
-    def get_production_parameters(self, **kwargs):
+    def get_production_parameters(self):
         """get the production parameters"""
 
         # raise without scenario id
         self._raise_scenario_id()
         
-        # prepare post
-        headers = {'Connection':'close'}
+        # make request
         url = f'scenarios/{self.scenario_id}/production_parameters'
-        
-        # request response and convert to df
-        resp = self.session.get(url, decoder="BytesIO", headers=headers, **kwargs)
+        resp = self.session.get(url, decoder="BytesIO")
+
+        # conver to frames
         parameters = pd.read_csv(resp)
         
         # set corresponsing parameter property

@@ -55,7 +55,7 @@ class Regionalisation:
             raise TypeError('carrier must be of type string or DataFrame')
 
         # use regionalisation function
-        return regionalize_curves(carrier, reg, node=node, 
+        return regionalise_curves(carrier, reg, node=node, 
                                   sector=sector, hours=hours, **kwargs)
     
     def regionalise_node(self, carrier, reg, node, 
@@ -106,6 +106,6 @@ class Regionalisation:
             raise TypeError('carrier must be of type string or DataFrame')
 
         # use regionalisation function
-        return regionalize_node(carrier, reg, node, 
+        return regionalise_node(carrier, reg, node, 
                                 sector=sector, hours=hours, **kwargs)
     

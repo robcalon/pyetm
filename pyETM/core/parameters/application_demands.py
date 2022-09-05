@@ -11,19 +11,17 @@ class ApplicationDemands:
             
         return self._application_demands
     
-    def get_application_demands(self, **kwargs):
+    def get_application_demands(self):
         """get the application demands"""
 
         # raise without scenario id
         self._raise_scenario_id()
         
-        # prepare post
-        headers = {'Connection':'close'}
+        # make request
         url = f'scenarios/{self.scenario_id}/application_demands'
-        
-        # request response and convert to df
-        resp = self.session.get(url, decoder="BytesIO", 
-                headers=headers, **kwargs)
+        resp = self.session.get(url, decoder="BytesIO")
+
+        # convert to frame
         demands = pd.read_csv(resp, index_col='key')
         
         # set corresponsing parameter property

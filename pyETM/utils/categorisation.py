@@ -4,7 +4,7 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 def categorise_curves(curves, mapping, columns=None,
-                      include_index=False, *args, **kwargs):
+                      include_index=False, **kwargs):
     """Categorize the hourly curves for a specific dataframe 
     with a specific mapping. 
     
@@ -27,8 +27,9 @@ def categorise_curves(curves, mapping, columns=None,
         in the mapping. Defaults to all columns in mapping.
     include_index : bool, default False
         Include the original ETM keys in the resulting mapping.
-    *args and **kwargs arguments are passed to pd.read_csv when
-    a filename is passed in the mapping argument.
+    **kwargs are passed to pd.read_csv when a filename is 
+    passed in the mapping argument.
+    
     Return
     ------
     curves : DataFrame

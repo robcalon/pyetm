@@ -137,20 +137,19 @@ class Header():
 
         return base + '/scenarios/%s/load' %self.scenario_id
     
-    def _get_scenario_header(self, **kwargs):
+    def _get_scenario_header(self):
         """get header of scenario"""
         
         # raise without scenario id
         self._raise_scenario_id()
                 
-        # prepare request
-        headers = {'Connection':'close'}
+        # make request
         url = f'scenarios/{self.scenario_id}'
+        header = self.session.get(url)
         
-        # request response and convert to dict
-        return self.session.get(url, headers=headers, **kwargs)
-        
-    def _change_scenario_header(self, header, **kwargs):
+        return header
+
+    def _change_scenario_header(self, header):
         """change header of scenario"""
 
         # raise without scenario id
@@ -159,12 +158,9 @@ class Header():
         # set data
         data = {"scenario": header}
 
-        # prepare request
-        headers = {'detailed': 'true', 'Connection':'close'}
+        # make request
         url = f'scenarios/{self.scenario_id}'
-        
-        # evaluate request
-        self.session.put(url, json=data, **kwargs)
+        self.session.put(url, json=data)
         
         # reinitialize scenario
         self._reset_session()

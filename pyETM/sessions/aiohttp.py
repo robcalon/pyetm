@@ -11,8 +11,8 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 from pyETM.types import Decoder, Method
-from pyETM.exceptions import UnprossesableEntityError
 from pyETM.optional import import_optional_dependency
+from pyETM.exceptions import UnprossesableEntityError, format_error_messages
 
 from .utils.loop import _LOOP, _LOOP_THREAD
 
@@ -324,11 +324,8 @@ class AIOHTTPSession:
             # no message returned
             errors = None
             
-        # trigger special raise
         if errors:
-            
-            # create error report
-            base = "ETEngine returned the following error(s):"
-            msg = """%s\n > {}""".format("\n > ".join(errors)) %base
 
+            # format error message(s)
+            msg = format_error_messages(errors)
             raise UnprossesableEntityError(msg)

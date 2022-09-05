@@ -17,11 +17,11 @@ class ScenarioID:
     def scenario_id(self, scenario_id):
         self.change_scenario_id(scenario_id)
                 
-    def change_scenario_id(self, scenario_id, **kwargs):
+    def change_scenario_id(self, scenario_id):
         """change the connected scenario."""
 
         # check if scenario id works
-        scenario_id = self.check_scenario_id(scenario_id, **kwargs)
+        scenario_id = self.check_scenario_id(scenario_id)
 
         # store previous scenario id
         previous = copy.deepcopy(self.scenario_id)
@@ -41,7 +41,7 @@ class ScenarioID:
         if all((c1, c2, c3)) is True:
             logger.debug(f"scenario_id changed to '{self.scenario_id}'")
         
-    def check_scenario_id(self, scenario_id, **kwargs):
+    def check_scenario_id(self, scenario_id):
         """check if scenario id responds"""
         
         # convert intiger to string
@@ -58,7 +58,7 @@ class ScenarioID:
                 
         # make validation request
         url = f'scenarios/{scenario_id}'
-        self.session.get(url, **kwargs)
+        self.session.get(url)
         
         return scenario_id
     

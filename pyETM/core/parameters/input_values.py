@@ -16,18 +16,18 @@ class InputValues:
     def input_values(self, uparams):
         raise AttributeError('protected attribute; change user values instead.')
     
-    def get_input_values(self, **kwargs):
+    def get_input_values(self):
         """get configuration information of all available input parameters. 
         direct dump of inputs json from engine."""
 
         # raise without scenario id
         self._raise_scenario_id()
         
-        # prepare post
+        # make request
         url = f'scenarios/{self.scenario_id}/inputs'
+        resp = self.session.get(url)
 
-        # request response and convert to df
-        resp = self.session.get(url, **kwargs)
+        # convert to frame
         ivalues = pandas.DataFrame.from_dict(resp, orient='index')
         
         # add user to column when absent

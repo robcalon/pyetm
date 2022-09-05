@@ -52,12 +52,9 @@ class Curves:
         # validate key
         key = self._validate_ccurve_key(key)
         
-        # prepare request
-        headers = {'Connection': 'close'}
-        url = f'scenarios/{self.scenario_id}/custom_curves/{key}'
-        
         # make request
-        self.session.delete(url, headers=headers)
+        url = f'scenarios/{self.scenario_id}/custom_curves/{key}'
+        self.session.delete(url)
         
     def _format_datetime(self, ccurves: pd.DataFrame) -> pd.DataFrame:
         """format datetime"""
@@ -78,15 +75,14 @@ class Curves:
         # validate key
         key = self._validate_ccurve_key(key)
             
-        # prepare request
-        headers = {"Connection": "close"}
+        # make request
         url = f'scenarios/{self.scenario_id}/custom_curves/{key}'
+        resp = self.session.get(url, decoder='BytesIO')
+
+        # convert to series
+        curve = pd.read_csv(resp, header=None, names=[key])
         
-        # request response and convert to series 
-        resp = self.session.get(url, headers=headers, decoder='BytesIO')
-        curve = pd.read_csv(resp, header=None, names=[key]).squeeze('columns')
-        
-        return curve
+        return curve.squeeze('columns')
         
     def __upload_ccurve(self, curve: pd.Series, key: str | None = None, 
             name: str | None = None) -> None:
@@ -111,13 +107,10 @@ class Curves:
         
         # check ccurve
         curve = self._check_ccurve(curve, key)
-        
-        # prepare request
-        headers = {'Connection': 'close'}
-        url = f'scenarios/{self.scenario_id}/custom_curves/{key}'
-        
+                
         # make request
-        self.session.upload_series(url, curve, name=name, headers=headers)
+        url = f'scenarios/{self.scenario_id}/custom_curves/{key}'
+        self.session.upload_series(url, curve, name=name)
         
     def _check_ccurve(self, curve: pd.Series, key: str) -> pd.Series:
         """check if a ccurve is compatible"""
