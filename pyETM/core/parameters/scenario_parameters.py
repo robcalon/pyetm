@@ -1,6 +1,7 @@
-import logging
+from pyETM.logger import get_modulelogger
 
-logger = logging.getLogger(__name__)
+# get modulelogger
+logger = get_modulelogger(__name__)
 
 
 class ScenarioParameters:

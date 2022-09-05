@@ -1,8 +1,8 @@
-import pandas
+from __future__ import annotations
 
 class Scenario:
             
-    def reset_scenario(self):
+    def reset_scenario(self) -> None:
         """Resets user values and heat network order
         to default settings."""
         
@@ -15,9 +15,9 @@ class Scenario:
         self.session.put(url, json=data)
         
         # reinitialize connected scenario
-        self._reset_session()
+        self.reset_session()
     
-    def create_scenario_copy(self, scenario_id):
+    def create_scenario_copy(self, scenario_id: str) -> None:
         """Create a new scenario that is a copy of an existing scenario
         based on its id"""
         
@@ -32,17 +32,18 @@ class Scenario:
         # update the scenario_id
         self.scenario_id = str(resp['id'])
         
-    def create_new_scenario(self, end_year, area_code, 
-                            metadata=None, keep_compatible=False, 
-                            read_only=False):
+    def create_new_scenario(self, area_code: str, end_year: int, 
+                            metadata: dict | None = None, 
+                            keep_compatible: bool = False, 
+                            read_only: bool = False) -> None:
         """Create a new scenario on the ETM server. 
                 
         Parameters
         ----------
-        end_year : int
-            End year of the created scenario
         area_code : str
             Area code of the created scenario
+        end_year : int
+            End year of the created scenario
         title : str, default None
             Title of the created scenario
         protected : boolean, default False
@@ -65,7 +66,7 @@ class Scenario:
                         
         self._create_new_scenario(scenario=scenario)
         
-    def _create_new_scenario(self, scenario=None):
+    def _create_new_scenario(self, scenario: dict | None = None) -> None:
         """Create a new scenario on the ETM server.
         
         Parameters

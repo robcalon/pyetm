@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-import logging
+import functools
 import pandas as pd
 
 from collections.abc import Iterable
+from pyETM.logger import get_modulelogger
 
-logger = logging.getLogger(__name__)
+# get modulelogger
+logger = get_modulelogger(__name__)
 
 
 class Curves:
@@ -13,13 +15,8 @@ class Curves:
     @property
     def custom_curves(self) -> pd.DataFrame:
         """fetch custom curves"""
-        
-        # get custom curves
-        if self._ccurves is None:
-            self.get_custom_curves()
-                    
-        return self._ccurves
-        
+        return self.get_custom_curves()
+                            
     @custom_curves.setter
     def custom_curves(self, ccurves: pd.DataFrame) -> None:
         """set custom curves without option to set a name"""
@@ -154,7 +151,7 @@ class Curves:
                         
             # delete ccurve and reset
             self.__delete_ccurve(key)
-            self._reset_session()
+            self.reset_session()
 
         else:
             # warn user for attempt
@@ -196,7 +193,7 @@ class Curves:
             [function(key) for key in keys]
             
             # reset session
-            self._reset_session()
+            self.reset_session()
         
         else:
             # warn user for attempt
@@ -209,6 +206,7 @@ class Curves:
         key = self._validate_ccurve_key(key)
         return self.custom_curves[key]
         
+    @functools.lru_cache
     def get_custom_curves(self, 
             keys: Iterable[str] | None = None) -> pd.DataFrame:
         """return all attached curstom curves"""
@@ -246,10 +244,7 @@ class Curves:
             
             # empty dataframe
             ccurves = pd.DataFrame()
-        
-        # assign ccurves
-        self._ccurves = ccurves
-        
+                
         return ccurves[keys]
              
     def upload_custom_curve(self, curve: pd.Series, key: str | None = None, 
@@ -263,7 +258,7 @@ class Curves:
         self.__upload_ccurve(curve, key, name)
                 
         # reset session
-        self._reset_session()
+        self.reset_session()
     
     def upload_custom_curves(self, ccurves: pd.DataFrame, 
             names: list[str] | None = None) -> None:
@@ -293,4 +288,4 @@ class Curves:
             self.__upload_ccurve(ccurves[key], key, name=names[nr])
                 
         # reset session
-        self._reset_session()
+        self.reset_session()

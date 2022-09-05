@@ -1,9 +1,10 @@
-import logging
 import pandas
 
+from pyETM.logger import get_modulelogger
 from pyETM.utils import regionalise_curves, regionalise_node
 
-logger = logging.getLogger(__name__)
+# get modulelogger
+logger = get_modulelogger(__name__)
 
 
 class Regionalisation:

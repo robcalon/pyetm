@@ -1,4 +1,5 @@
 import pandas
+
 from pyETM.utils import categorise_curves
 
 

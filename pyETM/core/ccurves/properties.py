@@ -1,8 +1,9 @@
-import logging
-from xml.etree.ElementInclude import include
 import pandas as pd
 
-logger = logging.getLogger(__name__)
+from pyETM.logger import get_modulelogger
+
+# get modulelogger
+logger = get_modulelogger(__name__)
 
 
 class Properties:

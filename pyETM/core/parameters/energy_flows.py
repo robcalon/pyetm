@@ -1,16 +1,13 @@
+import functools
 import pandas as pd
 
 class EnergyFlows:
     
     @property
     def energy_flows(self):
-        
-        # get energy flows
-        if self._energy_flows is None:
-            self.get_energy_flows()
-        
-        return self._energy_flows
+        return self.get_energy_flows()
     
+    @functools.lru_cache
     def get_energy_flows(self):
         """get the energy flows"""
 
@@ -24,7 +21,4 @@ class EnergyFlows:
         # convert to frame
         flows = pd.read_csv(resp, index_col='key')
         
-        # set corresponsing parameter property
-        self._energy_flows = flows
-
         return flows

@@ -57,7 +57,7 @@ class UserValues:
         self.session.put(url, json=data)
         
         # reinitialize scenario
-        self._reset_session()
+        self.reset_session()
         
     def _check_user_values(self, uvalues):
         """check if all user values can be passed to ETM."""

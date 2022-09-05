@@ -1,11 +1,13 @@
+import functools
 import pandas as pd
 
 class ProductionParameters:
     
     @property
     def production_parameters(self):
-        return self._production_parameters
+        return self.get_production_parameters()
     
+    @functools.lru_cache
     def get_production_parameters(self):
         """get the production parameters"""
 
@@ -16,10 +18,4 @@ class ProductionParameters:
         url = f'scenarios/{self.scenario_id}/production_parameters'
         resp = self.session.get(url, decoder="BytesIO")
 
-        # conver to frames
-        parameters = pd.read_csv(resp)
-        
-        # set corresponsing parameter property
-        self._production_parameters = parameters
-
-        return parameters
+        return pd.read_csv(resp)

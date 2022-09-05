@@ -2,16 +2,13 @@ from __future__ import annotations
 
 import io
 import json
-import logging
 import requests
 
 import pandas as pd
-
 from urllib.parse import urljoin
-from pyETM.types import Decoder, Method
-from pyETM.exceptions import UnprossesableEntityError, format_error_messages
 
-logger = logging.getLogger(__name__)
+from .utils.types import Decoder, Method
+from pyETM.exceptions import UnprossesableEntityError, format_error_messages
 
 
 class RequestsSession:
@@ -69,10 +66,17 @@ class RequestsSession:
         self._session = requests.Session()
 
     def __repr__(self):
-        return f'RequestsSession(base_url={self.base_url})'
+        """reproduction string"""
+
+        # object environment
+        env = ", ".join(f"{k}={str(v)}" for k, v in 
+            self._request_env.items())
+
+        return "RequestsSession(%s)" %env
 
     def __str__(self):
-        return repr(self)
+        """stringname"""
+        return 'RequestsSession'
 
     def __enter__(self) -> RequestsSession:
         """enter context manager"""
@@ -93,9 +97,11 @@ class RequestsSession:
         return urljoin(self.base_url, url)
 
     def connect(self):
+        """connect session"""
         pass
 
     def close(self):
+        """close session"""
         pass
 
     def request(self, method: Method, url: str, 
@@ -144,9 +150,6 @@ class RequestsSession:
                     else:
                         msg = "decoding method '%s' not implemented" %method
                         raise NotImplementedError(msg)
-
-                    # logger.debug("processed '%s' request with '%s' decoder", 
-                    #         method, decoder)
 
                     return resp
 
