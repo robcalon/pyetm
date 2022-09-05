@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-import logging
+import pandas as pd
 
 from .core.curves import Curves
 from .core.parameters import Parameters
@@ -13,9 +13,11 @@ from .core.scenario import Scenario
 from .core.merit import MeritConfiguration
 from .core.utils import Utils
 
-from .sessions import RequestsSession
+from .logger import get_modulelogger
+from .sessions import RequestsSession, AIOHTTPSession
 
-logger = logging.getLogger(__name__)
+# get modulelogger
+logger = get_modulelogger(__name__)
 
 
 class Client(Curves, Header, Parameters, Scenario, MeritConfiguration,
@@ -35,7 +37,7 @@ class Client(Curves, Header, Parameters, Scenario, MeritConfiguration,
         self.__beta_engine = bool(boolean)
         self.session.base_url = self.base_url
 
-        self._reset_session()
+        self.reset_session()
         
     @property
     def base_url(self) -> str:
@@ -53,17 +55,17 @@ class Client(Curves, Header, Parameters, Scenario, MeritConfiguration,
         return self.__session
 
     @classmethod
-    def from_scenario_parameters(cls, end_year, area_code, metadata=None,
-                                 keep_compatible=False, read_only=False, 
-                                 uvalues=None, heat_network_order=None, 
-                                 ccurves=None, **kwargs):
+    def from_scenario_parameters(cls, area_code: str, end_year: int, 
+        metadata: dict | None = None, keep_compatible: bool = False, 
+        read_only: bool = False, uvalues: dict | pd.Series | None = None, 
+        heat_network_order: list[str] | None = None, 
+        ccurves: pd.DataFrame | None = None, **kwargs) -> Client:
         """create new scenario from parameters on Client initalization"""
                 
         # initialize new scenario
         client = cls(scenario_id=None, **kwargs)
-        client.create_new_scenario(end_year, area_code, metadata=metadata, 
-                                   keep_compatible=keep_compatible, 
-                                   read_only=read_only)
+        client.create_new_scenario(area_code, end_year, metadata=metadata, 
+            keep_compatible=keep_compatible, read_only=read_only)
         
         # set user values
         if uvalues is not None:
@@ -80,9 +82,9 @@ class Client(Curves, Header, Parameters, Scenario, MeritConfiguration,
         return client
                 
     @classmethod
-    def from_existing_scenario(cls, scenario_id, metadata=None, 
-                               keep_compatible=False, read_only=False,
-                               **kwargs):
+    def from_existing_scenario(cls, scenario_id: str | None = None, 
+        metadata: dict | None = None, keep_compatible: bool = False, 
+        read_only: bool = False, **kwargs) -> Client:
         """create new scenario as copy of existing scenario"""
         
         # initialize client
@@ -100,7 +102,8 @@ class Client(Curves, Header, Parameters, Scenario, MeritConfiguration,
         return client
     
     @classmethod
-    def from_saved_scenario_id(cls, scenario_id, **kwargs):
+    def from_saved_scenario_id(cls, 
+        scenario_id: str | None = None, **kwargs) -> Client:
         """initialize a session with a saved scenario id"""
         
         # initialize client
@@ -109,8 +112,10 @@ class Client(Curves, Header, Parameters, Scenario, MeritConfiguration,
         
         return cls(session_id, **kwargs)
     
-    def __init__(self, scenario_id: int = None, beta_engine: bool = False,
-            reset: bool = False, Session = RequestsSession, **kwargs):
+    def __init__(self, scenario_id: str | None = None, 
+        beta_engine: bool = False, reset: bool = False, 
+        Session: RequestsSession | AIOHTTPSession | None = None, 
+        **kwargs) -> Client:
         """client object to process ETM requests via its public API
         
         Parameters
@@ -152,19 +157,30 @@ class Client(Curves, Header, Parameters, Scenario, MeritConfiguration,
         # reset scenario on intialization
         if reset and (scenario_id != None):
             self.reset_scenario()
-                
-        # reset session?
-        self._reset_session()
 
-        logger.debug("initialised: '%s'", self)
+        # store client environment
+        self.__env = {
+            **{"scenario_id": scenario_id, "beta_engine": beta_engine,
+            "reset": reset, "Session": str(self.session)}, **kwargs}
+
+        # make message
+        msg = ("\"scenario_id='%s', area_code='%s', end_year=%s\"" 
+            %(self.scenario_id, self.area_code, self.end_year))
+        logger.debug("Initialised new Client: %s", msg)
 
     def __repr__(self):
         """reproduction string"""
-        return f'Client({self.scenario_id})'
+
+        # object environment
+        env = ", ".join(f'{k}={v}' for k, v in 
+            self.__env.items())
+
+        return "Client(%s)" %env
 
     def __str__(self):
         """stringname"""
-        return repr(self)
+        return "Client(scenario_id=%s, area_code=%s, end_year=%s)" %(
+            self.scenario_id, self.area_code, self.end_year)
 
     def __enter__(self):
         """enter conext manager"""
@@ -180,31 +196,36 @@ class Client(Curves, Header, Parameters, Scenario, MeritConfiguration,
         # close session
         self.session.close()
 
-    def _reset_session(self):
+    def reset_session(self):
         """reset stored scenario properties"""
-                
-        # reset parameters
-        self._input_values = None
-        self._heat_network_order = None
-        self._application_demands = None
-        self._energy_flows = None
-        self._production_parameters = None
+
+        # clear parameter caches
+        self.get_scenario_header.cache_clear()
+        self.get_input_values.cache_clear()
+
+        # clear frame caches
+        self.get_heat_network_order.cache_clear()
+        self.get_application_demands.cache_clear()
+        self.get_energy_flows.cache_clear()
+        self.get_production_parameters.cache_clear()
         
         # reset gqueries
-        self._gquery_results = None
+        self.get_gquery_results.cache_clear()
         
         # reset ccurves
-        self._ccurves = None
+        self.get_custom_curves.cache_clear()
         
         # reset curves
-        self._hourly_electricity_curves = None
-        self._hourly_electricity_price_curve = None
-        self._hourly_heat_curves = None
-        self._hourly_household_curves = None
-        self._hourly_hydrogen_curves = None
-        self._hourly_methane_curves = None
+        self.get_hourly_electricity_curves.cache_clear()
+        self.get_hourly_electricity_price_curve.cache_clear()
+        self.get_hourly_heat_curves.cache_clear()
+        self.get_hourly_household_curves.cache_clear()
+        self.get_hourly_hydrogen_curves.cache_clear()
+        self.get_hourly_methane_curves.cache_clear()
 
-    def _get_session_id(self, scenario_id: int, **kwargs) -> int:
+        logger.debug("cleared lru_cache")
+
+    def _get_session_id(self, scenario_id: str, **kwargs) -> int:
         """get a session_id for a pro-environment scenario"""    
 
         # make pro url

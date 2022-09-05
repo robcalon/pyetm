@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import io
 import json
-import logging
 import asyncio
 import pandas as pd
 
@@ -10,11 +9,14 @@ from urllib.parse import urljoin
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
-from pyETM.types import Decoder, Method
-from pyETM.exceptions import UnprossesableEntityError
-from pyETM.optional import import_optional_dependency
-
+from .utils.types import Decoder, Method
 from .utils.loop import _LOOP, _LOOP_THREAD
+
+from pyETM.logger import get_modulelogger
+from pyETM.optional import import_optional_dependency
+from pyETM.exceptions import UnprossesableEntityError, format_error_messages
+
+logger = get_modulelogger(__name__)
 
 if TYPE_CHECKING:
 
@@ -22,8 +24,6 @@ if TYPE_CHECKING:
     import aiohttp
 
     from yarl import URL
-
-logger = logging.getLogger(__name__)
 
 
 class AIOHTTPSession:
@@ -49,7 +49,8 @@ class AIOHTTPSession:
         if base_url is not None:
             self.__base_url = str(base_url)
 
-    def __init__(self, proxy: str | URL | None = None, 
+    def __init__(self, base_url: str | None = None, 
+        proxy: str | URL | None = None, 
         proxy_auth: aiohttp.BasicAuth | None = None, 
         ssl: ssl.SSLContext | bool | aiohttp.Fingerprint | None = None, 
         proxy_headers: Mapping | None = None, 
@@ -77,6 +78,9 @@ class AIOHTTPSession:
             Should get proxies information from HTTP_PROXY / HTTPS_PROXY 
             environment variables or ~/.netrc file if present."""
 
+        # set hidden values
+        self.base_url = base_url
+
         # set environment kwargs for session construction
         self._session_env = {
             "trust_env": trust_env}
@@ -98,25 +102,31 @@ class AIOHTTPSession:
             self.loop_thread.start()
 
     def __repr__(self):
-        return f'AIOHTTPSession(base_url={self.base_url})'
+        """reprodcution string"""        
+
+        # object environment
+        env = ", ".join(f'{k}={v}' for k, v in {
+            **self._request_env, **self._session_env}.items())
+
+        return "AIOHTTPSession(%s)" %env
 
     def __str__(self):
-        return repr(self)
+        """stringname"""
+        return 'AIOHTTPSession'
 
     def __enter__(self):
         """enter context manager"""
         
-        # connect
+        # create session
         self.connect()
-        logger.debug('session_created by context manager')
 
         return self
 
     def __exit__(self):
         """exit context manager"""
 
+        # close session
         self.close()
-        logger.debug('session destroyed by context manager')
 
     def make_url(self, url: str | None = None):
         """join url with base url"""
@@ -199,15 +209,12 @@ class AIOHTTPSession:
         
         # start up session
         await self.async_connect()
-        logger.debug('session created by async context manager')
 
         return self
 
     async def __aexit__(self, *args, **kwargs) -> None:
         """exit async context manager"""
-
         await self.async_close()
-        logger.debug('session destroyed by async context manager')
 
     async def async_connect(self):
         """connect session"""
@@ -220,6 +227,7 @@ class AIOHTTPSession:
             # optional module import
             aiohttp = import_optional_dependency('aiohttp')
 
+        # create session
         self._session = aiohttp.ClientSession(**self._session_env)
 
     async def async_close(self):
@@ -227,7 +235,7 @@ class AIOHTTPSession:
 
         # close and remove session
         await self._session.close()
-        self._session = None      
+        self._session = None
           
     async def async_request(self, method: Method, url: str, 
             decoder: Decoder = 'bytes', **kwargs):
@@ -248,17 +256,16 @@ class AIOHTTPSession:
 
                 # merge kwargs with session envioronment kwargs
                 kwargs = {**self._request_env, **kwargs}
-                context = bool(self._session)
+                session = bool(self._session)
 
-                # create context
-                if not context:
-                    await self.start_session()
-                    logger.debug('single use session created')
+                # create session
+                if not session:
+                    await self.async_connect()
 
                 # make method request
                 request = getattr(self._session, method)
                 async with request(url, **kwargs) as resp:
-
+                    
                     # check response
                     if not (resp.status <= 400):
                                                 
@@ -290,9 +297,6 @@ class AIOHTTPSession:
                         msg = "decoding method '%s' not implemented" %method
                         raise NotImplementedError(msg)
 
-                    # logger.debug("processed '%s' request with '%s' decoder", 
-                    #         method, decoder)
-
                     return resp
 
             # except connectionerrors and retry
@@ -305,10 +309,9 @@ class AIOHTTPSession:
 
             finally:
                 
-                # close non contextual session
-                if not context:
-                    await self.close_session()
-                    logger.debug('single use session destroyed')
+                # close session
+                if not session:
+                    await self.async_close()
 
     async def _error_report(self, resp: aiohttp.ClientResponse) -> None:
         """create error report when api returns error messages."""
@@ -324,11 +327,8 @@ class AIOHTTPSession:
             # no message returned
             errors = None
             
-        # trigger special raise
         if errors:
-            
-            # create error report
-            base = "ETEngine returned the following error(s):"
-            msg = """%s\n > {}""".format("\n > ".join(errors)) %base
 
+            # format error message(s)
+            msg = format_error_messages(errors)
             raise UnprossesableEntityError(msg)

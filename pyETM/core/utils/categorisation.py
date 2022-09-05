@@ -1,11 +1,12 @@
 import pandas
+
 from pyETM.utils import categorise_curves
 
 
 class Categorisation:
     
     def categorise_curves(self, carrier, mapping, columns=None, 
-                          include_index=False, *args, **kwargs):
+                          include_index=False, **kwargs):
         """Categorise the hourly curves for a specific carrier with a 
         specific mapping.
         
@@ -24,7 +25,7 @@ class Categorisation:
         include_index : bool, default False
             Include the original ETM keys in the resulting mapping.
             
-        *args and **kwargs arguments are passed to pandas.read_csv when
+        **kwargs arguments are passed to pandas.read_csv when
         a filename is passed in the mapping argument.
         
         Return
@@ -53,6 +54,6 @@ class Categorisation:
         
         # use categorization function
         curves = categorise_curves(carrier, mapping, columns, 
-                                   include_index, *args, **kwargs)
+                                   include_index, **kwargs)
     
         return curves

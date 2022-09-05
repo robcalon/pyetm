@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-import logging
+import functools
 import pandas as pd
 
 from collections.abc import Iterable
+from pyETM.logger import get_modulelogger
 
-logger = logging.getLogger(__name__)
+# get modulelogger
+logger = get_modulelogger(__name__)
 
 
 class Curves:
@@ -13,13 +15,8 @@ class Curves:
     @property
     def custom_curves(self) -> pd.DataFrame:
         """fetch custom curves"""
-        
-        # get custom curves
-        if self._ccurves is None:
-            self.get_custom_curves()
-                    
-        return self._ccurves
-        
+        return self.get_custom_curves()
+                            
     @custom_curves.setter
     def custom_curves(self, ccurves: pd.DataFrame) -> None:
         """set custom curves without option to set a name"""
@@ -52,12 +49,9 @@ class Curves:
         # validate key
         key = self._validate_ccurve_key(key)
         
-        # prepare request
-        headers = {'Connection': 'close'}
-        url = f'scenarios/{self.scenario_id}/custom_curves/{key}'
-        
         # make request
-        self.session.delete(url, headers=headers)
+        url = f'scenarios/{self.scenario_id}/custom_curves/{key}'
+        self.session.delete(url)
         
     def _format_datetime(self, ccurves: pd.DataFrame) -> pd.DataFrame:
         """format datetime"""
@@ -78,15 +72,14 @@ class Curves:
         # validate key
         key = self._validate_ccurve_key(key)
             
-        # prepare request
-        headers = {"Connection": "close"}
+        # make request
         url = f'scenarios/{self.scenario_id}/custom_curves/{key}'
+        resp = self.session.get(url, decoder='BytesIO')
+
+        # convert to series
+        curve = pd.read_csv(resp, header=None, names=[key])
         
-        # request response and convert to series 
-        resp = self.session.get(url, headers=headers, decoder='BytesIO')
-        curve = pd.read_csv(resp, header=None, names=[key]).squeeze('columns')
-        
-        return curve
+        return curve.squeeze('columns')
         
     def __upload_ccurve(self, curve: pd.Series, key: str | None = None, 
             name: str | None = None) -> None:
@@ -111,13 +104,10 @@ class Curves:
         
         # check ccurve
         curve = self._check_ccurve(curve, key)
-        
-        # prepare request
-        headers = {'Connection': 'close'}
-        url = f'scenarios/{self.scenario_id}/custom_curves/{key}'
-        
+                
         # make request
-        self.session.upload_series(url, curve, name=name, headers=headers)
+        url = f'scenarios/{self.scenario_id}/custom_curves/{key}'
+        self.session.upload_series(url, curve, name=name)
         
     def _check_ccurve(self, curve: pd.Series, key: str) -> pd.Series:
         """check if a ccurve is compatible"""
@@ -161,7 +151,7 @@ class Curves:
                         
             # delete ccurve and reset
             self.__delete_ccurve(key)
-            self._reset_session()
+            self.reset_session()
 
         else:
             # warn user for attempt
@@ -203,7 +193,7 @@ class Curves:
             [function(key) for key in keys]
             
             # reset session
-            self._reset_session()
+            self.reset_session()
         
         else:
             # warn user for attempt
@@ -216,6 +206,7 @@ class Curves:
         key = self._validate_ccurve_key(key)
         return self.custom_curves[key]
         
+    @functools.lru_cache
     def get_custom_curves(self, 
             keys: Iterable[str] | None = None) -> pd.DataFrame:
         """return all attached curstom curves"""
@@ -253,10 +244,7 @@ class Curves:
             
             # empty dataframe
             ccurves = pd.DataFrame()
-        
-        # assign ccurves
-        self._ccurves = ccurves
-        
+                
         return ccurves[keys]
              
     def upload_custom_curve(self, curve: pd.Series, key: str | None = None, 
@@ -270,7 +258,7 @@ class Curves:
         self.__upload_ccurve(curve, key, name)
                 
         # reset session
-        self._reset_session()
+        self.reset_session()
     
     def upload_custom_curves(self, ccurves: pd.DataFrame, 
             names: list[str] | None = None) -> None:
@@ -300,4 +288,4 @@ class Curves:
             self.__upload_ccurve(ccurves[key], key, name=names[nr])
                 
         # reset session
-        self._reset_session()
+        self.reset_session()

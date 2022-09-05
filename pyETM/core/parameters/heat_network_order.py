@@ -1,40 +1,33 @@
-import numpy
+import functools
+import numpy as np
 
 class HeatNetworkOrder:
     
     @property
     def heat_network_order(self):
-        
-        # get heat network order
-        if self._heat_network_order is None:
-            self.get_heat_network_order()
-            
-        return self._heat_network_order
+        return self.get_heat_network_order()
     
     @heat_network_order.setter
     def heat_network_order(self, order):
         self.change_heat_network_order(order)
         
-    def get_heat_network_order(self, **kwargs):
+    @functools.lru_cache
+    def get_heat_network_order(self):
         """get the heat network order"""
         
         # raise without scenario id
         self._raise_scenario_id()
         
-        # prepare request
-        headers = {'Connection':'close'}
+        # make request
         url = f'scenarios/{self.scenario_id}/heat_network_order'
-        
-        # request response and convert to dict
-        resp = self.session.get(url, headers=headers, **kwargs)
+        resp = self.session.get(url)
+
+        # get order
         order = resp["order"]
-                
-        # set heat network order
-        self._heat_network_order = order
-        
+                        
         return order
     
-    def change_flexibility_order(self, order, **kwargs):
+    def change_heat_network_order(self, order):
         """change heat network order
         
         parameters
@@ -51,21 +44,18 @@ class HeatNetworkOrder:
         # map order to correct scenario parameter
         data = {'heat_network_order': {'order': order}}
         
-        # prepare request
-        headers = {'Connection':'close'}
+        # make request
         url = f'scenarios/{self.scenario_id}/heat_network_order'
-        
-        # evaluate request
-        self.session.put(url, json=data, headers=headers, **kwargs)
+        self.session.put(url, json=data)
         
         # reinitialize scenario
-        self._reset_session()
+        self.reset_session()
         
     def _check_heat_network_order(self, order):
         """check if items in flexbility order are in ETM."""
         
         # convert np,array to list
-        if isinstance(order, numpy.ndarray):
+        if isinstance(order, np.ndarray):
             order = order.tolist()
         
         # acces dict for order

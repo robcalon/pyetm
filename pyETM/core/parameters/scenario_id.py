@@ -1,7 +1,9 @@
 import copy
-import logging
 
-logger = logging.getLogger(__name__)
+from pyETM.logger import get_modulelogger
+
+# get modulelogger
+logger = get_modulelogger(__name__)
 
 
 class ScenarioID:
@@ -17,51 +19,34 @@ class ScenarioID:
     def scenario_id(self, scenario_id):
         self.change_scenario_id(scenario_id)
                 
-    def change_scenario_id(self, scenario_id, **kwargs):
+    def change_scenario_id(self, scenario_id: str):
         """change the connected scenario."""
 
-        # check if scenario id works
-        scenario_id = self.check_scenario_id(scenario_id, **kwargs)
-
-        # store previous scenario id
+        # store previous and validate new scenario id
         previous = copy.deepcopy(self.scenario_id)
-        
-        # set new scenario id
-        self._scenario_id = scenario_id
-        
-        # reinitialize scenario
-        self._reset_session()
-        
-        # specify log conditions
-        c1 = previous is not None
-        c2 = self.scenario_id is not None
-        c3 = self.scenario_id != previous
-        
-        # log changed scenario id
-        if all((c1, c2, c3)) is True:
-            logger.debug(f"scenario_id changed to '{self.scenario_id}'")
-        
-    def check_scenario_id(self, scenario_id, **kwargs):
-        """check if scenario id responds"""
-        
-        # convert intiger to string
-        if isinstance(scenario_id, int):
-            scenario_id = str(scenario_id)
-            
+
         # try accessing dict
         if isinstance(scenario_id, dict):
             scenario_id = scenario_id['id']
-        
-        # ignore None tests
-        if scenario_id is None:
-            return scenario_id
-                
-        # make validation request
-        url = f'scenarios/{scenario_id}'
-        self.session.get(url, **kwargs)
-        
-        return scenario_id
-    
+
+        # convert passed id to string        
+        if not (isinstance(scenario_id, str) | (scenario_id is None)):
+            scenario_id = str(scenario_id)
+
+        # set new scenario id
+        self._scenario_id = scenario_id
+
+        # log changed scenario id
+        if self.scenario_id != previous:
+            logger.debug(f"Updated scenario_id: '{self.scenario_id}'")
+
+        # reset session
+        if (self.scenario_id != previous) & (previous is not None):
+            self.reset_session()
+
+        # validate scenario id
+        self.get_scenario_header()
+
     def _raise_scenario_id(self):
         """raise error when scenario id is None"""
 

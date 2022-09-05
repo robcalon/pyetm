@@ -1,32 +1,21 @@
 import pandas as pd
+import functools
 
 class ApplicationDemands:
     
     @property
     def application_demands(self):
-        
-        # get application demands
-        if self._application_demands is None:
-            self.get_application_demands()
-            
-        return self._application_demands
+        return self.get_application_demands()
     
-    def get_application_demands(self, **kwargs):
+    @functools.lru_cache
+    def get_application_demands(self):
         """get the application demands"""
 
         # raise without scenario id
         self._raise_scenario_id()
         
-        # prepare post
-        headers = {'Connection':'close'}
+        # make request
         url = f'scenarios/{self.scenario_id}/application_demands'
-        
-        # request response and convert to df
-        resp = self.session.get(url, decoder="BytesIO", 
-                headers=headers, **kwargs)
-        demands = pd.read_csv(resp, index_col='key')
-        
-        # set corresponsing parameter property
-        self._application_demands = demands
+        resp = self.session.get(url, decoder="BytesIO")
 
-        return demands
+        return pd.read_csv(resp, index_col='key')

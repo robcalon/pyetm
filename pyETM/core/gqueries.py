@@ -1,3 +1,4 @@
+import functools
 import pandas as pd
 
 
@@ -23,17 +24,12 @@ class GQueries:
         self._gqueries = gqueries
         
         # reset gquery results
-        self._gquery_results = None
+        self.get_gquery_results.cache_clear()
         
     @property
     def gquery_results(self):
         """returns results for all set gqueries"""
-        
-        # get gquery results
-        if self._gquery_results is None:
-            self._get_gquery_results()
-            
-        return self._gquery_results
+        return self.get_gquery_results()
     
     @property
     def gquery_curves(self):
@@ -58,7 +54,7 @@ class GQueries:
         
         return gqueries
             
-    def get_gquery_results(self, gqueries):
+    def get_gquery_results_for_gqueries(self, gqueries):
         """Request gqueries from ETM"""
         
         # update gqueries
@@ -66,7 +62,8 @@ class GQueries:
         
         return self.gquery_results
         
-    def _get_gquery_results(self, **kwargs):
+    @functools.lru_cache
+    def get_gquery_results(self):
         """get data for queried graphs from ETM"""
                 
         # raise without scenario id
@@ -77,11 +74,10 @@ class GQueries:
         url = f'scenarios/{self.scenario_id}'
         
         # evaluate post
-        response = self.session.put(url, json=data, **kwargs)
+        response = self.session.put(url, json=data)
         
         # transform into dataframe
         records = response['gqueries']
         gquery_results = pd.DataFrame.from_dict(records, orient='index')
         
-        # set gquery results
-        self._gquery_results = gquery_results
+        return gquery_results

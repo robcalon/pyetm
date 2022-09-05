@@ -2,16 +2,13 @@ from __future__ import annotations
 
 import io
 import json
-import logging
 import requests
 
 import pandas as pd
-
 from urllib.parse import urljoin
-from pyETM.exceptions import UnprossesableEntityError
-from pyETM.types import Decoder, Method
 
-logger = logging.getLogger(__name__)
+from .utils.types import Decoder, Method
+from pyETM.exceptions import UnprossesableEntityError, format_error_messages
 
 
 class RequestsSession:
@@ -69,10 +66,17 @@ class RequestsSession:
         self._session = requests.Session()
 
     def __repr__(self):
-        return f'RequestsSession(base_url={self.base_url})'
+        """reproduction string"""
+
+        # object environment
+        env = ", ".join(f"{k}={str(v)}" for k, v in 
+            self._request_env.items())
+
+        return "RequestsSession(%s)" %env
 
     def __str__(self):
-        return repr(self)
+        """stringname"""
+        return 'RequestsSession'
 
     def __enter__(self) -> RequestsSession:
         """enter context manager"""
@@ -93,9 +97,11 @@ class RequestsSession:
         return urljoin(self.base_url, url)
 
     def connect(self):
+        """connect session"""
         pass
 
     def close(self):
+        """close session"""
         pass
 
     def request(self, method: Method, url: str, 
@@ -145,9 +151,6 @@ class RequestsSession:
                         msg = "decoding method '%s' not implemented" %method
                         raise NotImplementedError(msg)
 
-                    # logger.debug("processed '%s' request with '%s' decoder", 
-                    #         method, decoder)
-
                     return resp
 
             # except connectionerrors and retry
@@ -172,13 +175,10 @@ class RequestsSession:
             # no message returned
             errors = None
 
-        # trigger special raise
         if errors:
-            
-            # create error report
-            base = "ETEngine returned the following error(s):"
-            msg = """%s\n > {}""".format("\n > ".join(errors)) %base
 
+            # format error message(s)
+            msg = format_error_messages(errors)
             raise UnprossesableEntityError(msg)
 
     def delete(self, url: str | None = None, 

@@ -1,8 +1,9 @@
-import logging
-from xml.etree.ElementInclude import include
 import pandas as pd
 
-logger = logging.getLogger(__name__)
+from pyETM.logger import get_modulelogger
+
+# get modulelogger
+logger = get_modulelogger(__name__)
 
 
 class Properties:
@@ -28,12 +29,9 @@ class Properties:
             include_internal = str(bool(include_internal))
             params['include_internal'] = include_internal.lower()
         
-        # prepare request
-        headers = {'Connection': 'close'}
-        url = f'scenarios/{self.scenario_id}/custom_curves'
-        
         # request repsonse 
-        resp = self.session.get(url, headers=headers, params=params)
+        url = f'scenarios/{self.scenario_id}/custom_curves'
+        resp = self.session.get(url, params=params)
 
         # check for response
         if bool(resp) == True:
