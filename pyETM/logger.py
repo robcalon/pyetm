@@ -39,7 +39,7 @@ def _create_mainlogger(logdir):
     os.makedirs(logdir, exist_ok=True)
 
     # get rootlogger
-    logger = logging.getLogger()
+    logger = logging.getLogger(PACKAGENAME)
     logger.setLevel(logging.DEBUG)
 
     # create formatter
