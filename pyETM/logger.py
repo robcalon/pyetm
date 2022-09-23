@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import os
+import copy
+import shutil
 import logging
 
 from pathlib import Path
@@ -12,11 +13,11 @@ def find_dirpath(dirname:  str, dirpath: str):
     dirpath = Path(dirpath)
 
     # set modified dirpath
-    mdirpath = os.path.dirname(dirpath)
+    mdirpath = copy.copy(dirpath)
     recursions, max_recursions = 0, len(dirpath.parts)
 
     # iterate over dirpath until basename matched dirname
-    while os.path.basename(mdirpath) != dirname:
+    while mdirpath.stem != dirname:
 
         # limit number of recursions
         if recursions >= max_recursions:
@@ -24,10 +25,10 @@ def find_dirpath(dirname:  str, dirpath: str):
                 %(dirname, dirpath))
 
         # strip basename from modified path
-        mdirpath = os.path.dirname(mdirpath)
+        mdirpath = mdirpath.parent
         recursions += 1
 
-    return str(mdirpath)
+    return mdirpath
 
 def _create_mainlogger(logdir):
     """create main logger"""
@@ -35,8 +36,8 @@ def _create_mainlogger(logdir):
     global _mainlogger
 
     # make logdir
-    logdir = '%s/logs' %logdir
-    os.makedirs(logdir, exist_ok=True)
+    logdir = Path(logdir).joinpath('logs')
+    Path.mkdir(logdir, exist_ok=True)
 
     # get rootlogger
     logger = logging.getLogger(PACKAGENAME)
@@ -48,7 +49,7 @@ def _create_mainlogger(logdir):
     formatter = logging.Formatter(fmt, datefmt=datefmt)
 
     # create file handler
-    filepath = '%s/%s.log' %(logdir, PACKAGENAME)
+    filepath = logdir.joinpath(PACKAGENAME + '.log')
     file_handler = logging.FileHandler(filepath, mode='w+')
     file_handler.setFormatter(formatter)
     file_handler.setLevel(logging.DEBUG)
@@ -73,9 +74,24 @@ def get_modulelogger(name: str):
 
     return _moduleloggers[name]
 
-# globals
+def export_logfile(dst: str | None = None):
+    """Export logfile to targetfolder, 
+    defaults to current working directory."""
+
+    # default location
+    if dst is None:
+        dst = Path.cwd()
+   
+    # export file
+    shutil.copyfile(LOGDIR, dst)
+
+# package globals
 PACKAGENAME = 'pyETM'
 PACKAGEPATH = find_dirpath(PACKAGENAME, __file__)
+
+# logger globals
+LOGDIR = f"logs/{PACKAGENAME}.log"
+LOGDIR = PACKAGEPATH.joinpath(LOGDIR).as_posix()
 
 # track loggers
 _mainlogger = None
