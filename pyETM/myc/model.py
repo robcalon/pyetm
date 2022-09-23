@@ -6,9 +6,11 @@ import numpy as np
 import pandas as pd
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from pyETM import Client
 from pyETM.logger import get_modulelogger, export_logfile
+from pyETM.optional import import_optional_dependency
 
 _logger = get_modulelogger(__name__)
 
@@ -528,9 +530,16 @@ class Model():
         midx: tuple | pd.MultiIndex | None = None) -> None:
         """export results to excel"""
 
-        import xlsxwriter
         from pathlib import Path
         from .utils.excel import add_frame, add_series
+
+        if TYPE_CHECKING:
+            # import xlswriter
+            import xlsxwriter
+
+        else:
+            # import optional dependency
+            xlsxwriter = import_optional_dependency('xlsxwriter')
 
         # make filepath
         if filepath is None:

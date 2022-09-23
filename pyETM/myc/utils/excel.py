@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import math
-import xlsxwriter
 
 import numpy as np
 import pandas as pd
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import xlsxwriter
 
 def _handle_nans(worksheet, row, col, number, format=None):
     """handle nan values and convert float to numpy.float64"""
