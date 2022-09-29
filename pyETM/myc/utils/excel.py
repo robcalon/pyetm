@@ -78,39 +78,42 @@ def add_frame(name: str, frame: pd.DataFrame,
 
     return worksheet
 
-def add_series(name: str, series: pd.Series, 
-        workbook: xlsxwriter.Workbook):
+def add_series(name: str, series: pd.Series,
+    workbook: xlsxwriter.Workbook):
 
     # add formats
     f1 = workbook.add_format({"bold": True})
 
     # add worksheet and nan handler
     worksheet = workbook.add_worksheet(str(name))
+    worksheet.add_write_handler(float, _handle_nans)
 
-    # write index names
-    worksheet.write(0, 0, "STUDY", f1)
-    worksheet.write(0, 1, "SCENARIO", f1)
-    worksheet.write(0, 2, "REGION", f1)
-
-    # write values header
-    worksheet.write(0, 3, "URL", f1)
-
-    # set column widths
-    worksheet.set_column(0, 3, 20)
-    worksheet.set_column(4, 4, 80)
-
-    # set offsets and freeze panes
-    skiprows, skipcolumns = 1, 3
+    # set offset and freeze panes
+    skiprows, skipcolumns = 1, len(series.index.names)
     worksheet.freeze_panes(skiprows, skipcolumns)
 
-    # write index values
-    for row_num, row_data in enumerate(series.index.values):
-        worksheet.write(row_num + skiprows, 0, row_data[0])
-        worksheet.write(row_num + skiprows, 1, row_data[1])
-        worksheet.write(row_num + skiprows, 2, row_data[2])
+    # write index names
+    for nr, level in enumerate(series.index.names):
+        worksheet.write(0, nr, level, f1)
 
-    # write cell values in numeric format    
-    for row_num, row_data in enumerate(series.values):
-        worksheet.write(row_num + skiprows, skipcolumns, row_data)
+    # write header
+    worksheet.write(0, skipcolumns, series.name, f1)
+
+    if isinstance(series.index, pd.MultiIndex):
+
+        # write index values for multiindex
+        for row_num, row_data in enumerate(series.index.values):
+            for col_num, cell_data in enumerate(row_data):
+                worksheet.write(row_num + skiprows, col_num, cell_data)
+
+    else:
+
+        # write index values for regular index        
+        for row_num, row_data in enumerate(series.index.values):        
+            worksheet.write(row_num + skiprows, 0, row_data)
+    
+    # write cell values
+    for row_num, cell_data in enumerate(series.values):
+        worksheet.write(row_num + skiprows, skipcolumns, cell_data)
 
     return worksheet

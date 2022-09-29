@@ -27,7 +27,7 @@ def sort_frame(frame: pd.DataFrame):
     if 'Reference' in scenarios.unique():
 
         # subset reference and drop from frame
-        ref = frame.xs('Reference', level=1, axis=1, drop_level=False)
+        ref = frame.xs('Reference', level='SCENARIO', axis=1, drop_level=False)
         frame = frame.drop(ref.columns, axis=1)
 
         # merge back in correct order
@@ -49,6 +49,11 @@ class Model():
         if not isinstance(session_ids, pd.Series):
             session_ids = pd.Series(session_ids)
         
+        # set uniform index names
+        keys = ['STUDY', 'SCENARIO', 'REGION', 'YEAR']
+        session_ids.index.names = keys
+
+        # set session ids
         self.__session_ids = session_ids
 
     @property
@@ -62,6 +67,7 @@ class Model():
         if not isinstance(parameters, pd.Series):
             parameters = pd.Series(parameters)
         
+        # set parameters
         self.__parameters = parameters
 
     @property
@@ -75,6 +81,7 @@ class Model():
         if not isinstance(gqueries, pd.Series):
             gqueries = pd.Series(gqueries)
         
+        # set gqueries
         self.__gqueries = gqueries
 
     @property
@@ -132,33 +139,20 @@ class Model():
 
         return excluded
 
-    def __init__(self, 
-        session_ids: str | pd.Series | None = None,
-        parameters: str | pd.Series | None = None, 
-        gqueries: str | pd.Series | None = None,
-        **kwargs):
+    def __init__(self, session_ids: pd.Series,
+        parameters: pd.Series, gqueries: pd.Series, **kwargs):
         """initialisation logic for Client.
         
         Parameters
         ----------
-        session_ids: str, pd.Series or None, default None
-            Series object with session ids or relative path
-            to excel file with session ids. Defaults to path
-            TYNDPTools/data/session_ids.xlsx.
-        parameters: str, dict or None, default None
-            Dictonairy with parameters names to collect and 
-            corresponding parameter unit. Or (relative) path
-            to json from which this dictionairy is constructed.
-            Defaults to path TYNDPTools/data/parameters.json.
-        gqueries: str, dict or None, default None
-            Dictionairy with gqueries to collect and corresponding
-            gquery unit. Or (relative) path to json from which
-            this dictionairy is constructed. Defaults to path
-            TYNDPTools/data/gqueries.json.
-        writer : 
-            Object that handles processing of returned
-            frames into a file. Defaults to ExcelWriter that
-            writes an Excel file.
+        session_ids: pd.Series
+            Series with session ids.
+        parameters: pd.Series
+            Series with parameters names to collect and 
+            corresponding parameter unit.
+        gqueries: pd.Series
+            Series with gqueries to collect and corresponding
+            gquery unit.
     
         All key-word arguments are passed directly to the Session
         that is used in combination with the pyETM.client. In this 
@@ -480,7 +474,7 @@ class Model():
 
         # set names of index levels
         frame.index.names = ['KEY', 'UNIT']
-        frame.columns.names = ['STUDY', 'SCENARIO', 'YEAR', 'COUNTRY']
+        frame.columns.names = ['STUDY', 'SCENARIO', 'REGION', 'YEAR']
 
         # aggregate eu27
         frame = frame.fillna(0)
@@ -509,7 +503,7 @@ class Model():
         # drop reference scenario
         scenarios = cases.index.get_level_values(level='SCENARIO')
         if 'Reference' in scenarios.unique():
-            cases = cases.drop('Reference', level=1, axis=0)
+            cases = cases.drop('Reference', level='SCENARIO', axis=0)
 
         _logger.info("making MYC URLS")
 
@@ -526,9 +520,36 @@ class Model():
 
         return pd.Series(urls, name='URL').sort_index()
 
-    def to_excel(self, filepath: str | None = None,
-        midx: tuple | pd.MultiIndex | None = None) -> None:
-        """export results to excel"""
+    def to_excel(self, 
+        filepath: str | None = None,
+        midx: tuple | pd.MultiIndex | None = None, 
+        input_parameters: pd.DataFrame | None = None, 
+        output_values: pd.DataFrame | None = None, 
+        myc_urls: pd.Series | None = None) -> None:
+        """Export results of model to Excel.
+        
+        Parameters
+        ----------
+        filepath : str, default None
+            File path or existing ExcelWriter, defaults
+            to filename with current datetime in current 
+            working directory.
+        midx : tuple or pd.MultiIndex, default None
+            Tuple or MultiIndex with column names
+            of columns to include in file. Defaults 
+            to all columns.
+        input_parameters : pd.DataFrame, default None
+            DataFrame to write on the inputs sheet
+            of the Excel. Defaults to get_input_values 
+            method with specified midx.
+        output_values : pd.DataFrame, default None
+            DataFrame to write on the outputs sheet
+            of the Excel. Defaults to get_output_values
+            method with specified midx.
+        urls : pd.Series, default None
+            Series to write on the url sheet
+            of the Excel. Default to make_myc_urls
+            method with specified midx."""
 
         from pathlib import Path
         from .utils.excel import add_frame, add_series
@@ -551,22 +572,35 @@ class Model():
         # check filepath
         if not Path(filepath).parent.exists:
             raise FileNotFoundError("Path to file does not exist: '%s'" 
-            %filepath)
+                %filepath)
 
         # create workbook
         workbook = xlsxwriter.Workbook(str(filepath))
 
-        # add input parameters
-        frame = self.get_input_parameters(midx=midx)
-        add_frame('INPUT_PARAMETERS', frame, workbook)
+        # default inputs
+        if input_parameters is None:
+            input_parameters = self.get_input_parameters(midx=midx)
 
-        # add output values
-        frame = self.get_output_values(midx=midx) 
-        add_frame('OUTPUT_VALUES', frame, workbook)
+        # add inputs to workbook
+        add_frame('INPUT_PARAMETERS', input_parameters, workbook)
 
-        # add ETM urls
-        series = self.make_myc_urls(midx=midx)
-        add_series('ETM_URLS', series, workbook)
+        # default outputs
+        if output_values is None:
+            output_values = self.get_output_values(midx=midx)
+
+        # add outputs to workbook
+        add_frame('OUTPUT_VALUES', output_values, workbook)
+
+        # default urls
+        if myc_urls is None:
+            myc_urls = self.make_myc_urls(midx=midx)
+
+        # add urls to workbook
+        worksheet = add_series('ETM_URLS', myc_urls, workbook)
+
+        # set column widths
+        worksheet.set_column(0, 2, 20)
+        worksheet.set_column(3, 3, 80)
 
         # write workbook
         workbook.close()
