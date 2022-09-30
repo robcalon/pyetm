@@ -4,7 +4,7 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 def categorise_curves(curves, mapping, columns=None,
-                      include_index=False, **kwargs):
+    include_index=False, ignore_unused_keys=False, **kwargs):
     """Categorize the hourly curves for a specific dataframe 
     with a specific mapping. 
     
@@ -27,6 +27,10 @@ def categorise_curves(curves, mapping, columns=None,
         in the mapping. Defaults to all columns in mapping.
     include_index : bool, default False
         Include the original ETM keys in the resulting mapping.
+    ignore_unused_keys : bool, default False
+        Ignore keys that are specified in the categorisation 
+        that are not present in the passed curves. When True, 
+        raised a KeyError.
     **kwargs are passed to pd.read_csv when a filename is 
     passed in the mapping argument.
     
@@ -39,21 +43,34 @@ def categorise_curves(curves, mapping, columns=None,
         
     # load categorization
     if isinstance(mapping, str):
-        mapping = pd.read_csv(mapping, *args, **kwargs)
+        mapping = pd.read_csv(mapping, **kwargs)
     
     if isinstance(mapping, pd.Series):
         mapping = mapping.to_frame()
         columns = mapping.columns
         
     # check if passed curves contains columns not specified in cat 
-    for item in curves.columns[~curves.columns.isin(mapping.index)]:
-        raise KeyError(f'"{item}" is not present in the ' + 
-                       f'curve categorization')
+    errors = curves.columns[~curves.columns.isin(mapping.index)]
+    if not errors.empty:
+        
+        # make message
+        errors = "', '".join(map(str, errors))
+        message = "Missing key(s) in mapping: '%s'" %errors
+        
+        raise KeyError(message)
 
-    # check if cat specifies keys not in passed curves
-    for item in mapping.index[~mapping.index.isin(curves.columns)]:
-        raise KeyError(f'"{item}" is not present in the ' +
-                       f'returned ETM curves')
+    # check for unused keys
+    if not ignore_unused_keys:
+
+        # check if cat specifies keys not in passed curves
+        errors = mapping.index[~mapping.index.isin(curves.columns)]
+        if not errors.empty:
+
+            # make message
+            errors = "', '".join(map(str, errors))
+            message = "Unused key(s) in mapping: '%s'" %errors
+
+            raise KeyError(message)
 
     # copy curves
     curves = curves.copy()
