@@ -145,6 +145,7 @@ class Market:
     def from_excel(cls, filepath: str, name: str | None = None, **kwargs):
         """initialise market from excel"""
 
+        # default name
         if name is None:
             name = Path(filepath).stem
 
@@ -172,6 +173,7 @@ class Market:
             if 'MPI Profiles' in reader.sheet_names:
                 mpi_profiles = reader.parse('MPI Profiles')
 
+        # initialise model
         model = cls(name=name, 
             scenario_ids=scenario_ids, mpi_profiles=mpi_profiles, 
             interconnectors=interconnectors, **kwargs)
