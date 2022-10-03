@@ -141,6 +141,43 @@ class Market:
         # log event
         logger.debug("'%s': initialisation completed", self)
 
+    @classmethod
+    def from_excel(cls, filepath: str, name: str | None = None, **kwargs):
+        """initialise market from excel"""
+
+        if name is None:
+            name = Path(filepath).stem
+
+        # read excel
+        with pd.ExcelFile(filepath) as reader:
+
+            # read interconnectors
+            sheet, idx = 'Interconnectors', 0
+            interconnectors = reader.parse(sheet, index_col=idx)
+
+            # read scenario ids
+            sheet, idx = 'Sessions', [*range(4)]
+            scenario_ids = reader.parse(sheet, index_col=idx)
+            
+            # drop levels
+            for level in ['STUDY', 'SCENARIO', 'YEAR']:
+                if level in scenario_ids.index.names:
+                    scenario_ids = scenario_ids.droplevel(level)
+
+            # squeeze columns
+            scenario_ids = scenario_ids.squeeze('columns')
+
+            # read mpi profiles
+            mpi_profiles = None
+            if 'MPI Profiles' in reader.sheet_names:
+                mpi_profiles = reader.parse('MPI Profiles')
+
+        model = cls(name=name, 
+            scenario_ids=scenario_ids, mpi_profiles=mpi_profiles, 
+            interconnectors=interconnectors, **kwargs)
+
+        return model
+
     def __repr__(self) -> str:
         return "ExchangeModel(%s)" %self.name
 
