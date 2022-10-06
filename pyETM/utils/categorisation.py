@@ -1,11 +1,15 @@
-import logging
+from __future__ import annotations
+
 import pandas as pd
 
-logger = logging.getLogger(__name__)
+from pyETM.logger import get_modulelogger
+
+logger = get_modulelogger(__name__)
 
 
-def categorise_curves(curves, mapping, columns=None,
-                      include_index=False, **kwargs):
+def categorise_curves(curves: pd.DataFrame, 
+    mapping: pd.DataFrame | str, columns: list[str] | None =None, 
+    include_index: bool = False, **kwargs) -> pd.DataFrame:
     """Categorize the hourly curves for a specific dataframe
     with a specific mapping.
 
@@ -28,6 +32,7 @@ def categorise_curves(curves, mapping, columns=None,
         in the mapping. Defaults to all columns in mapping.
     include_index : bool, default False
         Include the original ETM keys in the resulting mapping.
+    
     **kwargs are passed to pd.read_csv when a filename is
     passed in the mapping argument.
 
@@ -40,25 +45,31 @@ def categorise_curves(curves, mapping, columns=None,
 
     # load categorization
     if isinstance(mapping, str):
-        mapping = pd.read_csv(mapping, *args, **kwargs)
+        mapping = pd.read_csv(mapping, **kwargs)
 
     if isinstance(mapping, pd.Series):
         mapping = mapping.to_frame()
         columns = mapping.columns
 
     # check if passed curves contains columns not specified in cat
-    missing_curves = curves.columns[~curves.columns.isin(mapping.index)].tolist()
-    if missing_curves:
-        raise KeyError(
-            "The following are present in the curves but not in the categorization mapping: "
-            + ", ".join(missing_curves))
+    missing_curves = curves.columns[~curves.columns.isin(mapping.index)]
+    if not missing_curves.empty:
+
+        # make message
+        missing_curves = "', '".join(map(str, missing_curves))
+        message = "Missing key(s) in mapping: '%s'" %missing_curves
+
+        raise KeyError(message)
 
     # check if cat specifies keys not in passed curves
-    superfluous_curves = mapping.index[~mapping.index.isin(curves.columns)].tolist()
-    if superfluous_curves:
-        logger.warning(
-            "The following are present in the categorization mapping but not in the curves: "
-            + ", ".join(superfluous_curves))
+    superfluous_curves = mapping.index[~mapping.index.isin(curves.columns)]
+    if not superfluous_curves.empty:
+
+        # make message
+        superfluous_curves = "', '".join(map(str, superfluous_curves))
+        message = "Unused key(s) in mapping: '%s'" %superfluous_curves
+        
+        logger.warning(message)
 
     # copy curves
     curves = curves.copy()
