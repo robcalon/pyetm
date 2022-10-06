@@ -57,7 +57,7 @@ def categorise_curves(curves, mapping, columns=None,
     # check if cat specifies keys not in passed curves
     superfluous_curves = mapping.index[~mapping.index.isin(curves.columns)].tolist()
     if superfluous_curves:
-        warnings.warn(
+        logger.warning(
             "The following are present in the categorization mapping but not in the curves: "
             + ", ".join(superfluous_curves))
 
