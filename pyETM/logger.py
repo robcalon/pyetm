@@ -4,6 +4,7 @@ import copy
 import shutil
 import logging
 
+from datetime import datetime
 from pathlib import Path
 
 def find_dirpath(dirname:  str, dirpath: str):
@@ -84,6 +85,29 @@ def export_logfile(dst: str | None = None):
    
     # export file
     shutil.copyfile(LOGDIR, dst)
+
+def report_error(error: Exception, logger: logging.Logger | None = None):
+    """report error message and export logs"""
+
+    # default logger
+    if logger is None:
+        logger = get_modulelogger(__name__)
+
+    # get current time
+    now = datetime.now()
+    now = now.strftime("%Y%m%d%H%M")
+    
+    # make filepath
+    filepath = Path.cwd().joinpath(now + '.log')
+
+    # log exception as error
+    logger.error("Encountered error: exported logs to '%s'", filepath)
+    logger.debug("Traceback for encountered error:", exc_info=True)
+
+    # export logfile
+    export_logfile(filepath)
+
+    raise error
 
 # package globals
 PACKAGENAME = 'pyETM'
