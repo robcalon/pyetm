@@ -9,7 +9,7 @@ logger = get_modulelogger(__name__)
 
 def categorise_curves(curves: pd.DataFrame, 
     mapping: pd.DataFrame | str, columns: list[str] | None =None, 
-    include_index: bool = False, **kwargs) -> pd.DataFrame:
+    include_keys: bool = False, **kwargs) -> pd.DataFrame:
     """Categorize the hourly curves for a specific dataframe
     with a specific mapping.
 
@@ -30,7 +30,7 @@ def categorise_curves(curves: pd.DataFrame,
     columns : list, default None
         List of column names and order that will be included
         in the mapping. Defaults to all columns in mapping.
-    include_index : bool, default False
+    include_keys : bool, default False
         Include the original ETM keys in the resulting mapping.
     
     **kwargs are passed to pd.read_csv when a filename is
@@ -89,10 +89,10 @@ def categorise_curves(curves: pd.DataFrame,
         mapping = mapping[columns]
 
     # include index in mapping
-    if include_index is True:
+    if include_keys is True:
 
         # append index as column to mapping
-        keys = mapping.index.to_series(name='ETM_key')
+        keys = mapping.index.to_series(name='KEY')
         mapping = pd.concat([mapping, keys], axis=1)
 
     if len(mapping.columns) == 1:
