@@ -148,7 +148,7 @@ class RequestsSession:
                         resp = resp.text
 
                     else:
-                        msg = "decoding method '%s' not implemented" %method
+                        msg = "decoding method '%s' not implemented" %decoder
                         raise NotImplementedError(msg)
 
                     return resp

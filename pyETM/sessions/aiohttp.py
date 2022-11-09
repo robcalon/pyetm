@@ -294,7 +294,7 @@ class AIOHTTPSession:
                         resp = await resp.text(encoding="utf-8")
 
                     else:
-                        msg = "decoding method '%s' not implemented" %method
+                        msg = "decoding method '%s' not implemented" %decoder
                         raise NotImplementedError(msg)
 
                     return resp
