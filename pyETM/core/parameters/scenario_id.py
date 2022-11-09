@@ -41,7 +41,7 @@ class ScenarioID:
             logger.debug(f"Updated scenario_id: '{self.scenario_id}'")
 
         # reset session
-        if (self.scenario_id != previous) & (previous is not None):
+        if self.scenario_id != previous:
             self.reset_session()
 
         # validate scenario id
