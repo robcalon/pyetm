@@ -6,34 +6,37 @@ import numpy as np
 import pandas as pd
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from pyETM import Client
-from pyETM.logger import get_modulelogger, export_logfile
+from pyETM.utils import categorise_curves
+from pyETM.logger import get_modulelogger, report_error
 from pyETM.optional import import_optional_dependency
 
 _logger = get_modulelogger(__name__)
 
+CARRIER = Literal['electricity', 'heat', 'hydrogen', 'methane']
+
 """externalize hard coded ETM parameters"""
 
-def sort_frame(frame: pd.DataFrame):
+def sort_frame(frame: pd.DataFrame, axis: int = 0):
     """sort frame with reference scenario at start position"""
 
     # sort columns
-    frame = frame.sort_index(axis=1)
-    
+    frame = frame.sort_index(axis=axis)
+
     # check for reference scenario
-    scenarios = frame.columns.get_level_values(level='SCENARIO')
+    scenarios = frame.axes[axis].get_level_values(level='SCENARIO')
     if 'Reference' in scenarios.unique():
 
-        # subset reference and drop from frame
-        ref = frame.xs('Reference', level='SCENARIO', axis=1, drop_level=False)
-        frame = frame.drop(ref.columns, axis=1)
+        # subset reference from frame
+        ref = frame.xs('Reference', level='SCENARIO', axis=axis, 
+            drop_level=False)
+        
+        # drop reference from frame
+        frame = frame.drop(ref.axes[axis], axis=axis)
 
-        # merge back in correct order
-        frame = ref.join(frame)
-
-    return frame
+    return pd.concat([ref, frame], axis=axis)
 
 
 class Model():
@@ -43,7 +46,7 @@ class Model():
         return self.__session_ids
 
     @session_ids.setter
-    def session_ids(self, session_ids):
+    def session_ids(self, session_ids: pd.Series):
 
         # convert to series        
         if not isinstance(session_ids, pd.Series):
@@ -61,7 +64,7 @@ class Model():
         return self.__parameters
 
     @parameters.setter
-    def parameters(self, parameters):
+    def parameters(self, parameters: pd.Series):
 
         # convert to series        
         if not isinstance(parameters, pd.Series):
@@ -75,7 +78,7 @@ class Model():
         return self.__gqueries
     
     @gqueries.setter
-    def gqueries(self, gqueries):
+    def gqueries(self, gqueries: pd.Series):
 
         # convert to series        
         if not isinstance(gqueries, pd.Series):
@@ -83,6 +86,24 @@ class Model():
         
         # set gqueries
         self.__gqueries = gqueries
+
+    @property
+    def mapping(self) -> pd.DataFrame:
+        return self.__mapping
+
+    @mapping.setter
+    def mapping(self, mapping: pd.DataFrame | None):
+        
+        # convert to dataframe
+        if not isinstance(mapping, (pd.DataFrame, None)):
+            mapping = pd.DataFrame(mapping)
+
+        # set default index names
+        if isinstance(mapping, pd.DataFrame):
+            mapping.index.names = ['KEY', 'CARRIER']
+
+        # set mapping
+        self.__mapping = mapping
 
     @property
     def depricated(self) -> list[str]:
@@ -140,7 +161,8 @@ class Model():
         return excluded
 
     def __init__(self, session_ids: pd.Series,
-        parameters: pd.Series, gqueries: pd.Series, **kwargs):
+        parameters: pd.Series, gqueries: pd.Series, 
+        mapping: pd.Series | pd.DataFrame | None = None, **kwargs):
         """initialisation logic for Client.
         
         Parameters
@@ -153,6 +175,8 @@ class Model():
         gqueries: pd.Series
             Series with gqueries to collect and corresponding
             gquery unit.
+        mapping : pd.Series or pd.DataFrame
+            Optional mapping for carrier curves output keys.
     
         All key-word arguments are passed directly to the Session
         that is used in combination with the pyETM.client. In this 
@@ -186,6 +210,7 @@ class Model():
         self.session_ids = session_ids
         self.parameters = parameters
         self.gqueries = gqueries
+        self.mapping = mapping
 
         # set kwargs
         self._kwargs = kwargs
@@ -194,22 +219,37 @@ class Model():
     def from_excel(cls, filepath: str, **kwargs):
         """initate from excel file with standard structure"""
 
+        # connect to excel file
+        xlsx = pd.ExcelFile(filepath)
+
         # get session ids
-        session_ids = pd.read_excel(filepath, sheet_name='Sessions', 
+        session_ids = pd.read_excel(xlsx, sheet_name='Sessions', 
             usecols=[*range(5)], index_col=[*range(4)]).squeeze('columns')
 
         # get paramters
-        parameters = pd.read_excel(filepath, sheet_name='Parameters', 
+        parameters = pd.read_excel(xlsx, sheet_name='Parameters', 
             usecols=[*range(2)], index_col=[*range(1)]).squeeze('columns')
 
         # get gqueries
-        gqueries = pd.read_excel(filepath, sheet_name='GQueries', 
+        gqueries = pd.read_excel(xlsx, sheet_name='GQueries', 
             usecols=[*range(2)], index_col=[*range(1)]).squeeze('columns')
 
-        return cls(session_ids, parameters, gqueries, **kwargs)
+        # check for optional mapping
+        if "Mapping" in xlsx.sheet_names:
+
+            # load mapping
+            mapping = pd.read_excel(filepath, sheet_name='Mapping', 
+                index_col=[*range(2)])
+
+        else: 
+
+            # default mapping
+            mapping = None
+
+        return cls(session_ids, parameters, gqueries, mapping, **kwargs)
 
     def _check_for_unmapped_input_parameters(self, 
-            client: Client) -> pd.Index:
+        client: Client) -> pd.Index:
 
         # get parameters from client side
         parameters = client.scenario_parameters
@@ -232,14 +272,14 @@ class Model():
         
         # warn for unmapped keys
         if not missing.empty:
-            _logger.warn("'%s' returned unmapped parameters: %s",
+            _logger.warn("%s returned unmapped parameters: %s",
                 client, list(missing))
 
         return missing
 
-    def get_input_parameters(self, 
-            midx: tuple | pd.MultiIndex | None = None) -> pd.DataFrame:
-        """get input parameters for single scenario"""
+    def _make_midx(self, 
+        midx: tuple | pd.MultiIndex | None = None) -> pd.MultiIndex:
+        """helper to handle passed multiindex"""
 
         # default to all
         if midx is None:
@@ -253,7 +293,14 @@ class Model():
         if not isinstance(midx, pd.MultiIndex):
             midx = pd.MultiIndex.from_tuples(midx)
 
+        return midx
+
+    def get_input_parameters(self, 
+        midx: tuple | pd.MultiIndex | None = None) -> pd.DataFrame:
+        """get input parameters for single scenario"""
+
         # subset cases of interest
+        midx = self._make_midx(midx=midx)
         cases = self.session_ids.loc[midx]
 
         _logger.info("collecting input parameters")
@@ -295,20 +342,9 @@ class Model():
                     parameters = parameters[keep]
                     values.append(parameters)
 
+        # handle exception
         except Exception as error:
-
-            # make filepath
-            now = datetime.datetime.now().strftime("%Y%m%d%H%M")
-            filepath = Path.cwd().joinpath(now + '.log')
-
-            # log excteption as error
-            _logger.error("Encountered error: exported logs to '%s'", filepath)
-            _logger.debug("Traceback for encountered error:", exc_info=True)
-
-            # export logfile
-            export_logfile(filepath)
-
-            raise error
+            report_error(error)
 
         # construct frame and handle nulls
         frame = pd.concat(values, axis=1, keys=midx)
@@ -322,7 +358,7 @@ class Model():
         frame.index.names = ['KEY', 'UNIT']
         frame.columns.names = ['STUDY', 'SCENARIO', 'REGION', 'YEAR']
 
-        return sort_frame(frame)
+        return sort_frame(frame, axis=1)
 
     def set_input_parameters(self, 
         frame: pd.DataFrame) -> None:
@@ -387,38 +423,87 @@ class Model():
                     client.scenario_id = self.session_ids.loc[case]
                     client.user_values = values
 
+        # handle exception
         except Exception as error:
+            report_error(error, logger=_logger)
 
-            # make filepath
-            now = datetime.datetime.now().strftime("%Y%m%d%H%M")
-            filepath = Path.cwd().joinpath(now + '.log')
+    def get_hourly_carrier_curves(self, carrier: str, 
+        midx: tuple | pd.MultiIndex | None = None, 
+        mapping: pd.DataFrame | None = None, 
+        columns: list | None = None, 
+        include_keys: bool = False) -> pd.DataFrame:
+        """get hourly carrier curves for scenarios"""
 
-            # log excteption as error
-            _logger.error("Encountered error: exported logs to '%s'", filepath)
-            _logger.debug("Traceback for encountered error:", exc_info=True)
-
-            # export logfile
-            export_logfile(filepath)
-
-            raise error
-
-    def get_output_values(self, 
-            midx: tuple | pd.MultiIndex | None = None) -> pd.DataFrame:
-        """get input parameters for single scenario"""
-
-        # default to all
-        if midx is None:
-            midx = self.session_ids.index
-
-        # add tuple to list
-        if isinstance(midx, tuple):
-            midx = [midx]
-
-        # make multiindex
-        if not isinstance(midx, pd.MultiIndex):
-            midx = pd.MultiIndex.from_tuples(midx)
+        # lower carrier
+        carrier = carrier.lower()
 
         # subset cases of interest
+        midx = self._make_midx(midx=midx)
+        cases = self.session_ids.loc[midx]
+    
+        # get default mapping
+        if (mapping is None) & (self.mapping is not None):
+
+            # lookup carriers in mapping and lower elements
+            carriers = list(self.mapping.index.levels[1])
+            lcarriers = [carrier.lower() for carrier in carriers]
+
+            # check if carrier is available
+            if not carrier in lcarriers:
+                raise KeyError("'%s' not specified as carrier in mapping")
+
+            # subset correct carrier
+            index = carriers[lcarriers.index(carrier)]
+            mapping = self.mapping.xs(index, level=1)
+
+        _logger.info("collecting hourly %s curves", carrier)
+
+        try:
+
+            # make client with context manager
+            with Client(**self._kwargs) as client:
+
+                # newlist
+                items = []
+
+                for case, scenario_id in cases.iteritems():
+
+                    # log event
+                    _logger.debug("> collecting hourly %s curves for " + 
+                        "'%s', '%s', '%s', '%s'", carrier, *case)
+        
+                    # connect scenario and get curves
+                    client.scenario_id = scenario_id
+
+                    # get method for carrier curves
+                    attr = f"hourly_{carrier}_curves"
+                    curves = getattr(client, attr)
+                        
+                    # check for categorisation
+                    if mapping is not None:
+
+                        # categorise curves
+                        curves = categorise_curves(curves, mapping, 
+                            columns=columns, include_keys=include_keys)
+
+                    # append curves to list
+                    items.append(curves)
+
+        # handle exception
+        except Exception as error:
+            report_error(error, logger=_logger)
+
+        # construct frame for carrier
+        frame = pd.concat(items, axis=1, keys=midx)
+
+        return sort_frame(frame, axis=1)
+
+    def get_output_values(self, 
+        midx: tuple | pd.MultiIndex | None = None) -> pd.DataFrame:
+        """get input parameters for single scenario"""
+
+        # subset cases of interest
+        midx = self._make_midx(midx=midx)
         cases = self.session_ids.loc[midx]
 
         _logger.info("collecting gquery results")
@@ -448,21 +533,9 @@ class Model():
                     # append gquery results
                     values.append(gqueries)
 
-        # log and raise exception
+        # handle exception
         except Exception as error:
-
-            # make filepath
-            now = datetime.datetime.now().strftime("%Y%m%d%H%M")
-            filepath = Path.cwd().joinpath(now + '.log')
-
-            # log excteption as error
-            _logger.error("Encountered error: exported logs to '%s'", filepath)
-            _logger.debug("Traceback for encountered error:", exc_info=True)
-
-            # export logfile
-            export_logfile(filepath)
-
-            raise error
+            report_error(error, logger=_logger)
 
         # construct frame and handle nulls
         frame = pd.concat(values, axis=1, keys=midx)
@@ -476,13 +549,13 @@ class Model():
         frame.index.names = ['KEY', 'UNIT']
         frame.columns.names = ['STUDY', 'SCENARIO', 'REGION', 'YEAR']
 
-        # aggregate eu27
+        # fill missing values
         frame = frame.fillna(0)
 
-        return sort_frame(frame)
+        return sort_frame(frame, axis=1)
 
     def make_myc_urls(self, 
-            midx: tuple | pd.MultiIndex | None = None) -> pd.Series:
+        midx: tuple | pd.MultiIndex | None = None) -> pd.Series:
         """convert session ids excel to myc urls"""
 
         # default to all
@@ -525,7 +598,13 @@ class Model():
         midx: tuple | pd.MultiIndex | None = None, 
         input_parameters: pd.DataFrame | None = None, 
         output_values: pd.DataFrame | None = None, 
-        myc_urls: pd.Series | None = None) -> None:
+        myc_urls: pd.Series | None = None,
+        include_hourly_curves: bool = False,
+        carriers: CARRIER | list[CARRIER] | None = None,
+        mapping: pd.DataFrame | None = None,
+        columns: list[str] | None = None,
+        include_keys: bool = False,
+        ) -> None:
         """Export results of model to Excel.
         
         Parameters
@@ -546,10 +625,29 @@ class Model():
             DataFrame to write on the outputs sheet
             of the Excel. Defaults to get_output_values
             method with specified midx.
-        urls : pd.Series, default None
+        myc_urls : pd.Series, default None
             Series to write on the url sheet
             of the Excel. Default to make_myc_urls
-            method with specified midx."""
+            method with specified midx.
+        include_hourly_curves : bool, default False
+            Include hourly carrier curves for specified
+            carriers in exported result. Defaults to
+            exclude carriers.
+        carriers : str | list, default None
+            Carrier of list of carriers to export when
+            including hourlu carrier curves. Defaults
+            to include all carriers.
+        mapping : DataFrame, default None
+            DataFrame with mapping of ETM keys and carrier in a multiindex
+            and mapping values in columns. Defaults to mapping passed on
+            initialisation or is excluded when not passed on model 
+            initialisation.
+        columns : list, default None
+            List of column names and the order of mappers that will 
+            be included in the applied mapping. Defaults to include all 
+            columns in applied mapping.
+        include_keys : bool, default False
+            Include the original ETM keys in the resulting mapping."""
 
         from pathlib import Path
         from .utils.excel import add_frame, add_series
@@ -561,6 +659,22 @@ class Model():
         else:
             # import optional dependency
             xlsxwriter = import_optional_dependency('xlsxwriter')
+
+        # supported carriers
+        all_carriers = ['electricity', 'heat', 'hydrogen', 'methane']
+
+        # default carriers
+        if carriers is None:
+            carriers = all_carriers
+
+        # add string to list
+        if isinstance(carriers, str):
+            carriers = [carriers]
+            
+        # check passed carriers
+        for carrier in carriers:
+            if carrier.lower() not in carriers:
+                raise ValueError("carrier '%s' not supported" %carrier)
 
         # make filepath
         if filepath is None:
@@ -582,25 +696,37 @@ class Model():
             input_parameters = self.get_input_parameters(midx=midx)
 
         # add inputs to workbook
-        add_frame('INPUT_PARAMETERS', input_parameters, workbook)
+        add_frame('INPUT_PARAMETERS', input_parameters, workbook,
+            index_width=[80, 18], column_width=18)
 
         # default outputs
         if output_values is None:
             output_values = self.get_output_values(midx=midx)
 
         # add outputs to workbook
-        add_frame('OUTPUT_VALUES', output_values, workbook)
+        add_frame('OUTPUT_VALUES', output_values, workbook,
+            index_width=[80, 18], column_width=18)
 
         # default urls
         if myc_urls is None:
             myc_urls = self.make_myc_urls(midx=midx)
 
         # add urls to workbook
-        worksheet = add_series('ETM_URLS', myc_urls, workbook)
+        add_series('ETM_URLS', myc_urls, workbook, 
+            index_width=18, column_width=80)
 
-        # set column widths
-        worksheet.set_column(0, 2, 20)
-        worksheet.set_column(3, 3, 80)
+        # iterate over carriers
+        if not include_hourly_curves:      
+            for carrier in carriers:
+                
+                # get carrier curves
+                curves = self.get_hourly_carrier_curves(carrier, 
+                    midx=midx, mapping=mapping, columns=columns, 
+                    include_keys=include_keys)
+
+                # add to excel
+                name = carrier.upper()
+                add_frame(name, curves, workbook, column_width=18)
 
         # write workbook
         workbook.close()
