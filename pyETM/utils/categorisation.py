@@ -9,14 +9,14 @@ logger = get_modulelogger(__name__)
 
 def categorise_curves(curves: pd.DataFrame, 
     mapping: pd.DataFrame | str, columns: list[str] | None =None, 
-    include_keys: bool = False, **kwargs) -> pd.DataFrame:
+    include_keys: bool = False, invert_sign: bool = False, 
+    **kwargs) -> pd.DataFrame:
     """Categorize the hourly curves for a specific dataframe
-    with a specific mapping.
-
-    # IMPORTANT #
-    -------------
-    Assigns a negative sign to demand to ensure that demand and supply keys
-    with the same key mapping can be aggregated.
+    with a specific mapping. 
+    
+    Assigns a negative sign to demand to ensure that demand 
+    and supply keys with the same key mapping can be aggregated. 
+    This behaviour can be modified with the invert_sign argument. 
 
     Parameters
     ----------
@@ -32,6 +32,10 @@ def categorise_curves(curves: pd.DataFrame,
         in the mapping. Defaults to all columns in mapping.
     include_keys : bool, default False
         Include the original ETM keys in the resulting mapping.
+    invert_sign : bool, default False
+        Inverts sign convention where demand is denoted with 
+        a negative sign. Demand will be denoted with a positve
+        value and supply with a negative value.
     
     **kwargs are passed to pd.read_csv when a filename is
     passed in the mapping argument.
@@ -74,8 +78,11 @@ def categorise_curves(curves: pd.DataFrame,
     # copy curves
     curves = curves.copy()
 
-    # assign negative sign to demand
-    cols = curves.columns.str.contains(".input (MW)", regex=False)
+    # determine pattern for desired sign convention
+    pattern = '.output (MW)' if invert_sign else '.input (MW)'
+
+    # assign sign convention by pattern
+    cols = curves.columns.str.contains(pattern, regex=False)
     curves.loc[:, cols] = -curves.loc[:, cols]
 
     # subset columns

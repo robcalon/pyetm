@@ -5,7 +5,6 @@ import datetime
 import numpy as np
 import pandas as pd
 
-from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from pyETM import Client
@@ -15,7 +14,7 @@ from pyETM.optional import import_optional_dependency
 
 _logger = get_modulelogger(__name__)
 
-CARRIER = Literal['electricity', 'heat', 'hydrogen', 'methane']
+Carrier = Literal['electricity', 'heat', 'hydrogen', 'methane']
 
 """externalize hard coded ETM parameters"""
 
@@ -600,10 +599,11 @@ class Model():
         output_values: pd.DataFrame | None = None, 
         myc_urls: pd.Series | None = None,
         include_hourly_curves: bool = False,
-        carriers: CARRIER | list[CARRIER] | None = None,
+        carriers: Carrier | list[Carrier] | None = None,
         mapping: pd.DataFrame | None = None,
         columns: list[str] | None = None,
         include_keys: bool = False,
+        invert_sign: bool = False,
         ) -> None:
         """Export results of model to Excel.
         
@@ -647,7 +647,11 @@ class Model():
             be included in the applied mapping. Defaults to include all 
             columns in applied mapping.
         include_keys : bool, default False
-            Include the original ETM keys in the resulting mapping."""
+            Include the original ETM keys in the resulting mapping.
+        invert_sign : bool, default False
+            Inverts sign convention where demand is denoted with 
+            a negative sign. Demand will be denoted with a positve
+            value and supply with a negative value."""
 
         from pathlib import Path
         from .utils.excel import add_frame, add_series
@@ -722,7 +726,7 @@ class Model():
                 # get carrier curves
                 curves = self.get_hourly_carrier_curves(carrier, 
                     midx=midx, mapping=mapping, columns=columns, 
-                    include_keys=include_keys)
+                    include_keys=include_keys, invert_sign=invert_sign)
 
                 # add to excel
                 name = carrier.upper()
