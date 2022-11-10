@@ -5,7 +5,7 @@ from https://stackoverflow.com/a/69514930"""
 import asyncio
 import threading
 
-from ...logger import get_modulelogger
+from pyETM.logger import get_modulelogger
 
 # get modulelogger
 logger = get_modulelogger(__name__)
