@@ -3,18 +3,18 @@ from __future__ import annotations
 import re
 import pandas as pd
 
-from .core.curves import Curves
-from .core.parameters import Parameters
-from .core.ccurves import CustomCurves
-from .core.gqueries import GQueries
-from .core.header import Header
-from .core.interpolate import Interpolate
-from .core.scenario import Scenario
-from .core.merit import MeritConfiguration
-from .core.utils import Utils
+from .curves import Curves
+from .parameters import Parameters
+from .ccurves import CustomCurves
+from .gqueries import GQueries
+from .header import Header
+from .interpolate import Interpolate
+from .scenario import Scenario
+from .merit import MeritConfiguration
+from .utils import Utils
 
-from .logger import get_modulelogger
-from .sessions import RequestsSession, AIOHTTPSession
+from pyETM.logger import get_modulelogger
+from pyETM.sessions import RequestsSession, AIOHTTPSession
 
 # get modulelogger
 logger = get_modulelogger(__name__)
