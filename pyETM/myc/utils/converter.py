@@ -142,7 +142,8 @@ def copy_study_configuration(filepath: str, model: Model,
 
                 # read and write mpi profiles
                 profiles = pd.read_excel(xlsx, sheet)
-                add_frame(sheet, profiles, workbook, column_width=18)
+                add_frame(sheet, profiles, workbook, 
+                    index=False, column_width=18)
 
                 _logger.debug("> included '%s' in copy", sheet)
 
