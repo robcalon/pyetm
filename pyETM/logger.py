@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-def find_dirpath(dirname:  str, dirpath: str):
+def find_dirpath(dirname:  str, dirpath: str) -> Path:
     """reduce dirpath until dirname in path found"""
 
     # convert to Path
@@ -31,7 +31,7 @@ def find_dirpath(dirname:  str, dirpath: str):
 
     return mdirpath
 
-def _create_mainlogger(logdir):
+def _create_mainlogger(logdir) -> None:
     """create main logger"""
 
     global _mainlogger
@@ -66,7 +66,7 @@ def _create_mainlogger(logdir):
 
     _mainlogger = logger
 
-def get_modulelogger(name: str):
+def get_modulelogger(name: str) -> logging.Logger:
     """get instance of modulelogger"""
 
     # create non existing loggers
@@ -75,7 +75,7 @@ def get_modulelogger(name: str):
 
     return _moduleloggers[name]
 
-def export_logfile(dst: str | None = None):
+def export_logfile(dst: str | None = None) -> None:
     """Export logfile to targetfolder, 
     defaults to current working directory."""
 
@@ -86,7 +86,8 @@ def export_logfile(dst: str | None = None):
     # export file
     shutil.copyfile(LOGDIR, dst)
 
-def report_error(error: Exception, logger: logging.Logger | None = None):
+def report_error(error: Exception, 
+    logger: logging.Logger | None = None) -> None:
     """report error message and export logs"""
 
     # default logger
