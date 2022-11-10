@@ -17,7 +17,7 @@ setup(
     author_email='robcalon@protonmail.com',
     license='EUPL-1.2',
     python_requires='>=3.7',
-    install_requires=["typing_extensions>=4.3", "requests>=2.26", "pandas>=1.3"],
+    install_requires=["requests>=2.26", "pandas>=1.3"],
     extras_require={
         "async": ["aiohttp>=3.8.1"],
         "excel": ["xlsxwriter>=3.0"],
@@ -36,9 +36,9 @@ setup(
         'Operating System :: OS Independent',        
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
     ],
 )
