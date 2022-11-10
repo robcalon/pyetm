@@ -6,7 +6,10 @@ from typing import TYPE_CHECKING
 
 from pyETM import Client
 from pyETM.myc import Model
+from pyETM.logger import get_modulelogger
 from pyETM.optional import import_optional_dependency
+
+_logger = get_modulelogger(__name__)
 
 def copy_study_session_ids(session_ids: pd.Series | Model, 
     study: str | None = None, metadata: dict | None = None, 
@@ -76,8 +79,23 @@ def copy_study_configuration(filepath: str, model: Model,
 
     else:
 
+        _logger.warning("when using 'copy_session_ids=False', the "
+            + "'keep_compatible' argument is ignored.")
+
         # keep original
         sessions = model.session_ids
+
+        # set study if applicable
+        if study is not None:
+            sessions = sessions.index.set_levels([study], level='STUDY')
+      
+            _logger.warning("'study' passed without copying session_ids, " +
+                "it is recommended to use 'copy_session_ids=True' instead to " + 
+                "prevent referencing the same session_id by different names.")
+        
+        if metadata is not None:
+            _logger.warning("'metadata' passed without copying session_ids, " +
+                "use 'copy_session_ids=True' instead.")
 
     # add sessions and set column width
     add_series('Sessions', sessions, workbook, column_width=18)
@@ -94,6 +112,45 @@ def copy_study_configuration(filepath: str, model: Model,
     if model.mapping is not None:
         add_frame('Mapping', model.mapping, workbook,
             index_width=[80, 18], column_width=18)
+
+    # copy other tabs from source
+    if hasattr(model, '_source'):
+        
+        _logger.debug("detected source file")
+
+        try: 
+
+            """merge together with model to also validate these values
+            before copying them"""
+
+            # link source file            
+            xlsx = pd.ExcelFile(model._source)
+
+            # look for interconnectors
+            sheet = 'Interconnectors'
+            if sheet in xlsx.sheet_names:
+
+                # read and write interconnectors
+                interconnectors = pd.read_excel(xlsx, sheet, index_col=0)
+                add_frame(sheet, interconnectors, workbook, column_width=18)
+
+                _logger.debug("> included '%s' in copy", sheet)
+
+            # look for mpi profiles
+            sheet = 'MPI Profiles'
+            if sheet in xlsx.sheet_names:
+
+                # read and write mpi profiles
+                profiles = pd.read_excel(xlsx, sheet)
+                add_frame(sheet, profiles, workbook, column_width=18)
+
+                _logger.debug("> included '%s' in copy", sheet)
+
+        except Exception as error:
+
+            # report failure
+            _logger.debug("could not process detected source file", 
+                exc_info=error)
 
     # write workbook
     workbook.close()

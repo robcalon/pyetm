@@ -245,7 +245,14 @@ class Model():
             # default mapping
             mapping = None
 
-        return cls(session_ids, parameters, gqueries, mapping, **kwargs)
+        # intialize model
+        model = cls(session_ids=session_ids, parameters=parameters, 
+            gqueries=gqueries, mapping=mapping, **kwargs)
+
+        # set source in model
+        model._source = filepath
+
+        return model
 
     def _check_for_unmapped_input_parameters(self, 
         client: Client) -> pd.Index:
