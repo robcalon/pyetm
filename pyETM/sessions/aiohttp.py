@@ -7,16 +7,13 @@ import pandas as pd
 
 from urllib.parse import urljoin
 from collections.abc import Mapping
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
-from .utils.types import Decoder, Method
 from .utils.loop import _LOOP, _LOOP_THREAD
 
 from pyETM.logger import get_modulelogger
 from pyETM.optional import import_optional_dependency
 from pyETM.exceptions import UnprossesableEntityError, format_error_messages
-
-logger = get_modulelogger(__name__)
 
 if TYPE_CHECKING:
 
@@ -24,6 +21,11 @@ if TYPE_CHECKING:
     import aiohttp
 
     from yarl import URL
+
+logger = get_modulelogger(__name__)
+
+Decoder = Literal['bytes', 'BytesIO', 'json', 'text']
+Method = Literal['delete', 'get', 'post', 'put']
 
 
 class AIOHTTPSession:

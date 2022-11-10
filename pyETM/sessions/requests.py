@@ -7,8 +7,11 @@ import requests
 import pandas as pd
 from urllib.parse import urljoin
 
-from .utils.types import Decoder, Method
+from typing import Literal
 from pyETM.exceptions import UnprossesableEntityError, format_error_messages
+
+Decoder = Literal['bytes', 'BytesIO', 'json', 'text']
+Method = Literal['delete', 'get', 'post', 'put']
 
 
 class RequestsSession:
