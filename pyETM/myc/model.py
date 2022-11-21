@@ -94,7 +94,7 @@ class Model():
     def mapping(self, mapping: pd.DataFrame | None):
         
         # convert to dataframe
-        if not isinstance(mapping, (pd.DataFrame, None)):
+        if not isinstance(mapping, pd.DataFrame) & (mapping is not None):
             mapping = pd.DataFrame(mapping)
 
         # set default index names
