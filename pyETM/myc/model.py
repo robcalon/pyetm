@@ -21,19 +21,20 @@ Carrier = Literal['electricity', 'heat', 'hydrogen', 'methane']
 def sort_frame(frame: pd.DataFrame, axis: int = 0):
     """sort frame with reference scenario at start position"""
 
-    # sort columns
+    # sort columns and get scenarios
     frame = frame.sort_index(axis=axis)
-
-    # check for reference scenario
     scenarios = frame.axes[axis].get_level_values(level='SCENARIO')
-    if 'Reference' in scenarios.unique():
 
-        # subset reference from frame
-        ref = frame.xs('Reference', level='SCENARIO', axis=axis, 
-            drop_level=False)
-        
-        # drop reference from frame
-        frame = frame.drop(ref.axes[axis], axis=axis)
+    # return frame without reference
+    if 'Reference' not in scenarios.unique():
+        return frame
+
+    # subset reference from frame
+    ref = frame.xs('Reference', level='SCENARIO', axis=axis, 
+        drop_level=False)
+    
+    # drop reference from frame
+    frame = frame.drop(ref.axes[axis], axis=axis)
 
     return pd.concat([ref, frame], axis=axis)
 
@@ -94,7 +95,7 @@ class Model():
     def mapping(self, mapping: pd.DataFrame | None):
         
         # convert to dataframe
-        if not isinstance(mapping, pd.DataFrame) & (mapping is not None):
+        if (not isinstance(mapping, pd.DataFrame)) & (mapping is not None):
             mapping = pd.DataFrame(mapping)
 
         # set default index names
@@ -437,7 +438,8 @@ class Model():
         midx: tuple | pd.MultiIndex | None = None, 
         mapping: pd.DataFrame | None = None, 
         columns: list | None = None, 
-        include_keys: bool = False) -> pd.DataFrame:
+        include_keys: bool = False,
+        invert_sign: bool = False) -> pd.DataFrame:
         """get hourly carrier curves for scenarios"""
 
         # lower carrier
@@ -485,12 +487,16 @@ class Model():
                     attr = f"hourly_{carrier}_curves"
                     curves = getattr(client, attr)
                         
+                    # set column name
+                    curves.columns.names = ['KEY']
+                    
                     # check for categorisation
                     if mapping is not None:
 
                         # categorise curves
-                        curves = categorise_curves(curves, mapping, 
-                            columns=columns, include_keys=include_keys)
+                        curves = categorise_curves(
+                            curves, mapping, columns=columns, 
+                            include_keys=include_keys, invert_sign=invert_sign)
 
                     # append curves to list
                     items.append(curves)
@@ -583,6 +589,11 @@ class Model():
         scenarios = cases.index.get_level_values(level='SCENARIO')
         if 'Reference' in scenarios.unique():
             cases = cases.drop('Reference', level='SCENARIO', axis=0)
+
+        # all cases are dropped
+        if cases.empty:
+            raise ValueError("Cannot make URLs as model or passed subset " +
+                "only contains reference scenarios")
 
         _logger.info("making MYC URLS")
 
@@ -718,16 +729,10 @@ class Model():
         add_frame('OUTPUT_VALUES', output_values, workbook,
             index_width=[80, 18], column_width=18)
 
-        # default urls
-        if myc_urls is None:
-            myc_urls = self.make_myc_urls(midx=midx)
-
-        # add urls to workbook
-        add_series('ETM_URLS', myc_urls, workbook, 
-            index_width=18, column_width=80)
+        """Allow for modified carrier curves as well"""
 
         # iterate over carriers
-        if not include_hourly_curves:      
+        if include_hourly_curves:      
             for carrier in carriers:
                 
                 # get carrier curves
@@ -738,6 +743,14 @@ class Model():
                 # add to excel
                 name = carrier.upper()
                 add_frame(name, curves, workbook, column_width=18)
+
+        # default urls
+        if myc_urls is None:
+            myc_urls = self.make_myc_urls(midx=midx)
+
+        # add urls to workbook
+        add_series('ETM_URLS', myc_urls, workbook, 
+            index_width=18, column_width=80)
 
         # write workbook
         workbook.close()
