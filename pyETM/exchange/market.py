@@ -584,7 +584,7 @@ class Market:
 
         # determine exchange capacity at direction
         imp = (1.0 - mpi - utilization) * capacity
-        exp = (1.0 + mpi + utilization) * capacity
+        exp = (1.0 - mpi + utilization) * capacity
 
         # make table
         keys = ['import', 'export']
