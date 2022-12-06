@@ -49,7 +49,7 @@ def _set_column_width(worksheet: Worksheet,
 
     # single value for all header columns
     if isinstance(column_width, int):
-        worksheet.set_column(offset, len(columns) + offset, column_width)
+        worksheet.set_column(offset, len(columns) + offset - 1, column_width)
 
 def _set_index_width(
     worksheet: Worksheet, 
