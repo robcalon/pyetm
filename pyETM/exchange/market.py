@@ -136,7 +136,8 @@ class Market:
         self.interconnector_utilization
 
         # write first traces
-        self._update_traces()
+        if not reset:
+            self._update_traces()
 
         # log event
         logger.debug("'%s': initialisation completed", self)

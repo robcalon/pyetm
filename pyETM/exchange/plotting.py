@@ -223,7 +223,7 @@ def plot_weekly_exchange(region, model, utilization=None, ax=None, **kwargs):
 
     # get exchange volumes for region
     utilization = exchange_volumes_for_region(region, model, utilization)
-    utilization = utilization.loc[:8736]
+    utilization = utilization.loc[:8735]
 
     # default plot
     if ax is None:
