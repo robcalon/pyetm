@@ -496,10 +496,12 @@ class Region:
         # get custom curve keys without unattached
         keys = self.client.get_custom_curve_keys(False)
 
-        # check for keys that need updates
-        if capacities is not None:
+        # drop non interconnector related keys
+        pattern = 'interconnector_\d{1,2}_'
+        keys = keys[keys.str.contains(pattern)]
 
-            # subset keys that need to be unattached
+        # drop keys for configured profiles
+        if capacities is not None:
             keys = keys[~keys.isin(columns)]
 
         # unattach keys
@@ -507,4 +509,4 @@ class Region:
 
             # delete custom curves
             self.client.delete_custom_curves(keys=keys)
-            logger.debug("'%s': deleted superfluous ccurves", self)
+            logger.debug("'%s': deleted superfluous ccurves: '%s'", self, keys)
