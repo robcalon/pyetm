@@ -9,7 +9,7 @@ from urllib.parse import urljoin
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Literal
 
-from .utils.loop import _LOOP, _LOOP_THREAD
+from pyETM.utils.loop import _LOOP, _LOOP_THREAD
 
 from pyETM.logger import get_modulelogger
 from pyETM.optional import import_optional_dependency
