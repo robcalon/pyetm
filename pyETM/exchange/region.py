@@ -509,4 +509,4 @@ class Region:
 
             # delete custom curves
             self.client.delete_custom_curves(keys=keys)
-            logger.debug("'%s': deleted superfluous ccurves: '%s'", self, keys)
+            logger.debug("'%s': deleted superfluous ccurves", self)
