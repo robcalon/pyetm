@@ -672,7 +672,7 @@ class Model():
             value and supply with a negative value."""
 
         from pathlib import Path
-        from .utils.excel import add_frame, add_series
+        from pyETM.utils import add_frame, add_series
 
         if TYPE_CHECKING:
             # import xlswriter
