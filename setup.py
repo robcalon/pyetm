@@ -5,10 +5,10 @@ with open('README.md', 'rb') as file:
 
 # with open('requirements.txt') as file:
 #     requires = [[l.strip() for l in file.readlines() if not l.startswith("#")]]
-    
+
 setup(
     name='pyETM',
-    version='0.8.1',    
+    version='0.8.2',
     description='Python-ETM Connector',
     long_description=README,
     long_description_content_type='text/markdown',
@@ -22,7 +22,7 @@ setup(
         "async": ["aiohttp>=3.8.1"],
         "excel": ["xlsxwriter>=3.0"],
         "all": ["aiohttp>=3.8.1", "xlsxwriter>=3.0"],
-        },
+    },
     packages=find_packages(),
     include_package_data=True,
     classifiers=[
@@ -33,7 +33,7 @@ setup(
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
-        'Operating System :: OS Independent',        
+        'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.8',
