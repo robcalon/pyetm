@@ -8,7 +8,7 @@ with open('README.md', 'rb') as file:
     
 setup(
     name='pyETM',
-    version='0.8.2',    
+    version='0.8.2',
     description='Python-ETM Connector',
     long_description=README,
     long_description_content_type='text/markdown',
@@ -31,9 +31,9 @@ setup(
         'Intended Audience :: Developers',
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: European Union  Public License 1.2',
+        'License :: OSI Approved :: European Union Public License 1.2',
         'Natural Language :: English',
-        'Operating System :: OS Independent',        
+        'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.8',
