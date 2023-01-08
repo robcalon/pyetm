@@ -31,7 +31,7 @@ setup(
         'Intended Audience :: Developers',
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: MIT License',
+        'License :: OSI Approved :: European Union  Public License 1.2',
         'Natural Language :: English',
         'Operating System :: OS Independent',        
         'Programming Language :: Python',
