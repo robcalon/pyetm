@@ -1,3 +1,4 @@
+"""scenario id"""
 import copy
 
 from pyETM.logger import get_modulelogger
@@ -7,18 +8,20 @@ logger = get_modulelogger(__name__)
 
 
 class ScenarioID:
-    
+    """scenario id related methods"""
+
     def __init__(self):
         self._scenario_id = None
-    
+
     @property
     def scenario_id(self):
+        """scenario id"""
         return self._scenario_id
-    
+
     @scenario_id.setter
     def scenario_id(self, scenario_id):
         self.change_scenario_id(scenario_id)
-                
+
     def change_scenario_id(self, scenario_id: str):
         """change the connected scenario."""
 
@@ -29,8 +32,8 @@ class ScenarioID:
         if isinstance(scenario_id, dict):
             scenario_id = scenario_id['id']
 
-        # convert passed id to string        
-        if not (isinstance(scenario_id, str) | (scenario_id is None)):
+        # convert passed id to string
+        if not isinstance(scenario_id, str) | (scenario_id is None):
             scenario_id = str(scenario_id)
 
         # set new scenario id

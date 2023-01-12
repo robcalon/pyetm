@@ -1,3 +1,4 @@
+"""parameters object"""
 from .application_demands import ApplicationDemands
 from .energy_flows import EnergyFlows
 from .heat_network_order import HeatNetworkOrder
@@ -10,10 +11,7 @@ from .user_parameters import UserParameters
 from .user_values import UserValues
 from .util_parameters import UtilParameters
 
-
 class Parameters(ApplicationDemands, EnergyFlows, HeatNetworkOrder,
                  ProductionParameters, Sankey, ScenarioID, ScenarioParameters,
                  InputValues, UserParameters, UserValues, UtilParameters):
-
-    def __init__(self):
-        super().__init__()
+    """collector class for parameter objects"""
