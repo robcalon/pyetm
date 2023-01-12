@@ -260,7 +260,6 @@ class Client(Curves, Header, Parameters, SavedScenario, Scenario,
 
         # # clear parameter caches
         self.get_scenario_header.cache_clear()
-
         self.get_input_values.cache_clear()
 
         # clear frame caches

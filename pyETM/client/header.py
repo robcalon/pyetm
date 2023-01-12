@@ -148,7 +148,7 @@ class Header:
 
         return f'{base}/scenarios/{self.scenario_id}/load'
 
-    @functools.cache
+    @functools.lru_cache
     def get_scenario_header(self):
         """get header of scenario"""
 
