@@ -1,19 +1,20 @@
+"""aiohttp session object"""
 from __future__ import annotations
 
 import io
 import json
 import asyncio
-import pandas as pd
 
 from urllib.parse import urljoin
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Literal
 
 from pyETM.utils.loop import _LOOP, _LOOP_THREAD
-
 from pyETM.logger import get_modulelogger
 from pyETM.optional import import_optional_dependency
 from pyETM.exceptions import UnprossesableEntityError, format_error_messages
+
+import pandas as pd
 
 if TYPE_CHECKING:
 
@@ -29,17 +30,21 @@ Method = Literal['delete', 'get', 'post', 'put']
 
 
 class AIOHTTPSession:
+    """aiohttp-based session object"""
 
     @property
     def loop(self):
+        """used event loop"""
         return _LOOP
 
     @property
     def loop_thread(self):
+        """seperate thread for event loop"""
         return _LOOP_THREAD
 
     @property
     def base_url(self) -> str | None:
+        """base url used in make_url"""
         return self.__base_url
 
     @base_url.setter
@@ -51,37 +56,55 @@ class AIOHTTPSession:
         if base_url is not None:
             self.__base_url = str(base_url)
 
-    def __init__(self, base_url: str | None = None, 
-        proxy: str | URL | None = None, 
-        proxy_auth: aiohttp.BasicAuth | None = None, 
-        ssl: ssl.SSLContext | bool | aiohttp.Fingerprint | None = None, 
-        proxy_headers: Mapping | None = None, 
+    @property
+    def headers(self) -> dict:
+        """headers that are passed in each request"""
+        return self.__headers
+
+    @headers.setter
+    def headers(self, headers: dict | None) -> None:
+
+        if headers is None:
+            headers = {}
+
+        self.__headers = dict(headers)
+
+    def __init__(self, base_url: str | None = None,
+        headers: dict | None = None,
+        proxy: str | URL | None = None,
+        proxy_auth: aiohttp.BasicAuth | None = None,
+        ssl: ssl.SSLContext | bool | aiohttp.Fingerprint | None = None,
+        proxy_headers: Mapping | None = None,
         trust_env: bool = False):
         """session object for pyETM clients
-        
+
         Parameters
         ----------
         base_url: str, default None
             Base url to which the session connects, all request urls
-            will be merged with the base url to create a destination. 
+            will be merged with the base url to create a destination.
+        headers : dict, default None
+            Headers that are always passed during requests, e.g. an
+            authorization token.
         proxy: str or URL, default None
             Proxy URL
         proxy_auth : aiohttp.BasicAuth, default None
             An object that represents proxy HTTP Basic authorization.
         ssl: None, False, aiohttp.Fingerprint or ssl.SSLContext, default None
-            SSL validation mode. None for default SSL check 
-            (ssl.create_default context() is used), False for skip 
-            SSL certificate validation, aiohttp.Fingerprint for fingerprint 
-            validation, ssl.SSLContext for custom SSL certificate validation. 
+            SSL validation mode. None for default SSL check
+            (ssl.create_default context() is used), False for skip
+            SSL certificate validation, aiohttp.Fingerprint for fingerprint
+            validation, ssl.SSLContext for custom SSL certificate validation.
         proxy_headers: Mapping, default None
-            HTTP headers to send to the proxy if the parameter proxy has 
+            HTTP headers to send to the proxy if the parameter proxy has
             been provided.
         trust_env : bool, default False
-            Should get proxies information from HTTP_PROXY / HTTPS_PROXY 
+            Should get proxies information from HTTP_PROXY / HTTPS_PROXY
             environment variables or ~/.netrc file if present."""
 
-        # set hidden values
+        # set parameters
         self.base_url = base_url
+        self.headers = headers
 
         # set environment kwargs for session construction
         self._session_env = {
@@ -104,13 +127,13 @@ class AIOHTTPSession:
             self.loop_thread.start()
 
     def __repr__(self):
-        """reprodcution string"""        
+        """reprodcution string"""
 
         # object environment
         env = ", ".join(f'{k}={v}' for k, v in {
             **self._request_env, **self._session_env}.items())
 
-        return "AIOHTTPSession(%s)" %env
+        return f"AIOHTTPSession({env})"
 
     def __str__(self):
         """stringname"""
@@ -118,13 +141,13 @@ class AIOHTTPSession:
 
     def __enter__(self):
         """enter context manager"""
-        
+
         # create session
         self.connect()
 
         return self
 
-    def __exit__(self):
+    def __exit__(self, *args, **kwargs):
         """exit context manager"""
 
         # close session
@@ -140,17 +163,17 @@ class AIOHTTPSession:
         # specify coroutine and get future
         coro = self.async_connect()
         asyncio.run_coroutine_threadsafe(coro, self.loop).result()
-        
+
         return self
 
-    def close(self, *args, **kwargs):
+    def close(self):
         """close session"""
 
         # specify coroutine and get future
         coro = self.async_close()
         asyncio.run_coroutine_threadsafe(coro, self.loop).result()
 
-    def request(self, method: Method, url: str, 
+    def request(self, method: Method, url: str,
             decoder: Decoder = "bytes", **kwargs):
         """request and handle api response"""
 
@@ -159,35 +182,33 @@ class AIOHTTPSession:
         future = asyncio.run_coroutine_threadsafe(coro, self.loop)
 
         return future.result()
-            
-    def delete(self, url: str | None = None, 
-            decoder: Decoder = 'text', **kwargs):
+
+    def delete(self, url: str | None = None,
+        decoder: Decoder = 'text', **kwargs):
+        """delete request"""
         return self.request("delete", self.make_url(url), decoder, **kwargs)
 
-    def get(self, url: str | None = None, 
-            decoder: Decoder = 'json', **kwargs):
+    def get(self, url: str | None = None,
+        decoder: Decoder = 'json', **kwargs):
+        """get request"""
         return self.request("get", self.make_url(url), decoder, **kwargs)
-            
-    def post(self, url: str | None = None, 
-            decoder: Decoder = 'json', **kwargs):
+
+    def post(self, url: str | None = None,
+        decoder: Decoder = 'json', **kwargs):
+        """post request"""
         return self.request("post", self.make_url(url), decoder, **kwargs)
 
-    def put(self, url: str | None = None, 
-            decoder: Decoder = 'json', **kwargs):
+    def put(self, url: str | None = None,
+        decoder: Decoder = 'json', **kwargs):
+        """put request"""
         return self.request("put", self.make_url(url), decoder, **kwargs)
 
-    def upload_series(self, url: str | None = None, 
-            series: pd.Series | None = None, 
-            name: str | None = None, **kwargs):
+    def upload_series(self, url: str | None = None,
+        series: pd.Series | None = None, name: str | None = None, **kwargs):
         """upload series object"""
-        
-        if TYPE_CHECKING:
-            # import aiohttp
-            import aiohttp
 
-        else:
-            # optional module import
-            aiohttp = import_optional_dependency('aiohttp')
+        # optional module import
+        aiohttp = import_optional_dependency('aiohttp')
 
         # default to empty series
         if series is None:
@@ -199,7 +220,7 @@ class AIOHTTPSession:
 
         # convert values to string
         data = series.to_string(index=False)
-        
+
         # insert data in form
         form = aiohttp.FormData()
         form.add_field("file", data, filename=name)
@@ -208,7 +229,7 @@ class AIOHTTPSession:
 
     async def __aenter__(self):
         """enter async context manager"""
-        
+
         # start up session
         await self.async_connect()
 
@@ -220,14 +241,9 @@ class AIOHTTPSession:
 
     async def async_connect(self):
         """connect session"""
-        
-        if TYPE_CHECKING:
-            # import aiohttp
-            import aiohttp
 
-        else:
-            # optional module import
-            aiohttp = import_optional_dependency('aiohttp')
+        # optional module import
+        aiohttp = import_optional_dependency('aiohttp')
 
         # create session
         self._session = aiohttp.ClientSession(**self._session_env)
@@ -238,18 +254,13 @@ class AIOHTTPSession:
         # close and remove session
         await self._session.close()
         self._session = None
-          
-    async def async_request(self, method: Method, url: str, 
-            decoder: Decoder = 'bytes', **kwargs):
+
+    async def async_request(self, method: Method, url: str,
+        decoder: Decoder = 'bytes', **kwargs):
         """make request to api session"""
 
-        if TYPE_CHECKING:
-            # import aiohttp
-            import aiohttp
-
-        else:
-            # optional module import
-            aiohttp = import_optional_dependency('aiohttp')
+        # optional module import
+        aiohttp = import_optional_dependency('aiohttp')
 
         retries = 5
         while retries:
@@ -258,6 +269,12 @@ class AIOHTTPSession:
 
                 # merge kwargs with session envioronment kwargs
                 kwargs = {**self._request_env, **kwargs}
+
+                # add persistent headers
+                headers = kwargs.get('headers', {})
+                kwargs['headers'] = {**headers, **self.headers}
+
+                # reusable existing session
                 session = bool(self._session)
 
                 # create session
@@ -267,14 +284,14 @@ class AIOHTTPSession:
                 # make method request
                 request = getattr(self._session, method)
                 async with request(url, **kwargs) as resp:
-                    
+
                     # check response
-                    if not (resp.status <= 400):
-                                                
+                    if not resp.status <= 400:
+
                         # report error messages
                         if resp.status == 422:
                             self._error_report(resp)
-                        
+
                         # raise for status
                         resp.raise_for_status()
 
@@ -290,13 +307,13 @@ class AIOHTTPSession:
                     # json decoding
                     elif decoder == "json":
                         resp = await resp.json(encoding="utf-8")
-                    
+
                     # text decoding
                     elif decoder == "text":
                         resp = await resp.text(encoding="utf-8")
 
                     else:
-                        msg = "decoding method '%s' not implemented" %decoder
+                        msg = f"decoding method '{decoder}' not implemented"
                         raise NotImplementedError(msg)
 
                     return resp
@@ -310,7 +327,7 @@ class AIOHTTPSession:
                     raise error
 
             finally:
-                
+
                 # close session
                 if not session:
                     await self.async_close()
@@ -323,12 +340,12 @@ class AIOHTTPSession:
             # attempt decode error message(s)
             msg = await resp.json(encoding="utf-8")
             errors = msg.get("errors")
-            
+
         except json.decoder.JSONDecodeError:
-            
+
             # no message returned
             errors = None
-            
+
         if errors:
 
             # format error message(s)

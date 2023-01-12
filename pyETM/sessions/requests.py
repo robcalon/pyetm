@@ -1,23 +1,27 @@
+"""requests session object"""
 from __future__ import annotations
 
 import io
 import json
-import requests
 
-import pandas as pd
 from urllib.parse import urljoin
-
 from typing import Literal
+
 from pyETM.exceptions import UnprossesableEntityError, format_error_messages
+
+import requests
+import pandas as pd
 
 Decoder = Literal['bytes', 'BytesIO', 'json', 'text']
 Method = Literal['delete', 'get', 'post', 'put']
 
 
 class RequestsSession:
+    """requests-based session object"""
 
     @property
     def base_url(self) -> str | None:
+        """base url used in make_url"""
         return self.__base_url
 
     @base_url.setter
@@ -29,42 +33,60 @@ class RequestsSession:
         if base_url is not None:
             self.__base_url = str(base_url)
 
-    def __init__(self, base_url: str | None = None, 
-        proxies: dict | None = None, stream: bool = False, 
-        verify: bool | str = True, cert: str | tuple | None = None):
+    @property
+    def headers(self) -> dict:
+        """headers that are passed in each request"""
+        return self.__headers
+
+    @headers.setter
+    def headers(self, headers: dict | None) -> None:
+
+        if headers is None:
+            headers = {}
+
+        self.__headers = dict(headers)
+
+    def __init__(self, base_url: str | None = None,
+        headers: dict | None = None, proxies: dict | None = None,
+        stream: bool = False,  verify: bool | str = True,
+        cert: str | tuple | None = None):
         """session object for pyETM clients
-                
+
         Parameters
         ----------
         base_url: str, default None
             Base url to which the session connects, all request urls
-            will be merged with the base url to create a destination. 
+            will be merged with the base url to create a destination.
+        headers : dict, default None
+            Headers that are always passed during requests, e.g. an
+            authorization token.
         proxies: dict, default None
-            Dictionary mapping protocol or protocol and 
+            Dictionary mapping protocol or protocol and
             hostname to the URL of the proxy.
-        stream: boolean, default False 
+        stream: boolean, default False
             Whether to immediately download the response content.
         verify: boolean or string, default True
             Either a boolean, in which case it controls whether we verify
-            the server's TLS certificate, or a string, in which case it must 
-            be a path to a CA bundle to use. When set to False, requests will 
-            accept any TLS certificate presented by the server, and will ignore 
-            hostname mismatches and/or expired certificates, which will make 
-            your application vulnerable to man-in-the-middle (MitM) attacks. 
-            Setting verify to False may be useful during local development or 
+            the server's TLS certificate, or a string, in which case it must
+            be a path to a CA bundle to use. When set to False, requests will
+            accept any TLS certificate presented by the server, and will ignore
+            hostname mismatches and/or expired certificates, which will make
+            your application vulnerable to man-in-the-middle (MitM) attacks.
+            Setting verify to False may be useful during local development or
             testing.
-        cert: string or tuple, default None 
-            If string; path to ssl client cert file (.pem). 
+        cert: string or tuple, default None
+            If string; path to ssl client cert file (.pem).
             If tuple; ('cert', 'key') pair."""
 
-        # set hidden values
+        # set parameters
         self.base_url = base_url
+        self.headers = headers
 
         # set environment kwargs for method requests
         self._request_env = {
             "proxies": proxies, "stream": stream,
             "verify": verify, "cert": cert}
-    
+
         # set session
         self._session = requests.Session()
 
@@ -72,10 +94,10 @@ class RequestsSession:
         """reproduction string"""
 
         # object environment
-        env = ", ".join(f"{k}={str(v)}" for k, v in 
+        env = ", ".join(f"{k}={str(v)}" for k, v in
             self._request_env.items())
 
-        return "RequestsSession(%s)" %env
+        return f"RequestsSession({env})"
 
     def __str__(self):
         """stringname"""
@@ -101,13 +123,11 @@ class RequestsSession:
 
     def connect(self):
         """connect session"""
-        pass
 
     def close(self):
         """close session"""
-        pass
 
-    def request(self, method: Method, url: str, 
+    def request(self, method: Method, url: str,
             decoder: Decoder = 'bytes', **kwargs):
         """make request to api session"""
 
@@ -119,17 +139,21 @@ class RequestsSession:
                 # merge kwargs with session envioronment kwargs
                 kwargs = {**self._request_env, **kwargs}
 
+                # add persistent headers
+                headers = kwargs.get('headers', {})
+                kwargs['headers'] = {**headers, **self.headers}
+
                 # make method request
                 request = getattr(self._session, method)
                 with request(url, **kwargs) as resp:
 
                     # check response
                     if not resp.ok:
-                        
+
                         # get debug message
                         if resp.status_code == 422:
                             self._error_report(resp)
-                        
+
                         # raise for status
                         resp.raise_for_status()
 
@@ -145,13 +169,13 @@ class RequestsSession:
                     # json decoding
                     elif decoder == "json":
                         resp = resp.json()
-                    
+
                     # text decoding
                     elif decoder == "text":
                         resp = resp.text
 
                     else:
-                        msg = "decoding method '%s' not implemented" %decoder
+                        msg = f"decoding method '{decoder}' not implemented"
                         raise NotImplementedError(msg)
 
                     return resp
@@ -163,10 +187,10 @@ class RequestsSession:
                 # raise after retries
                 if not retries:
                     raise error
-                
+
     def _error_report(self, resp: requests.Response) -> None:
         """create error report when api returns error messages."""
-        
+
         try:
 
             # attempt decode error message(s)
@@ -184,27 +208,30 @@ class RequestsSession:
             msg = format_error_messages(errors)
             raise UnprossesableEntityError(msg)
 
-    def delete(self, url: str | None = None, 
-            decoder: Decoder = 'text', **kwargs):
+    def delete(self, url: str | None = None,
+        decoder: Decoder = 'text', **kwargs):
+        """delete request"""
         return self.request("delete", self.make_url(url), decoder, **kwargs)
 
-    def get(self, url: str | None = None, 
-            decoder: Decoder = 'json', **kwargs):
+    def get(self, url: str | None = None,
+        decoder: Decoder = 'json', **kwargs):
+        """get request"""
         return self.request("get", self.make_url(url), decoder, **kwargs)
-            
-    def post(self, url: str | None = None, 
-            decoder: Decoder = 'json', **kwargs):
+
+    def post(self, url: str | None = None,
+        decoder: Decoder = 'json', **kwargs):
+        """post request"""
         return self.request("post", self.make_url(url), decoder, **kwargs)
 
-    def put(self, url: str | None = None, 
-            decoder: Decoder = 'json', **kwargs):
+    def put(self, url: str | None = None,
+        decoder: Decoder = 'json', **kwargs):
+        """put request"""
         return self.request("put", self.make_url(url), decoder, **kwargs)
 
-    def upload_series(self, url: str | None = None, 
-            series: pd.Series | None = None, 
-            name: str | None = None, **kwargs):
+    def upload_series(self, url: str | None = None,
+        series: pd.Series | None = None, name: str | None = None, **kwargs):
         """upload series object"""
-        
+
         # default to empty series
         if series is None:
             series = pd.Series()
@@ -216,5 +243,5 @@ class RequestsSession:
         # convert series to string
         data = series.to_string(index=False)
         form = {"file": (name, data)}
-        
+
         return self.put(url=url, files=form, **kwargs)
