@@ -1,8 +1,9 @@
+"""exceptions"""
 import re
 
 
 class UnprossesableEntityError(Exception):
-    pass
+    """Unprocessable Entity Error"""
 
 def format_share_group_error(error):
     """apply more readable format to
@@ -18,7 +19,7 @@ def format_share_group_error(error):
 
     # reformat message
     group = group.replace("\"", "\'")
-    group = "Share_group %s sums to %s" %(group, group_sum)
+    group = f"Share_group {group} sums to {group_sum}"
 
     # find parameters in group
     pattern = re.compile("[a-z_]*=[0-9.]*")
@@ -28,17 +29,17 @@ def format_share_group_error(error):
     items = [item.replace("=", "': ") for item in items]
     items = "'" + ",\n    '".join(items)
 
-    return """%s\n   {%s}""" %(group, items)
+    return f"""{group}\n   {{{items}}}"""
 
 def format_error_messages(errors):
     """format and handle error message"""
-        
+
     # newlist
     errs = []
 
     # iterate over messages
     for error in errors:
-        
+
         # format share group errors
         if "group does not balance" in error:
             error = format_share_group_error(error)

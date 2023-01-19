@@ -1,11 +1,12 @@
-"""copied from https://github.com/quintel/etdataset-public/blob/master/curves/demand/households/space_heating/script/smoothing.py
+"""copied from https://github.com/quintel/etdataset-public/blob/master/
+curves/demand/households/space_heating/script/smoothing.py
 by Quintel"""
 
 import numpy as np
 
 
 class ProfileSmoother:
-    
+
     """
     The profiles generator is based on data for an individual household.
     To transform this into a profile for a typical neighbourhood (e.g. 300 houses)
@@ -28,18 +29,18 @@ class ProfileSmoother:
     X houses rather than an individual household.
     """
 
-    def __init__(self, number_of_houses=300, hours_shifted=None, 
+    def __init__(self, number_of_houses=300, hours_shifted=None,
                  interpolation_steps=10, random_seed=1337):
-        """init"""        
-        
+        """init"""
+
         # Standard deviation per insulation type.
         # See README for source
         if hours_shifted is None:
             hours_shifted = {'low' : 2, 'medium' : 2.5, 'high' : 3}
-    
+
         # interpolation steps
         # use intervals of 6 minutes when shifting curves
-    
+
         self.number_of_houses = number_of_houses
         self.hours_shifted = hours_shifted
         self.interpolation_steps = interpolation_steps
@@ -56,14 +57,14 @@ class ProfileSmoother:
         forward 1.5 hours, '-10' means it will be shifted backwards 1 hour
         '''
         # (re)set random seed
-        np.random.seed(self.random_seed)    
+        np.random.seed(self.random_seed)
 
         # generate X random numbers with normal distribution
         random_numbers = np.random.normal(loc=0.0, scale=scale, size=size)
-        
+
         # round by 1 decimal point
         rounded_numbers = np.round(random_numbers, 1)
-        
+
         # multiply by 10 to get integer numbers for the deviations
         shifts = rounded_numbers * 10
 
@@ -112,7 +113,7 @@ class ProfileSmoother:
 
     def calculate_smoothed_demand(self, heat_demand, insulation_type):
         """calculate smoothed demand"""
-        
+
         # start out with list of zeroes
         cumulative_demand = [0] * len(heat_demand) * self.interpolation_steps
 

@@ -1,3 +1,4 @@
+"""init util module"""
 from .categorisation import categorise_curves, diagnose_categorisation
 from .excel import add_frame, add_series
 from .interpolation import Interpolator, interpolate_clients

@@ -1,22 +1,22 @@
+"""categorisation method"""
 from __future__ import annotations
 
 import pandas as pd
-
 from pyETM.logger import get_modulelogger
 
 logger = get_modulelogger(__name__)
 
 
-def categorise_curves(curves: pd.DataFrame, 
-    mapping: pd.DataFrame | str, columns: list[str] | None =None, 
-    include_keys: bool = False, invert_sign: bool = False, 
+def categorise_curves(curves: pd.DataFrame,
+    mapping: pd.DataFrame | str, columns: list[str] | None =None,
+    include_keys: bool = False, invert_sign: bool = False,
     **kwargs) -> pd.DataFrame:
     """Categorize the hourly curves for a specific dataframe
-    with a specific mapping. 
-    
-    Assigns a negative sign to demand to ensure that demand 
-    and supply keys with the same key mapping can be aggregated. 
-    This behaviour can be modified with the invert_sign argument. 
+    with a specific mapping.
+
+    Assigns a negative sign to demand to ensure that demand
+    and supply keys with the same key mapping can be aggregated.
+    This behaviour can be modified with the invert_sign argument.
 
     Parameters
     ----------
@@ -33,10 +33,10 @@ def categorise_curves(curves: pd.DataFrame,
     include_keys : bool, default False
         Include the original ETM keys in the resulting mapping.
     invert_sign : bool, default False
-        Inverts sign convention where demand is denoted with 
+        Inverts sign convention where demand is denoted with
         a negative sign. Demand will be denoted with a positve
         value and supply with a negative value.
-    
+
     **kwargs are passed to pd.read_csv when a filename is
     passed in the mapping argument.
 
@@ -61,7 +61,7 @@ def categorise_curves(curves: pd.DataFrame,
 
         # make message
         missing_curves = "', '".join(map(str, missing_curves))
-        message = "Missing key(s) in mapping: '%s'" %missing_curves
+        message = "Missing key(s) in mapping: '{missing_curves}'"
 
         raise KeyError(message)
 
@@ -71,8 +71,8 @@ def categorise_curves(curves: pd.DataFrame,
 
         # make message
         superfluous_curves = "', '".join(map(str, superfluous_curves))
-        message = "Unused key(s) in mapping: '%s'" %superfluous_curves
-        
+        message = "Unused key(s) in mapping: '{superflous_curves}'"
+
         logger.warning(message)
 
     # copy curves

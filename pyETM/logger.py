@@ -1,3 +1,4 @@
+"""logger module"""
 from __future__ import annotations
 
 import copy
@@ -22,8 +23,11 @@ def find_dirpath(dirname:  str, dirpath: str) -> Path:
 
         # limit number of recursions
         if recursions >= max_recursions:
-            raise ModuleNotFoundError("Could not find '%s' in '%s'"
-                %(dirname, dirpath))
+
+            # make message
+            msg = f"Could not find '{dirname} in '{dirpath}'"
+
+            raise ModuleNotFoundError(msg)
 
         # strip basename from modified path
         mdirpath = mdirpath.parent
@@ -32,9 +36,7 @@ def find_dirpath(dirname:  str, dirpath: str) -> Path:
     return mdirpath
 
 def _create_mainlogger(logdir) -> None:
-    """create main logger"""
-
-    global _mainlogger
+    """create mainlogger"""
 
     # make logdir
     logdir = Path(logdir).joinpath('logs')
@@ -64,29 +66,29 @@ def _create_mainlogger(logdir) -> None:
     logger.addHandler(file_handler)
     logger.addHandler(stream_handler)
 
-    _mainlogger = logger
+    return logger
 
 def get_modulelogger(name: str) -> logging.Logger:
     """get instance of modulelogger"""
 
     # create non existing loggers
-    if not name in _moduleloggers.keys():
+    if name not in _moduleloggers:
         _moduleloggers[name] = logging.getLogger(name)
 
     return _moduleloggers[name]
 
 def export_logfile(dst: str | None = None) -> None:
-    """Export logfile to targetfolder, 
+    """Export logfile to targetfolder,
     defaults to current working directory."""
 
     # default location
     if dst is None:
         dst = Path.cwd()
-   
+
     # export file
     shutil.copyfile(LOGDIR, dst)
 
-def report_error(error: Exception, 
+def log_exception(exc: Exception,
     logger: logging.Logger | None = None) -> None:
     """report error message and export logs"""
 
@@ -97,7 +99,7 @@ def report_error(error: Exception,
     # get current time
     now = datetime.now()
     now = now.strftime("%Y%m%d%H%M")
-    
+
     # make filepath
     filepath = Path.cwd().joinpath(now + '.log')
 
@@ -108,7 +110,7 @@ def report_error(error: Exception,
     # export logfile
     export_logfile(filepath)
 
-    raise error
+    raise exc
 
 # package globals
 PACKAGENAME = 'pyETM'
@@ -118,9 +120,8 @@ PACKAGEPATH = find_dirpath(PACKAGENAME, __file__)
 LOGDIR = f"logs/{PACKAGENAME}.log"
 LOGDIR = PACKAGEPATH.joinpath(LOGDIR).as_posix()
 
-# track loggers
-_mainlogger = None
-_moduleloggers = {}
+# initialize mainlogger
+_MAINLOGGER = _create_mainlogger(PACKAGEPATH)
 
-# initiate mainlogger
-_create_mainlogger(PACKAGEPATH)
+# track moduleloggers
+_moduleloggers = {}

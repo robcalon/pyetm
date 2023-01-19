@@ -1,15 +1,15 @@
+"""myc access"""
 from __future__ import annotations
-
-import datetime
-
-import numpy as np
-import pandas as pd
 
 from typing import TYPE_CHECKING, Literal
 
+import datetime
+import numpy as np
+import pandas as pd
+
 from pyETM import Client
 from pyETM.utils import categorise_curves
-from pyETM.logger import get_modulelogger, report_error
+from pyETM.logger import get_modulelogger, log_exception
 from pyETM.optional import import_optional_dependency
 
 _logger = get_modulelogger(__name__)
@@ -30,28 +30,30 @@ def sort_frame(frame: pd.DataFrame, axis: int = 0):
         return frame
 
     # subset reference from frame
-    ref = frame.xs('Reference', level='SCENARIO', axis=axis, 
+    ref = frame.xs('Reference', level='SCENARIO', axis=axis,
         drop_level=False)
-    
+
     # drop reference from frame
     frame = frame.drop(ref.axes[axis], axis=axis)
 
     return pd.concat([ref, frame], axis=axis)
 
 
-class Model():
+class MYCClient():
+    """Multi Year Chart Client"""
 
     @property
     def session_ids(self) -> pd.Series:
+        """series of scenario_ids"""
         return self.__session_ids
 
     @session_ids.setter
     def session_ids(self, session_ids: pd.Series):
 
-        # convert to series        
+        # convert to series
         if not isinstance(session_ids, pd.Series):
             session_ids = pd.Series(session_ids)
-        
+
         # set uniform index names
         keys = ['STUDY', 'SCENARIO', 'REGION', 'YEAR']
         session_ids.index.names = keys
@@ -61,39 +63,42 @@ class Model():
 
     @property
     def parameters(self) -> pd.Series:
+        """parameters"""
         return self.__parameters
 
     @parameters.setter
     def parameters(self, parameters: pd.Series):
 
-        # convert to series        
+        # convert to series
         if not isinstance(parameters, pd.Series):
             parameters = pd.Series(parameters)
-        
+
         # set parameters
         self.__parameters = parameters
 
     @property
     def gqueries(self) -> pd.Series:
+        """gqueries"""
         return self.__gqueries
-    
+
     @gqueries.setter
     def gqueries(self, gqueries: pd.Series):
 
-        # convert to series        
+        # convert to series
         if not isinstance(gqueries, pd.Series):
             gqueries = pd.Series(gqueries)
-        
+
         # set gqueries
         self.__gqueries = gqueries
 
     @property
     def mapping(self) -> pd.DataFrame:
+        """mapping"""
         return self.__mapping
 
     @mapping.setter
     def mapping(self, mapping: pd.DataFrame | None):
-        
+
         # convert to dataframe
         if (not isinstance(mapping, pd.DataFrame)) & (mapping is not None):
             mapping = pd.DataFrame(mapping)
@@ -107,6 +112,7 @@ class Model():
 
     @property
     def depricated(self) -> list[str]:
+        """depricated parameters"""
 
         # subset depricated parameters
         depricated = [
@@ -129,6 +135,7 @@ class Model():
 
     @property
     def excluded(self) -> list[str]:
+        """excluded parameters"""
 
         # list of excluded parameters for TYNDP
         excluded = [
@@ -161,49 +168,49 @@ class Model():
         return excluded
 
     def __init__(self, session_ids: pd.Series,
-        parameters: pd.Series, gqueries: pd.Series, 
+        parameters: pd.Series, gqueries: pd.Series,
         mapping: pd.Series | pd.DataFrame | None = None, **kwargs):
         """initialisation logic for Client.
-        
+
         Parameters
         ----------
         session_ids: pd.Series
             Series with session ids.
         parameters: pd.Series
-            Series with parameters names to collect and 
+            Series with parameters names to collect and
             corresponding parameter unit.
         gqueries: pd.Series
             Series with gqueries to collect and corresponding
             gquery unit.
         mapping : pd.Series or pd.DataFrame
             Optional mapping for carrier curves output keys.
-    
+
         All key-word arguments are passed directly to the Session
-        that is used in combination with the pyETM.client. In this 
-        module the pyETM.Client uses a Requests Session object as 
+        that is used in combination with the pyETM.client. In this
+        module the pyETM.Client uses a Requests Session object as
         backend.
 
         Keyword Arguments
         -----------------
         base_url: str, default None
             Base url to which the session connects, all request urls
-            will be merged with the base url to create a destination. 
+            will be merged with the base url to create a destination.
         proxies: dict, default None
-            Dictionary mapping protocol or protocol and 
+            Dictionary mapping protocol or protocol and
             hostname to the URL of the proxy.
-        stream: boolean, default False 
+        stream: boolean, default False
             Whether to immediately download the response content.
         verify: boolean or string, default True
             Either a boolean, in which case it controls whether we verify
-            the server's TLS certificate, or a string, in which case it must 
-            be a path to a CA bundle to use. When set to False, requests will 
-            accept any TLS certificate presented by the server, and will ignore 
-            hostname mismatches and/or expired certificates, which will make 
-            your application vulnerable to man-in-the-middle (MitM) attacks. 
-            Setting verify to False may be useful during local development or 
+            the server's TLS certificate, or a string, in which case it must
+            be a path to a CA bundle to use. When set to False, requests will
+            accept any TLS certificate presented by the server, and will ignore
+            hostname mismatches and/or expired certificates, which will make
+            your application vulnerable to man-in-the-middle (MitM) attacks.
+            Setting verify to False may be useful during local development or
             testing.
-        cert: string or tuple, default None 
-            If string; path to ssl client cert file (.pem). 
+        cert: string or tuple, default None
+            If string; path to ssl client cert file (.pem).
             If tuple; ('cert', 'key') pair."""
 
         # set optional parameters
@@ -223,31 +230,31 @@ class Model():
         xlsx = pd.ExcelFile(filepath)
 
         # get session ids
-        session_ids = pd.read_excel(xlsx, sheet_name='Sessions', 
+        session_ids = pd.read_excel(xlsx, sheet_name='Sessions',
             usecols=[*range(5)], index_col=[*range(4)]).squeeze('columns')
 
         # get paramters
-        parameters = pd.read_excel(xlsx, sheet_name='Parameters', 
+        parameters = pd.read_excel(xlsx, sheet_name='Parameters',
             usecols=[*range(2)], index_col=[*range(1)]).squeeze('columns')
 
         # get gqueries
-        gqueries = pd.read_excel(xlsx, sheet_name='GQueries', 
+        gqueries = pd.read_excel(xlsx, sheet_name='GQueries',
             usecols=[*range(2)], index_col=[*range(1)]).squeeze('columns')
 
         # check for optional mapping
         if "Mapping" in xlsx.sheet_names:
 
             # load mapping
-            mapping = pd.read_excel(filepath, sheet_name='Mapping', 
+            mapping = pd.read_excel(filepath, sheet_name='Mapping',
                 index_col=[*range(2)])
 
-        else: 
+        else:
 
             # default mapping
             mapping = None
 
         # intialize model
-        model = cls(session_ids=session_ids, parameters=parameters, 
+        model = cls(session_ids=session_ids, parameters=parameters,
             gqueries=gqueries, mapping=mapping, **kwargs)
 
         # set source in model
@@ -255,7 +262,7 @@ class Model():
 
         return model
 
-    def _check_for_unmapped_input_parameters(self, 
+    def _check_for_unmapped_input_parameters(self,
         client: Client) -> pd.Index:
 
         # get parameters from client side
@@ -276,15 +283,10 @@ class Model():
         # keys not in parameters but in parameters
         missing = parameters[~parameters.index.isin(self.parameters.index)]
         missing = pd.Index(missing.index, name='unmapped keys')
-        
-        # warn for unmapped keys
-        if not missing.empty:
-            _logger.warn("%s returned unmapped parameters: %s",
-                client, list(missing))
 
         return missing
 
-    def _make_midx(self, 
+    def _make_midx(self,
         midx: tuple | pd.MultiIndex | None = None) -> pd.MultiIndex:
         """helper to handle passed multiindex"""
 
@@ -302,7 +304,7 @@ class Model():
 
         return midx
 
-    def get_input_parameters(self, 
+    def get_input_parameters(self,
         midx: tuple | pd.MultiIndex | None = None) -> pd.DataFrame:
         """get input parameters for single scenario"""
 
@@ -323,16 +325,26 @@ class Model():
                 # connect scenario and check for unmapped keys
                 client.gqueries = list(self.gqueries.index)
 
+                # newset
+                warned = False
+                unmapped = set()
+
                 # get parameter settings
-                for case, scenario_id in cases.iteritems():
+                for case, scenario_id in cases.items():
 
                     # log event
-                    _logger.debug("> collecting inputs for " + 
+                    _logger.debug("> collecting inputs for " +
                         "'%s', '%s', '%s', '%s'", *case)
 
                     # connect scenario and check for unmapped keys
                     client.scenario_id = scenario_id
-                    self._check_for_unmapped_input_parameters(client)
+                    missing = self._check_for_unmapped_input_parameters(client)
+
+                    if (not missing.empty) & (not warned):
+                        _logger.warning("unmapped parameters in scenario(s)")
+                        warned = True
+
+                    unmapped.update(set(missing))
 
                     # reference scenario parameters
                     parameters = client.scenario_parameters
@@ -340,7 +352,7 @@ class Model():
                     # collect irrelevant parameters
                     drop = self.excluded + self.depricated
                     drop = self.parameters.index.isin(drop)
-                    
+
                     # collect relevant parameters
                     keep = self.parameters.index[~drop]
                     keep = parameters.index.isin(keep)
@@ -349,9 +361,14 @@ class Model():
                     parameters = parameters[keep]
                     values.append(parameters)
 
+                # warn for unmapped keys
+                if unmapped:
+                    _logger.warn("encountered unmapped parameters: %s",
+                        unmapped)
+
         # handle exception
-        except Exception as error:
-            report_error(error)
+        except Exception as exc:
+            log_exception(exc, logger=_logger)
 
         # construct frame and handle nulls
         frame = pd.concat(values, axis=1, keys=midx)
@@ -367,7 +384,7 @@ class Model():
 
         return sort_frame(frame, axis=1)
 
-    def set_input_parameters(self, 
+    def set_input_parameters(self,
         frame: pd.DataFrame) -> None:
         """set input parameters"""
 
@@ -385,7 +402,7 @@ class Model():
 
         # raise for errors
         if errors:
-            raise KeyError("unknown cases in dataframe: '%s'" %errors)
+            raise KeyError(f"unknown cases in dataframe: '{errors}'")
 
         _logger.info("changing input parameters")
 
@@ -402,7 +419,7 @@ class Model():
 
             # warn for keys
             for key in illegal:
-                _logger.warning("excluded '%s' from upload" %key)
+                _logger.warning("excluded '{key}' from upload")
 
             # drop excluded parameters
             frame = frame.drop(illegal)
@@ -416,7 +433,7 @@ class Model():
                 for case, values in frame.iteritems():
 
                     # log event
-                    _logger.debug("> changing input parameters for " + 
+                    _logger.debug("> changing input parameters for " +
                         "'%s', '%s', '%s', '%s'", *case)
 
                     # drop unchanged keys
@@ -431,13 +448,13 @@ class Model():
                     client.user_values = values
 
         # handle exception
-        except Exception as error:
-            report_error(error, logger=_logger)
+        except Exception as exc:
+            log_exception(exc, logger=_logger)
 
-    def get_hourly_carrier_curves(self, carrier: str, 
-        midx: tuple | pd.MultiIndex | None = None, 
-        mapping: pd.DataFrame | None = None, 
-        columns: list | None = None, 
+    def get_hourly_carrier_curves(self, carrier: str,
+        midx: tuple | pd.MultiIndex | None = None,
+        mapping: pd.DataFrame | None = None,
+        columns: list | None = None,
         include_keys: bool = False,
         invert_sign: bool = False) -> pd.DataFrame:
         """get hourly carrier curves for scenarios"""
@@ -448,7 +465,7 @@ class Model():
         # subset cases of interest
         midx = self._make_midx(midx=midx)
         cases = self.session_ids.loc[midx]
-    
+
         # get default mapping
         if (mapping is None) & (self.mapping is not None):
 
@@ -477,40 +494,40 @@ class Model():
                 for case, scenario_id in cases.iteritems():
 
                     # log event
-                    _logger.debug("> collecting hourly %s curves for " + 
+                    _logger.debug("> collecting hourly %s curves for " +
                         "'%s', '%s', '%s', '%s'", carrier, *case)
-        
+
                     # connect scenario and get curves
                     client.scenario_id = scenario_id
 
                     # get method for carrier curves
                     attr = f"hourly_{carrier}_curves"
                     curves = getattr(client, attr)
-                        
+
                     # set column name
                     curves.columns.names = ['KEY']
-                    
+
                     # check for categorisation
                     if mapping is not None:
 
                         # categorise curves
                         curves = categorise_curves(
-                            curves, mapping, columns=columns, 
+                            curves, mapping, columns=columns,
                             include_keys=include_keys, invert_sign=invert_sign)
 
                     # append curves to list
                     items.append(curves)
 
         # handle exception
-        except Exception as error:
-            report_error(error, logger=_logger)
+        except Exception as exc:
+            log_exception(exc, logger=_logger)
 
         # construct frame for carrier
         frame = pd.concat(items, axis=1, keys=midx)
 
         return sort_frame(frame, axis=1)
 
-    def get_output_values(self, 
+    def get_output_values(self,
         midx: tuple | pd.MultiIndex | None = None) -> pd.DataFrame:
         """get input parameters for single scenario"""
 
@@ -532,10 +549,10 @@ class Model():
                 client.gqueries = list(self.gqueries.index)
 
                 # get parameter settings
-                for case, scenario_id in cases.iteritems():
+                for case, scenario_id in cases.items():
 
                     # log event
-                    _logger.debug("> collecting gquery results for " + 
+                    _logger.debug("> collecting gquery results for " +
                         "'%s', '%s', '%s', '%s'", *case)
 
                     # connect scenario and set gqueries
@@ -546,8 +563,8 @@ class Model():
                     values.append(gqueries)
 
         # handle exception
-        except Exception as error:
-            report_error(error, logger=_logger)
+        except Exception as exc:
+            log_exception(exc, logger=_logger)
 
         # construct frame and handle nulls
         frame = pd.concat(values, axis=1, keys=midx)
@@ -566,7 +583,7 @@ class Model():
 
         return sort_frame(frame, axis=1)
 
-    def make_myc_urls(self, 
+    def make_myc_urls(self,
         midx: tuple | pd.MultiIndex | None = None) -> pd.Series:
         """convert session ids excel to myc urls"""
 
@@ -600,7 +617,7 @@ class Model():
         # unstack year
         scenarios = cases.unstack(level='YEAR').astype(str)
 
-        # raise for missing ids 
+        # raise for missing ids
         if scenarios.isna().values.any():
             raise ValueError("missing session ids")
 
@@ -610,11 +627,11 @@ class Model():
 
         return pd.Series(urls, name='URL').sort_index()
 
-    def to_excel(self, 
+    def to_excel(self,
         filepath: str | None = None,
-        midx: tuple | pd.MultiIndex | None = None, 
-        input_parameters: pd.DataFrame | None = None, 
-        output_values: pd.DataFrame | None = None, 
+        midx: tuple | pd.MultiIndex | None = None,
+        input_parameters: pd.DataFrame | None = None,
+        output_values: pd.DataFrame | None = None,
         myc_urls: pd.Series | None = None,
         include_hourly_curves: bool = False,
         carriers: Carrier | list[Carrier] | None = None,
@@ -624,20 +641,20 @@ class Model():
         invert_sign: bool = False,
         ) -> None:
         """Export results of model to Excel.
-        
+
         Parameters
         ----------
         filepath : str, default None
             File path or existing ExcelWriter, defaults
-            to filename with current datetime in current 
+            to filename with current datetime in current
             working directory.
         midx : tuple or pd.MultiIndex, default None
             Tuple or MultiIndex with column names
-            of columns to include in file. Defaults 
+            of columns to include in file. Defaults
             to all columns.
         input_parameters : pd.DataFrame, default None
             DataFrame to write on the inputs sheet
-            of the Excel. Defaults to get_input_values 
+            of the Excel. Defaults to get_input_values
             method with specified midx.
         output_values : pd.DataFrame, default None
             DataFrame to write on the outputs sheet
@@ -658,18 +675,21 @@ class Model():
         mapping : DataFrame, default None
             DataFrame with mapping of ETM keys and carrier in a multiindex
             and mapping values in columns. Defaults to mapping passed on
-            initialisation or is excluded when not passed on model 
+            initialisation or is excluded when not passed on model
             initialisation.
         columns : list, default None
-            List of column names and the order of mappers that will 
-            be included in the applied mapping. Defaults to include all 
+            List of column names and the order of mappers that will
+            be included in the applied mapping. Defaults to include all
             columns in applied mapping.
         include_keys : bool, default False
             Include the original ETM keys in the resulting mapping.
         invert_sign : bool, default False
-            Inverts sign convention where demand is denoted with 
+            Inverts sign convention where demand is denoted with
             a negative sign. Demand will be denoted with a positve
             value and supply with a negative value."""
+
+        # pylint: disable=C0415
+        # Due to optional import
 
         from pathlib import Path
         from pyETM.utils import add_frame, add_series
@@ -682,6 +702,8 @@ class Model():
             # import optional dependency
             xlsxwriter = import_optional_dependency('xlsxwriter')
 
+        # pylint: enable=C0415
+
         # supported carriers
         all_carriers = ['electricity', 'heat', 'hydrogen', 'methane']
 
@@ -692,23 +714,22 @@ class Model():
         # add string to list
         if isinstance(carriers, str):
             carriers = [carriers]
-            
+
         # check passed carriers
         for carrier in carriers:
             if carrier.lower() not in carriers:
-                raise ValueError("carrier '%s' not supported" %carrier)
+                raise ValueError("carrier '{carrier}' not supported")
 
         # make filepath
         if filepath is None:
-            
+
             # default filepath
             now = datetime.datetime.now().strftime("%Y%m%d%H%M")
             filepath = Path.cwd().joinpath(now + '.xlsx')
 
         # check filepath
         if not Path(filepath).parent.exists:
-            raise FileNotFoundError("Path to file does not exist: '%s'" 
-                %filepath)
+            raise FileNotFoundError("Path to file does not exist: '{filepath}'")
 
         # create workbook
         workbook = xlsxwriter.Workbook(str(filepath))
@@ -732,12 +753,12 @@ class Model():
         """Allow for modified carrier curves as well"""
 
         # iterate over carriers
-        if include_hourly_curves:      
+        if include_hourly_curves:
             for carrier in carriers:
-                
+
                 # get carrier curves
-                curves = self.get_hourly_carrier_curves(carrier, 
-                    midx=midx, mapping=mapping, columns=columns, 
+                curves = self.get_hourly_carrier_curves(carrier,
+                    midx=midx, mapping=mapping, columns=columns,
                     include_keys=include_keys, invert_sign=invert_sign)
 
                 # add to excel
@@ -749,7 +770,7 @@ class Model():
             myc_urls = self.make_myc_urls(midx=midx)
 
         # add urls to workbook
-        add_series('ETM_URLS', myc_urls, workbook, 
+        add_series('ETM_URLS', myc_urls, workbook,
             index_width=18, column_width=80)
 
         # write workbook

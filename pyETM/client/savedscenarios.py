@@ -3,8 +3,11 @@ from __future__ import annotations
 
 import pandas as pd
 
+from .session import SessionMethods
+from .base import BaseClient
 
-class SavedScenario:
+
+class SavedScenarioMethods(SessionMethods):
     """saved scenario related functions"""
 
     def get_saved_scenario_id(self, saved_scenario_id: str):
@@ -29,7 +32,7 @@ class SavedScenario:
         headers = {'content-type': 'application/json'}
 
         # make request
-        resp = self.session.get(url, decoder='json')
+        resp = self.session.get(url, decoder='json', headers=headers)
 
         return resp
 
@@ -133,11 +136,8 @@ class SavedScenario:
         if not history:
             return pd.DataFrame()
 
-        """NEED TO RESTRUCTURE CLIENT OBJECT TO CREATE PARTIAL INITED
-        CLIENT CAN BE USED HERE"""
-
         # get scenario headers for history scenarios
-        history = [Client(id).get_scenario_header() for id in history]
+        history = [BaseClient(id)._scenario_header for id in history]
 
         # transform history naar dataframe
         exclude = ['user_values', 'balanced_values', 'metadata', 'url']
@@ -161,7 +161,7 @@ class SavedScenario:
         """
 
         # raise without scenario id
-        self._raise_scenario_id()
+        self._validate_scenario_id()
 
         # check permissions
         # self._validate_token_permission(read=True)

@@ -1,8 +1,8 @@
+"""conversion methods"""
 from __future__ import annotations
 
-import pandas as pd
-
 from typing import TYPE_CHECKING
+import pandas as pd
 
 from pyETM import Client
 from pyETM.myc import Model
@@ -11,8 +11,8 @@ from pyETM.optional import import_optional_dependency
 
 _logger = get_modulelogger(__name__)
 
-def copy_study_session_ids(session_ids: pd.Series | Model, 
-    study: str | None = None, metadata: dict | None = None, 
+def copy_study_session_ids(session_ids: pd.Series | Model,
+    study: str | None = None, metadata: dict | None = None,
     keep_compatible: bool = False, **kwargs) -> pd.Series:
     """make a copy of an existing study. The returned
     session ids are decoupled from the original study,
@@ -32,7 +32,7 @@ def copy_study_session_ids(session_ids: pd.Series | Model,
         """create compatible scenario copy"""
 
         # initiate client from existing scenairo
-        client = Client.from_existing_scenario(session_id, metadata=metadata, 
+        client = Client.from_existing_scenario(session_id, metadata=metadata,
             keep_compatible=keep_compatible, **kwargs)
 
         return client.scenario_id
@@ -46,33 +46,37 @@ def copy_study_session_ids(session_ids: pd.Series | Model,
 
     return session_ids
 
-def copy_study_configuration(filepath: str, model: Model, 
+def copy_study_configuration(filepath: str, model: Model,
     study: str | None = None, copy_session_ids: bool = True,
     metadata: dict | None = None, keep_compatible: bool = False) -> None:
     """copy study configuration"""
 
+    # pylint: disable=C0415
+    # Due to optional import
+
     from pathlib import Path
-    from pyETM.myc.utils import add_series, add_frame
+    from pyETM.utils import add_series, add_frame
 
     if TYPE_CHECKING:
         # import xlsxwriter
         import xlsxwriter
-        
+
     else:
         # import optional dependency
         xlsxwriter = import_optional_dependency('xlsxwriter')
-    
+
+    # pylint: enable-C0415
+
     # check filepath
     if not Path(filepath).parent.exists:
-        raise FileNotFoundError("Path to file does not exist: '%s'"
-            %filepath)
+        raise FileNotFoundError(f"Path to file does not exist: '{filepath}'")
 
     # create workbook
     workbook = xlsxwriter.Workbook(str(filepath))
 
     # get session ids
     if copy_session_ids:
-        
+
         # create copies of session ids
         sessions = copy_study_session_ids(model, study=study,
             metadata=metadata, keep_compatible=keep_compatible)
@@ -88,11 +92,11 @@ def copy_study_configuration(filepath: str, model: Model,
         # set study if applicable
         if study is not None:
             sessions = sessions.index.set_levels([study], level='STUDY')
-      
+
             _logger.warning("'study' passed without copying session_ids, " +
-                "it is recommended to use 'copy_session_ids=True' instead to " + 
+                "it is recommended to use 'copy_session_ids=True' instead to " +
                 "prevent referencing the same session_id by different names.")
-        
+
         if metadata is not None:
             _logger.warning("'metadata' passed without copying session_ids, " +
                 "use 'copy_session_ids=True' instead.")
@@ -101,7 +105,7 @@ def copy_study_configuration(filepath: str, model: Model,
     add_series('Sessions', sessions, workbook, column_width=18)
 
     # add parameters and set column width
-    add_series('Parameters', model.parameters, workbook, 
+    add_series('Parameters', model.parameters, workbook,
         index_width=80, column_width=18)
 
     # add gqueries and set column width
@@ -115,15 +119,15 @@ def copy_study_configuration(filepath: str, model: Model,
 
     # copy other tabs from source
     if hasattr(model, '_source'):
-        
+
         _logger.debug("detected source file")
 
-        try: 
+        try:
 
             """merge together with model to also validate these values
             before copying them"""
 
-            # link source file            
+            # link source file
             xlsx = pd.ExcelFile(model._source)
 
             # look for interconnectors
@@ -142,16 +146,16 @@ def copy_study_configuration(filepath: str, model: Model,
 
                 # read and write mpi profiles
                 profiles = pd.read_excel(xlsx, sheet)
-                add_frame(sheet, profiles, workbook, 
+                add_frame(sheet, profiles, workbook,
                     index=False, column_width=18)
 
                 _logger.debug("> included '%s' in copy", sheet)
 
-        except Exception as error:
+        except Exception as exc:
 
             # report failure
-            _logger.debug("could not process detected source file", 
-                exc_info=error)
+            _logger.debug("could not process detected source file",
+                exc_info=exc)
 
     # write workbook
     workbook.close()

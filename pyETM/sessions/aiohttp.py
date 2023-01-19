@@ -290,7 +290,7 @@ class AIOHTTPSession:
 
                         # report error messages
                         if resp.status == 422:
-                            self._error_report(resp)
+                            await self._error_report(resp)
 
                         # raise for status
                         resp.raise_for_status()

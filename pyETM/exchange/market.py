@@ -1,25 +1,26 @@
-
+"""market module"""
 from __future__ import annotations
-
-import shutil
-
-import numpy as np
-import pandas as pd
 
 from pathlib import Path
 from functools import cached_property
+
+
+import shutil
+import numpy as np
+import pandas as pd
 
 from pyETM.logger import get_modulelogger
 from pyETM.utils import lookup_coordinates
 
 from .region import Region
-from .checks import (validate_scenario_ids, 
+from .checks import (validate_scenario_ids,
     validate_interconnectors, validate_mpi_profiles)
 
 logger = get_modulelogger(__name__)
 
 
 class Market:
+    """Market Object"""
 
     @property
     def name(self) -> str:
@@ -78,9 +79,9 @@ class Market:
         """multi purpose interconnector utilization"""
         return self.__mpi_profiles
 
-    def __init__(self, interconnectors: pd.DataFrame, 
-            scenario_ids: dict, mpi_profiles: pd.DataFrame | None = None, 
-            name: str = "exchange", reset: bool = True, 
+    def __init__(self, interconnectors: pd.DataFrame,
+            scenario_ids: dict, mpi_profiles: pd.DataFrame | None = None,
+            name: str = "exchange", reset: bool = True,
             wdir: str | Path | None = None, **kwargs):
         """initialize object"""
 
@@ -101,7 +102,7 @@ class Market:
 
         # warn for non-reset
         if not reset:
-            logger.critical("'%s': regions not reset on initialisation", 
+            logger.critical("'%s': regions not reset on initialisation",
                     self)
 
         # validate scenario ids
@@ -160,7 +161,7 @@ class Market:
             # read scenario ids
             sheet, idx = 'Sessions', [*range(4)]
             scenario_ids = reader.parse(sheet, index_col=idx)
-            
+
             # drop levels
             for level in ['STUDY', 'SCENARIO', 'YEAR']:
                 if level in scenario_ids.index.names:
@@ -175,14 +176,14 @@ class Market:
                 mpi_profiles = reader.parse('MPI Profiles')
 
         # initialise model
-        model = cls(name=name, 
-            scenario_ids=scenario_ids, mpi_profiles=mpi_profiles, 
+        model = cls(name=name,
+            scenario_ids=scenario_ids, mpi_profiles=mpi_profiles,
             interconnectors=interconnectors, **kwargs)
 
         return model
 
     def __repr__(self) -> str:
-        return "ExchangeModel(%s)" %self.name
+        return f"ExchangeModel({self.name})"
 
     def __str__(self) -> str:
         return self.name
@@ -192,13 +193,13 @@ class Market:
 
         # specify relevant paths
         paths = ['prices', 'utilization', 'difference', 'consistency']
-        
+
         # iterate over paths
         for path in paths:
 
             # construct dirpath
-            path = self.wdir.joinpath('%s/%s' %(self.name, path))
-            
+            path = self.wdir.joinpath("{self.name}/{path}")
+
             # remove existing results
             if path.is_dir() & self.reset:
                 shutil.rmtree(str(path))
@@ -226,7 +227,7 @@ class Market:
         for region, scenario_id in self.scenario_ids.items():
 
             logger.info("'%s': initialising region '%s'", self, region.upper())
-            
+
             # get interconnector names
             names = 'interconnector_' + imap.other.xs(region)
 
@@ -243,8 +244,8 @@ class Market:
                 capacity = None
 
             # initialze a region
-            region = Region(region, scenario_id, 
-                    reset=reset, capacities=capacity, 
+            region = Region(region, scenario_id,
+                    reset=reset, capacities=capacity,
                     interconnector_names=names, **self.__kwargs)
 
             # append region to self
@@ -254,7 +255,7 @@ class Market:
         self.__regions = regions
 
     def __make_mapping__(self) -> pd.DataFrame:
-        """mapping of interconnector names to ETM 
+        """mapping of interconnector names to ETM
         interconnector keys"""
 
         # reference conns
@@ -319,8 +320,8 @@ class Market:
         curves = self.electricity_prices.copy()
 
         for col in curves.columns:
-            
-            filename = basedir.joinpath('prices/%s.csv' %col)
+
+            filename = basedir.joinpath(f'prices/{col}.csv')
             curves[[col]].T.to_csv(filename, index=False, mode='a',
                     header=False, sep=';', decimal=',')
 
@@ -328,8 +329,8 @@ class Market:
         curves = self.interconnector_utilization.copy()
 
         for col in curves.columns:
-            
-            filename = basedir.joinpath('utilization/%s.csv' %col)
+
+            filename = basedir.joinpath(f'utilization/{col}.csv')
             curves[[col]].T.to_csv(filename, index=False, mode='a',
                     header=False, sep=';', decimal=',')
 
@@ -337,8 +338,8 @@ class Market:
         curves = self.difference()
 
         for col in curves.columns:
-            
-            filename = basedir.joinpath('difference/%s.csv' %col)
+
+            filename = basedir.joinpath(f'difference/{col}.csv')
             curves[[col]].T.to_csv(filename, index=False, mode='a',
                     header=False, sep=';', decimal=',')
 
@@ -347,22 +348,22 @@ class Market:
         curves = self.consistency()
 
         for col in curves.columns:
-            
-            filename = basedir.joinpath('consistency/%s.csv' %col)
+
+            filename = basedir.joinpath(f'consistency/{col}.csv')
             curves[[col]].T.to_csv(filename, index=False, mode='a',
                     header=False, sep=';', decimal=',')
 
         logger.debug("'%s': updated iteration traces", self)
 
     def consistency(self):
-        """difference between etm utilization of 
+        """difference between etm utilization of
         from and to region."""
-        
+
         difference = []
 
         # reference interconnector mapping
         imap = self._interconnector_mapping
-        
+
         # modify mapping index
         imap = imap.reset_index(level=1)
         imap = imap.set_index('key', append=True)
@@ -381,10 +382,10 @@ class Market:
 
             # get etm utilization in both sides
             frm = utilization(props.from_region, conn)
-            to = utilization(props.to_region, conn)
-            
+            tow = utilization(props.to_region, conn)
+
             # evaluate difference (add as oppositve signs)
-            diff = frm.add(to).replace(-0.000, 0.000)
+            diff = frm.add(tow).replace(-0.000, 0.000)
 
             difference.append(pd.Series(diff, name=conn))
 
@@ -393,7 +394,7 @@ class Market:
     def difference(self):
         """difference between utilization and etm utilization,
         returns difference based on from orient.
-        
+
         use consistency check to see if there are differences
         in the etm utilization between the from and to region."""
 
@@ -406,7 +407,7 @@ class Market:
             # get difference
             _region = self._get_region(region)
             diff = _region.utilization - _region.etm_utilization
-            
+
             diff = diff.round(3)
             diff = diff.replace(-0.000, 0.000)
 
@@ -438,7 +439,7 @@ class Market:
 
         # convert to frame
         utilization = pd.concat(utilization, axis=1, keys=self.regions)
-        
+
         # get correctly oriented interconnectors
         cols = imap[imap.index.get_level_values('region') == imap.from_region]
         utilization = utilization[cols.index]
@@ -464,7 +465,7 @@ class Market:
 
         # convert to frame
         utilization = pd.concat(utilization, axis=1, keys=self.regions)
-        
+
         # get correctly oriented interconnectors
         cols = imap[imap.index.get_level_values('region') == imap.from_region]
         utilization = utilization[cols.index]
@@ -575,7 +576,7 @@ class Market:
 
     @cached_property
     def available_interconnector_capacity(self) -> pd.DataFrame:
-        """get remaining available capacity for the import 
+        """get remaining available capacity for the import
         and export orients of the interconnector"""
 
         # reference properties
@@ -595,7 +596,7 @@ class Market:
 
     @property
     def interconnector_price_deltas(self) -> pd.DataFrame:
-        """get price deltas between the from and 
+        """get price deltas between the from and
         to region of each interconnector"""
 
         # reference properties
@@ -604,22 +605,22 @@ class Market:
         dispatch = self.next_dispatchable_prices
 
         # make dictonairy
-        frm, to = conns.from_region, conns.to_region
-        mapping = dict(zip(conns.index, list(zip(frm, to))))
+        frm, tow = conns.from_region, conns.to_region
+        mapping = dict(zip(conns.index, list(zip(frm, tow))))
 
         # helper function
         def price_deltas(from_region, to_region):
-            """Evaluated the price signals between the from and 
+            """Evaluated the price signals between the from and
             to region of an interconnector.
 
-            In case the price of the next dispatchable unit at the 
+            In case the price of the next dispatchable unit at the
             signaled orient negates the price delta, the price delta
             is set to zero. There is no wellfare effect to be realized
             from exchange via the interconnector"""
 
             # determine price delta between each region
             delta = prices[from_region] - prices[to_region]
-            
+
             # inspect if price delta also there at next dispatchable unit
             imprt = prices[from_region] - dispatch[to_region]
             exprt = dispatch[from_region] - prices[to_region]
@@ -632,7 +633,7 @@ class Market:
             return (delta * signal).replace(-0.0, 0.0)
 
         # evaluate price deltas for combinations
-        deltas = [price_deltas(frm, to) for frm, to in mapping.values()]
+        deltas = [price_deltas(frm, tow) for frm, tow in mapping.values()]
 
         return pd.concat(deltas, axis=1, keys=mapping.keys())
 
@@ -653,7 +654,7 @@ class Market:
 
         return pd.concat(curves, axis=1)
 
-    def set_region_curves(self, utilization: pd.DataFrame, 
+    def set_region_curves(self, utilization: pd.DataFrame,
             prices: pd.DataFrame) -> None:
         """set interconnector availability and price curves"""
 
@@ -670,7 +671,7 @@ class Market:
 
         # iterate over regions
         for region in self._regions:
-            
+
             logger.info("'%s': updating region '%s'", self, region)
 
             # set availability curves
@@ -694,22 +695,23 @@ class Market:
 
     @property
     def iterations(self) -> int:
+        """number of iterations"""
         return self.__iterations
 
     @property
     def exchange_bids(self) -> pd.DataFrame:
         """market information sheet
-        
+
         This sheet checks if there is exchange potential between the
-        from and to region on each interconnector. 
-        
-        This is done by looking at the import or export side of the 
+        from and to region on each interconnector.
+
+        This is done by looking at the import or export side of the
         interconnector based on the price signal of each hour in the year.
-        A negative price delta signals an export orient for the 
+        A negative price delta signals an export orient for the
         interconnector, reasoned from the from region, and a positive price
         delta signals a import orient of the interconnector.
 
-        When the capacity of the interconnector at the signaled exchange 
+        When the capacity of the interconnector at the signaled exchange
         side is not saturated, the surplus capacity is communicated. This
         capacity is always set to zero in cases where the price delta between
         the from and to region is zero, as there is no added wellfare to
@@ -757,15 +759,15 @@ class Market:
         coords = pd.Series(coords, index=frame.index, name='orient')
 
         # assign available network capacity for exchange
-        frame['network_mw'] = lookup_coordinates(coords, 
+        frame['network_mw'] = lookup_coordinates(coords,
             self.available_interconnector_capacity)
 
         # lookup production surplus at exporting region
-        frame['supply_mw'] = lookup_coordinates(frame['export_region'], 
+        frame['supply_mw'] = lookup_coordinates(frame['export_region'],
             self.next_dispatchable_capacities)
-        
+
         # lookup replacable dispatch at importing region
-        frame['demand_mw'] = lookup_coordinates(frame['import_region'], 
+        frame['demand_mw'] = lookup_coordinates(frame['import_region'],
             self.price_setting_capacities)
 
         # assign price delta
@@ -777,10 +779,10 @@ class Market:
     def exchange_results(self) -> pd.DataFrame:
         """evaluate the updated interconnector utilization
         based on the current utilization and wellfare potential.
-        
+
         The exchanged capacity is defined as the minimum value
         of the available exchange capacity, the surplus production
-        at the exporting region and the production at the price 
+        at the exporting region and the production at the price
         setting unit at the importing country."""
 
         # reference properties
@@ -833,7 +835,7 @@ class Market:
         """evaluate next iteration of market clearing"""
 
         try:
-            
+
             # set next iterations
             self.__iterations += 1
 
@@ -857,7 +859,7 @@ class Market:
             self._update_traces()
 
             # log event
-            logger.info("completed iteration '%s' for '%s'", 
+            logger.info("completed iteration '%s' for '%s'",
                          self.iterations, self)
 
         except Exception as error:

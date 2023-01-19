@@ -1,34 +1,40 @@
-class Interpolate:
+"""interpolation methods"""
+from __future__ import annotations
+from .header import HeaderMethods
 
-    def interpolate(self, ryear, connect=False):
-            """Create interpolated scenario for ryear, based on the build-in
-            interpolation function of the ETM-engine.
-            
-            This function works only for a 2050 scenario and interpolates 
-            from the start year of the scenario. Use the interpolator in 
-            the utils folder to interpolate between two specific scenarios.
-            """
 
-            # convert reference year to integer
-            if not isinstance(ryear, int):
-                ryear = int(ryear)
+class InterpolationMethods(HeaderMethods):
+    """interpolation methods"""
 
-            # check scenario end year
-            if self.end_year != 2050:
-                raise NotImplementedError('Can only interpolate based on 2050 scenarios')
+    def interpolate(self, ryear: int, connect: bool = False):
+        """Create interpolated scenario for ryear, based on the build-in
+        interpolation function of the ETM-engine.
 
-            # pass end year to interpolate tool
-            data = {'end_year': ryear}
+        This function works only for a 2050 scenario and interpolates
+        from the start year of the scenario. Use the interpolator in
+        the utils folder to interpolate between two specific scenarios.
+        """
 
-            # make requestd
-            url = f'scenarios/{self.scenario_id}/interpolate'
-            scenario = self.session.post(url, json=data)
+        # convert reference year to integer
+        if not isinstance(ryear, int):
+            ryear = int(ryear)
 
-            # get scenario id
-            scenario_id = scenario['id']
+        # check scenario end year
+        if self.end_year != 2050:
+            raise NotImplementedError('Can only interpolate based on 2050 scenarios')
 
-            # connect to new scenario
-            if connect is True:
-                self.scenario_id = scenario_id
+        # pass end year to interpolate tool
+        data = {'end_year': ryear}
 
-            return scenario_id
+        # make requestd
+        url = f'scenarios/{self.scenario_id}/interpolate'
+        scenario = self.session.post(url, json=data, decoder='json')
+
+        # get scenario id
+        scenario_id = scenario['id']
+
+        # connect to new scenario
+        if connect is True:
+            self.scenario_id = scenario_id
+
+        return scenario_id

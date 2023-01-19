@@ -1,7 +1,8 @@
+"""region module"""
+from typing import Optional
+
 import numpy as np
 import pandas as pd
-
-from typing import Optional
 
 from pyETM import Client
 from pyETM.logger import get_modulelogger
@@ -38,9 +39,9 @@ class Region:
     def utilization(self) -> pd.DataFrame:
 
         # create pattern for relevant keys
-        p1 = 'interconnector_\d{1,2}_export_availability'
-        p2 = 'interconnector_\d{1,2}_import_availability'
-        pattern = '%s|%s' %(p1, p2)
+        pat1 = 'interconnector_\d{1,2}_export_availability'
+        pat2 = 'interconnector_\d{1,2}_import_availability'
+        pattern = '%s|%s' %(pat1, pat2)
 
         # get attached keys
         keys = self.client.get_custom_curve_keys(False)
@@ -62,7 +63,7 @@ class Region:
         suffix = '_export_availability'
         exprt = availability[cols[cols.str.match(base + suffix)]]
         exprt.columns = exprt.columns.str.rstrip(suffix)
-        
+
         # get utilization in sparse format
         utilization = imprt.sub(exprt)
 
@@ -100,10 +101,10 @@ class Region:
             curve = curves[imprt] - curves[exprt]
 
             return pd.Series(curve, name=conn, dtype='float64')
-        
+
         # get interconnector utilization profile for ETM curves
         curves = [process_conn(conn) for conn in uvalues.index]
-        
+
         return pd.concat(curves, axis=1) / uvalues
 
     @utilization.setter
@@ -120,7 +121,7 @@ class Region:
 
         # merge and sort availability
         availability = pd.concat([imprt, exprt], axis=1)
-        
+
         # specify curve names
         names = self.interconnector_names
         names = pd.concat([names, names]).to_list()
@@ -163,7 +164,7 @@ class Region:
     @exchange_prices.setter
     def exchange_prices(self, prices) -> None:
         """interconnector price curves"""
-        
+
         # make key and upload curves
         prices.columns += '_price'
         names = self.interconnector_names.to_list()
@@ -217,10 +218,10 @@ class Region:
     @property
     def price_setting_unit(self) -> pd.Series:
         """name of price setting unit"""
-        
+
         # get dispatchable utilization
         util = self.dispatchable_utilization.copy()
-        
+
         # invalidate zeros and reverse order
         util = util.replace(0.00, np.nan)
         util = util[util.columns[::-1]]
@@ -261,7 +262,7 @@ class Region:
     @property
     def next_dispatchable_unit(self) -> pd.Series:
         """hourly unit name for next dispatchable unit"""
-        
+
         # get units and match hourly curve format
         ladder = self.bidladder.copy()
         ladder.index = ladder.index + '.output (MW)'
@@ -285,11 +286,11 @@ class Region:
         unit = unit.str.rstrip('.output (MW)')
 
         return pd.Series(unit, name='unit', dtype='str')
-        
+
     @property
     def next_dispatchable_price(self) -> pd.Series:
         """hourly price curve for next dispatchable unit"""
-        
+
         # evaluate prices
         units = self.next_dispatchable_unit
         prices = units.map(self.bidladder.marginal_costs)
@@ -340,7 +341,7 @@ class Region:
 
     # @property
     # def surplus_bidlevel(self) -> pd.Series:
-    #     """reached bidlevel of priceladder at each hour of the year. 
+    #     """reached bidlevel of priceladder at each hour of the year.
     #     The reached bidlevel is based on the hourly electricity prices."""
 
     #     # get dispatchables and match hourly curve format
@@ -386,15 +387,15 @@ class Region:
     #     bidlevel = self.surplus_bidlevel
     #     bidlevel = bidlevel + '.output (MW)'
 
-    #     # determine capacity 
+    #     # determine capacity
     #     # correction for rounding erros
     #     capacity = ladder.capacity.cumsum()
     #     capacity = bidlevel.map(capacity).round(2)
 
     #     return capacity - util
 
-    def __init__(self, name: str, scenario_id = str, 
-            reset: bool = True, capacities: Optional[pd.Series] = None, 
+    def __init__(self, name: str, scenario_id = str,
+            reset: bool = True, capacities: Optional[pd.Series] = None,
             interconnector_names: Optional[pd.Series] = None, **kwargs) -> None:
         """kwargs used for client, be aware that the proxies
         argument changes to proxy when enabling a queue."""
@@ -429,11 +430,11 @@ class Region:
         self.hourly_electricity_curves
 
     def __reset_interconnectors(self, capacities: pd.Series) -> None:
-        """sets capacities of specified interconnectors and 
-        disables all other interconnectors. All availability 
-        and price related custom curves are removed from all 
+        """sets capacities of specified interconnectors and
+        disables all other interconnectors. All availability
+        and price related custom curves are removed from all
         interconnectors.
-        
+
         capacities : pd.Series
             interconnector name ('interconnector_x') in index
             and capacity of interconnector as value."""
@@ -448,7 +449,7 @@ class Region:
         pattern = 'electricity_interconnector_\d{1,2}_capacity'
         conns = uvalues[uvalues.index.str.match(pattern)]
 
-        # set interconnection 
+        # set interconnection
         # capacity to zero
         conns.loc[:] = 0
         conns.name = 'ETM_key'
@@ -463,9 +464,9 @@ class Region:
             logger.debug("'%s': uploaded capacity settings", self)
 
             # create pattern for relevant keys
-            p1 = 'interconnector_\d{1,2}_export_availability'
-            p2 = 'interconnector_\d{1,2}_import_availability'
-            pattern = '%s|%s' %(p1, p2)
+            pat1 = 'interconnector_\d{1,2}_export_availability'
+            pat2 = 'interconnector_\d{1,2}_import_availability'
+            pattern = '%s|%s' %(pat1, pat2)
 
             # get all keys and subset availability keys
             keys = self.client.get_custom_curve_keys(True)
@@ -482,7 +483,7 @@ class Region:
             # get interconnectors
             pattern = '(interconnector_\d{1,2})'
             ccolumns = columns.str.extract(pattern, expand=False).unique()
-            
+
             # replace existing keys
             utilization = pd.DataFrame(0, index=range(8760), columns=ccolumns)
             self.utilization = utilization
@@ -490,7 +491,7 @@ class Region:
             logger.debug("'%s': uploaded initial ccurves", self)
 
         else:
-            
+
             logger.debug("'%s': all capacities set to zero", self)
 
         # get custom curve keys without unattached

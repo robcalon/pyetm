@@ -1,3 +1,4 @@
+"""validation methods"""
 from __future__ import annotations
 
 import numpy as np
@@ -13,7 +14,7 @@ _logger = get_modulelogger(__name__)
 
 def validate_interconnectors(interconnectors: pd.DataFrame, regions: dict):
     """validate interconnectors dataframe"""
-    
+
     # ensure interconnectors is dataframe
     if not isinstance(interconnectors, pd.DataFrame):
         interconnectors = pd.DataFrame(interconnectors)
@@ -27,7 +28,7 @@ def validate_interconnectors(interconnectors: pd.DataFrame, regions: dict):
     # dropping of invalid entries (warnings)
     interconnectors = _validate_region_names(interconnectors, regions)
     interconnectors = _validate_availability(interconnectors)
-    
+
     # internal consistency checks (errors)
     _validate_from_to_region(interconnectors)
     _validate_duplicates(interconnectors)
@@ -36,7 +37,7 @@ def validate_interconnectors(interconnectors: pd.DataFrame, regions: dict):
 
     return interconnectors
 
-def _validate_region_names(interconnectors: pd.DataFrame, 
+def _validate_region_names(interconnectors: pd.DataFrame,
     regions: dict) -> pd.DataFrame:
     """validate regions have a session id"""
 
@@ -52,11 +53,11 @@ def _validate_region_names(interconnectors: pd.DataFrame,
         _logger.warning("scenario_id for '%s' missing", region)
 
     # specify conditions to exclude interconnectors
-    c1 = interconnectors['from_region'].isin(regions)
-    c2 = interconnectors['to_region'].isin(regions)
+    con1 = interconnectors['from_region'].isin(regions)
+    con2 = interconnectors['to_region'].isin(regions)
 
     # drop excluded interconnectors
-    return interconnectors[c1 & c2]
+    return interconnectors[con1 & con2]
 
 def _validate_availability(interconnectors: pd.DataFrame) -> pd.DataFrame:
     """check for unavaialble interconnectors"""
@@ -68,7 +69,7 @@ def _validate_availability(interconnectors: pd.DataFrame) -> pd.DataFrame:
 
     # get interconnectors that are not available
     invalid = interconnectors[~(powered & scaled & in_service)]
-    
+
     # warn for unavailable interconnectors
     for key in invalid.index:
         _logger.warning("interconnector '%s' is not powered", key)
@@ -83,28 +84,28 @@ def _validate_from_to_region(interconnectors: pd.DataFrame) -> None:
     pairs = interconnectors[keys].apply(lambda x: sorted(x.values), axis=1)
 
     # get length of unique entries of pairs
-    pairs = pairs.apply(set).apply(len)    
+    pairs = pairs.apply(set).apply(len)
 
     # get from and to with same region
     errors = pairs[pairs < 2]
 
     # raise for same from and to region
     if not errors.empty:
-        raise ValueError("same from and to region for '%s'" %list(errors))
+        raise ValueError(f"same from and to region for '{list(errors)}'")
 
 def _validate_duplicates(interconnectors: pd.DataFrame) -> None:
     """check if there are duplicate entries"""
-    
+
     # get sorted region pairs
     keys = ['from_region', 'to_region']
     pairs = interconnectors[keys].apply(lambda x: sorted(x.values), axis=1)
-    
+
     # get duplicate entries
     errors = pairs[pairs.duplicated()]
 
     # raise for duplicates
     if not errors.empty:
-        raise ValueError("duplicate entry/entries for '%s" %list(errors))
+        raise ValueError(f"duplicate entry/entries for '{list(errors)}'")
 
 def _validate_mpi_regions(interconnectors: pd.DataFrame) -> None:
     """check the mpi regions"""
@@ -121,8 +122,10 @@ def _validate_mpi_regions(interconnectors: pd.DataFrame) -> None:
 
     # raise for invalid results
     if not errors.empty:
-        raise ValueError("invalid mpi_region for interconnectors " +
-            "'%s'" %list(errors))
+
+        # make message
+        msg = f"invalid mpi_region for interconnectors'{list(errors)}'"
+        raise ValueError(msg)
 
 def _validate_mpi_percentage(interconnectors: pd.DataFrame) -> None:
     """check mpi percentages"""
@@ -131,10 +134,12 @@ def _validate_mpi_percentage(interconnectors: pd.DataFrame) -> None:
     passed = interconnectors.mpi_perc.between(0, 100)
     if not passed.all():
         cases = passed[~passed].index
-        raise ValueError("mpi percentages of %s " %list(cases) +
-                "outside range [0-100]")
 
-def validate_scenario_ids(regions: dict, 
+        # make message
+        msg = f"mpi percentages of {list(cases)} outside range [0=100]"
+        raise ValueError(msg)
+
+def validate_scenario_ids(regions: dict,
     interconnectors: pd.DataFrame) -> dict:
     """"validate regions"""
 
@@ -145,7 +150,7 @@ def validate_scenario_ids(regions: dict,
 
     return regions
 
-def _validate_interconnector_regions(regions: dict, 
+def _validate_interconnector_regions(regions: dict,
     interconnectors: pd.DataFrame) -> pd.DataFrame:
     """validate that all regions are in interconnection"""
 
@@ -159,7 +164,7 @@ def _validate_interconnector_regions(regions: dict,
     # warn for missing regions
     for region in missing:
         _logger.warning("no interconnection with '%s'", region)
-    
+
     # remove missing regions
     regions = regions.items()
     regions = {k: v for k, v in regions if k not in missing}
@@ -189,10 +194,10 @@ def validate_mpi_profiles(mpi_profiles: pd.DataFrame,
     profiles.update(mpi_profiles)
 
     # specify condition to determine profile orient
-    condition = (interconnectors['from_region'] == 
+    condition = (interconnectors['from_region'] ==
         interconnectors['mpi_region'])
 
-    # get and apply profile orient        
+    # get and apply profile orient
     orient = np.where(condition, 1, -1)
     profiles = profiles * orient
 
@@ -207,13 +212,17 @@ def _validate_profile_ranges(mpi_profiles: pd.DataFrame) -> None:
     # check mpi profile range [0-1]
     passed = ((mpi_profiles >= 0) & (mpi_profiles <= 1)).all()
     if not passed.all():
-        
+
         # get and raise for cases
         cases = passed[~passed].index
-        raise ValueError("mpi profiles for %s " %list(cases) + 
-                "contain values outside range [0-1]")
 
-def _validate_missing_profiles(mpi_profiles: pd.DataFrame, 
+        # make message
+        msg = (f"mpi profiles for {list(cases)} contain "
+            "values outside range [0=1]")
+
+        raise ValueError(msg)
+
+def _validate_missing_profiles(mpi_profiles: pd.DataFrame,
     interconnectors: pd.DataFrame) -> None:
     """validate if an mpi profile present for each
     interconnector with mpi percentage."""
@@ -227,15 +236,15 @@ def _validate_missing_profiles(mpi_profiles: pd.DataFrame,
 
     # raise for missing profiles
     if missing:
-        raise ValueError("mpi_profile missing for '%s'" %missing)
+        raise ValueError(f"mpi_profile missing for '{missing}'")
 
-def _validate_missing_mpi_perc(mpi_profiles: pd.DataFrame, 
+def _validate_missing_mpi_perc(mpi_profiles: pd.DataFrame,
     interconnectors: pd.DataFrame) -> pd.DataFrame:
     """validate missing mpi percentage for specified mpi profile"""
 
     # check mpi profiles without interconnector
     drop = [c for c in mpi_profiles if c not in interconnectors.index]
-    
+
     # warn user
     for key in drop:
         _logger.warning("dropped mpi_profile '%s'", key)
@@ -253,5 +262,4 @@ def _validate_missing_mpi_perc(mpi_profiles: pd.DataFrame,
 
     # raise for missing profiles
     if missing:
-        raise ValueError("mpi_perc missing for '%s'" %missing)
-
+        raise ValueError(f"mpi_perc missing for '{missing}'")
