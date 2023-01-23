@@ -1,7 +1,9 @@
 """scenario header"""
 from __future__ import annotations
 
+import copy
 import pandas as pd
+
 from .session import SessionMethods
 
 class HeaderMethods(SessionMethods):
@@ -164,3 +166,9 @@ class HeaderMethods(SessionMethods):
 
         # clear scenario header cache
         self._get_scenario_header.cache_clear()
+
+    def add_metadata(self, metadata: dict):
+        """append metadata"""
+
+        original = copy.deepcopy(self.metadata)
+        self.metadata = {**original, **metadata}

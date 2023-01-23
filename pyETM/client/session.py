@@ -253,6 +253,30 @@ class SessionMethods:
         # update scenario_id
         self.scenario_id = str(response['id'])
 
+    def delete_scenario(self, scenario_id: str | None = None) -> None:
+        """Delete scenario"""
+
+        # validate token
+        # self._validate_token_permission(read=True, delete=True)
+
+        # use connected scenario
+        previous = None
+        if (scenario_id is not None) & ((str(scenario_id)) != self.scenario_id):
+
+            # remember original connected scenario
+            # and connect to passed scenario id
+            previous = copy.deepcopy(self.scenario_id)
+            self.scenario_id = scenario_id
+
+        # delete scenario
+        url = f'scenarios/{self.scenario_id}'
+        response = self.session.delete(url=url)
+
+        # connect to previous or None
+        self.scenario_id = scenario_id
+
+        return response
+
     def reset_scenario(self) -> None:
         """Resets user values and heat network order
         to default settings."""
