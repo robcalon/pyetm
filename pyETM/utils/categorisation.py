@@ -10,7 +10,7 @@ logger = get_modulelogger(__name__)
 def categorise_curves(curves: pd.DataFrame,
     mapping: pd.DataFrame | str, columns: list[str] | None =None,
     include_keys: bool = False, invert_sign: bool = False,
-    **kwargs) -> pd.DataFrame:
+    pattern_level: str | int | None = None, **kwargs) -> pd.DataFrame:
     """Categorize the hourly curves for a specific dataframe
     with a specific mapping.
 
@@ -36,6 +36,9 @@ def categorise_curves(curves: pd.DataFrame,
         Inverts sign convention where demand is denoted with
         a negative sign. Demand will be denoted with a positve
         value and supply with a negative value.
+    pattern_level : str or int, default None
+        Column level in which sign convention pattern is located.
+        Assumes last level by default.
 
     **kwargs are passed to pd.read_csv when a filename is
     passed in the mapping argument.
@@ -77,11 +80,21 @@ def categorise_curves(curves: pd.DataFrame,
 
         logger.warning(message)
 
+        # remove superfluous keys
+        mapping = mapping.drop(index=superfluous_curves)
+
     # determine pattern for desired sign convention
     pattern = '[.]output [(]MW[)]' if invert_sign else '[.]input [(]MW[)]'
 
+    # assume pattern in last level
+    if pattern_level is None:
+        pattern_level = curves.columns.nlevels - 1
+
+    # subset column positions with pattern
+    cols = curves.columns.get_level_values(
+        level=pattern_level).str.contains(pattern)
+
     # assign sign convention by pattern
-    cols = curves.columns.str.contains(pattern)
     curves.loc[:, cols] = -curves.loc[:, cols]
 
     # subset columns
@@ -98,8 +111,18 @@ def categorise_curves(curves: pd.DataFrame,
     if include_keys is True:
 
         # append index as column to mapping
-        keys = mapping.index.to_series(name='KEY')
+        keys = mapping.index.to_series(name='ETM_key')
         mapping = pd.concat([mapping, keys], axis=1)
+
+    # include levels in mapping
+    if mapping.index.nlevels > 1:
+
+        # transform index levels to frame
+        idx = mapping.index.droplevel(level=pattern_level)
+        idx = idx.to_frame(index=False).set_index(mapping.index)
+
+        # join frame with mapping
+        mapping = pd.concat([idx, mapping], axis=1)
 
     if len(mapping.columns) == 1:
 
@@ -115,56 +138,15 @@ def categorise_curves(curves: pd.DataFrame,
 
     else:
 
-        # make multiindex and midx mapper
-        midx = pd.MultiIndex.from_frame(mapping)
-        mapping = dict(zip(mapping.index, midx))
+        # make mapper for multiindex
+        names = mapping.columns
+        mapping = dict(zip(mapping.index, pd.MultiIndex.from_frame(mapping)))
 
         # apply mapping to curves
-        curves.columns = curves.columns.map(mapping)
-        curves.columns.names = midx.names
+        midx = curves.columns.to_series().map(mapping)
+        curves.columns = pd.MultiIndex.from_tuples(midx, names=names)
 
         # aggregate over levels
-        levels = curves.columns.names
-        curves = curves.groupby(level=levels, axis=1).sum()
+        curves = curves.groupby(level=names, axis=1).sum()
 
-    return curves
-
-
-def diagnose_categorisation(mapping, curves, warn=True):
-    """Diagnose categorisation keys
-
-    Parameters
-    ----------
-    mapping : dict or Series
-        ETM keys in index and user keys as values.
-    curves : DataFrame
-        Uncategorised ETM curves.
-    warn : bool, default True
-        Raise warning if check failed."""
-
-    # initialize dict
-    diagnosis = {}
-
-    # convert dict to series
-    if isinstance(mapping, dict):
-        mapping = pd.Series(mapping)
-
-    # identify invalid entries
-    errors = mapping.index[~mapping.index.isin(curves.columns)]
-
-    # store errors
-    if not errors.empty:
-        diagnosis["invalid"] = set(errors)
-
-    # identify missing entries
-    errors = curves.columns[~curves.columns.isin(mapping.index)]
-
-    # store errors
-    if not errors.empty:
-        diagnosis["missing"] = set(errors)
-
-    # raise warning
-    if bool(diagnosis) & warn:
-        logger.warning("regionalisation contains errors")
-
-    return diagnosis
+    return curves.sort_index(axis=1)
