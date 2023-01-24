@@ -80,9 +80,6 @@ def categorise_curves(curves: pd.DataFrame,
 
         logger.warning(message)
 
-        # remove superfluous keys
-        mapping = mapping.drop(index=superfluous_curves)
-
     # determine pattern for desired sign convention
     pattern = '[.]output [(]MW[)]' if invert_sign else '[.]input [(]MW[)]'
 
@@ -139,7 +136,7 @@ def categorise_curves(curves: pd.DataFrame,
     else:
 
         # make mapper for multiindex
-        names = mapping.columns
+        names = list(mapping.columns)
         mapping = dict(zip(mapping.index, pd.MultiIndex.from_frame(mapping)))
 
         # apply mapping to curves
