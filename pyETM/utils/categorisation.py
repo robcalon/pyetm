@@ -46,6 +46,8 @@ def categorise_curves(curves: pd.DataFrame,
         DataFrame with the categorized curves of the
         specified carrier.
     """
+    # copy curves
+    curves = curves.copy()
 
     # load categorization
     if isinstance(mapping, str):
@@ -61,7 +63,7 @@ def categorise_curves(curves: pd.DataFrame,
 
         # make message
         missing_curves = "', '".join(map(str, missing_curves))
-        message = "Missing key(s) in mapping: '{missing_curves}'"
+        message = f"Missing key(s) in mapping: '{missing_curves}'"
 
         raise KeyError(message)
 
@@ -71,18 +73,15 @@ def categorise_curves(curves: pd.DataFrame,
 
         # make message
         superfluous_curves = "', '".join(map(str, superfluous_curves))
-        message = "Unused key(s) in mapping: '{superflous_curves}'"
+        message = f"Unused key(s) in mapping: '{superfluous_curves}'"
 
         logger.warning(message)
 
-    # copy curves
-    curves = curves.copy()
-
     # determine pattern for desired sign convention
-    pattern = '.output (MW)' if invert_sign else '.input (MW)'
+    pattern = '[.]output [(]MW[)]' if invert_sign else '[.]input [(]MW[)]'
 
     # assign sign convention by pattern
-    cols = curves.columns.str.contains(pattern, regex=False)
+    cols = curves.columns.str.contains(pattern)
     curves.loc[:, cols] = -curves.loc[:, cols]
 
     # subset columns
