@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from collections.abc import Iterable
 
 import math
 import pandas as pd
@@ -89,57 +88,16 @@ class SavedScenarioMethods(HeaderMethods, SessionMethods):
 
         return resp
 
-    def _get_saved_scenarios(self,
-        page: int = 1, limit: int = 25) -> dict:
-        """Get saved scenarios info connected to token"""
-
-        # raise without scenario id or required permission
-        # self._validate_token_permission(read=True)
-
-        # format request
-        url = 'saved_scenarios'
-        params = {'page': int(page), 'limit': int(limit)}
-        headers = {'content-type': 'application/json'}
-
-        # request response
-        resp = self.session.get(
-            url, params=params, decoder='json', headers=headers)
-
-        return resp
-
-    def _format_sscenario(self, scenario, exclude: Iterable | None = None):
-        """helper function to reformat a saved scenario"""
-
-        # add string to list
-        if isinstance(exclude, str):
-            exclude = [exclude]
-
-        # flatten passed keys
-        for key in ['owner']:
-            if key in scenario:
-
-                # flatten items in dict
-                item = scenario.pop(key)
-                item = {f'{key}_{k}': v for k, v in item.items()}
-
-                # add back to scenario
-                scenario = {**scenario, **item}
-
-        # process datetimes
-        for key in ['created_at', 'updated_at']:
-            if key in scenario:
-                if scenario.get(key) is not None:
-                    scenario[key] = pd.to_datetime(scenario[key], utc=True)
-
-        # reduce items in scenario
-        return {k:v for k,v in scenario.items() if k not in exclude}
-
     @property
     def my_saved_scenarios(self):
         """all saved scenarios connector to account"""
 
-        pages = math.ceil(self._get_saved_scenarios(
-            page=1, limit=1)['meta']['total'] / 25)
+        # set url
+        url = 'saved_scenarios'
+
+        # determine number of pages
+        pages = self._get_scenarios(url, page=1, limit=1)
+        pages = math.ceil(pages['meta']['total'] / 25)
 
         if pages == 0:
             return pd.DataFrame()
@@ -149,11 +107,11 @@ class SavedScenarioMethods(HeaderMethods, SessionMethods):
         for page in range(pages):
 
             # fetch pages and format scenarios
-            recs = self._get_saved_scenarios(page=page)['data']
+            recs = self._get_scenarios(url, page=page)['data']
 
             excl = ['scenario', 'scenario_id', 'scenario_id_history']
             scenarios.extend([
-                self._format_sscenario(scen, excl) for scen in recs])
+                self._format_scenario(scen, excl) for scen in recs])
 
         return pd.DataFrame.from_records(scenarios, index='id')
 
