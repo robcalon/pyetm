@@ -54,8 +54,7 @@ class SessionMethods:
     @scenario_id.setter
     def scenario_id(self, scenario_id: str | None):
 
-        # store previous and validate new scenario id
-        # if hasattr(self, '_scenario_id'):
+        # store previous scenario id
         previous = copy.deepcopy(self.scenario_id)
 
         # try accessing dict
@@ -270,12 +269,10 @@ class SessionMethods:
 
         # delete scenario
         url = f'scenarios/{self.scenario_id}'
-        response = self.session.delete(url=url)
+        self.session.delete(url=url)
 
         # connect to previous or None
-        self.scenario_id = scenario_id
-
-        return response
+        self.scenario_id = previous
 
     def reset_scenario(self) -> None:
         """Resets user values and heat network order

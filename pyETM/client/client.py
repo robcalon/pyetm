@@ -86,7 +86,6 @@ class Client(
     def from_saved_scenario_id(cls,
         saved_scenario_id: str,
         copy: bool = True,
-        public : bool = False,
         metadata: dict | None = None,
         keep_compatible: bool | None = None,
         read_only: bool = False,
@@ -100,10 +99,6 @@ class Client(
         copy : bool, default True
             Connect to a copy of the latest scenario_id. Connects
             to the latest used scenario_id otherwise.
-        public : bool, default False
-            Connect to public saved scenario id that is not
-            related to the token. When True will always return
-            a copy of the saved scenario.
         metadata : dict, default None
             metadata passed to scenario.
         keep_compatible : bool, default None
@@ -124,32 +119,14 @@ class Client(
         # initialize client
         client = cls(**kwargs)
 
-        # select method
-        if public:
-
-            # scrape scenario id from pro environment
-            client.scenario_id = client._get_session_id(saved_scenario_id)
-
-        else:
-
-            # connect to saved scenario and get latest scenario id
-            saved_scenario = client.get_saved_scenario_id(saved_scenario_id)
-            client.scenario_id = saved_scenario['scenario_id']
-
-            # create a copy
-            if copy:
-                client.copy_scenario()
-
-        # only pass if explicitly passed
-        if metadata is not None:
-            client.metadata = metadata
-
-        # only set if explicitly passed
-        if keep_compatible is not None:
-            client.keep_compatible = keep_compatible
-
-        # set read only parameter
-        client.read_only = read_only
+        # connect to saved scenario
+        client.connect_to_saved_scenario(
+            saved_scenario_id=saved_scenario_id,
+            copy=copy,
+            metadata=metadata,
+            keep_compatible=keep_compatible,
+            read_only=read_only
+        )
 
         return client
 
