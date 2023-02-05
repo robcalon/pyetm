@@ -22,7 +22,7 @@ def _validate_regionalisation(curves, reg, **kwargs):
 
     # check if regionalizations add up to 1.000
     sums = round(reg.sum(axis=0), 3)
-    for idx, value in sums[sums != 1].iteritems():
+    for idx, value in sums[sums != 1].items():
         raise ValueError(f'"{idx}" regionalization sums to ' +
                          f'{value: .3f} instead of 1.000')
 
