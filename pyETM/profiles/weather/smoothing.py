@@ -1,12 +1,9 @@
-"""copied from https://github.com/quintel/etdataset-public/blob/master/
-curves/demand/households/space_heating/script/smoothing.py
-by Quintel"""
+"""Profile smoother, adapted from:
+https://github.com/quintel/etdataset-public/blob/master/curves/demand/households/space_heating/script/smoothing.pys"""
 
 import numpy as np
 
-
 class ProfileSmoother:
-
     """
     The profiles generator is based on data for an individual household.
     To transform this into a profile for a typical neighbourhood (e.g. 300 houses)
@@ -118,23 +115,25 @@ class ProfileSmoother:
         cumulative_demand = [0] * len(heat_demand) * self.interpolation_steps
 
         # generate random numbers
-        deviations = self.generate_deviations(self.number_of_houses,
-                                         self.hours_shifted[insulation_type])
+        deviations = self.generate_deviations(
+            self.number_of_houses, self.hours_shifted[insulation_type])
 
         # interpolate the demand curve to increase the number of data points
         # (i.e. reduce the time interval 1 hour to e.g. 6 minutes)
-        interpolated_demand = self.interpolate(heat_demand, self.interpolation_steps)
+        interpolated_demand = self.interpolate(
+            heat_demand, self.interpolation_steps)
 
         # for each random number, shift the demand curve X places forwards or
         # backwards (depending on the number value) and add it to the
         # cumulative demand array
         for num in deviations:
             demand_list = self.shift_curve(interpolated_demand, num)
-            cumulative_demand = [x + y for x, y in zip(cumulative_demand,
-                                                       demand_list)]
+            cumulative_demand = [
+                x + y for x, y in zip(cumulative_demand, demand_list)]
 
         # Trim the cumulative demand array such that it has 8760 data points again
         # (hourly intervals instead of 6 minute intervals)
-        smoothed_demand = self.trim_interpolated(cumulative_demand, self.interpolation_steps)
+        smoothed_demand = self.trim_interpolated(
+            cumulative_demand, self.interpolation_steps)
 
         return smoothed_demand
