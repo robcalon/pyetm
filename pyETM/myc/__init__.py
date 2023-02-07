@@ -1,2 +1,2 @@
 """init myc module"""
-from .model import MYCClient as Model
+from .model import MYCClient
