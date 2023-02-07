@@ -12,6 +12,10 @@ from .header import HeaderMethods
 
 logger = get_modulelogger(__name__)
 
+# consider making this seperate entity in toolbox
+# as wrapper around Client class
+
+# include updated header information
 
 class SavedScenarioMethods(HeaderMethods, SessionMethods):
     """saved scenario related functions"""
@@ -51,6 +55,33 @@ class SavedScenarioMethods(HeaderMethods, SessionMethods):
         if self._saved_scenario_id is not None:
             self._get_saved_scenario(self.saved_scenario_id)
 
+    @property
+    def my_saved_scenarios(self):
+        """all saved scenarios connector to account"""
+
+        # set url
+        url = 'saved_scenarios'
+
+        # determine number of pages
+        pages = self._get_scenarios(url, page=1, limit=1)
+        pages = math.ceil(pages['meta']['total'] / 25)
+
+        if pages == 0:
+            return pd.DataFrame()
+
+        # newlist
+        scenarios = []
+        for page in range(pages):
+
+            # fetch pages and format scenarios
+            recs = self._get_scenarios(url, page=page)['data']
+
+            excl = ['scenario', 'scenario_id', 'scenario_id_history']
+            scenarios.extend([
+                self._format_scenario(scen, excl) for scen in recs])
+
+        return pd.DataFrame.from_records(scenarios, index='id')
+
     def _validate_saved_scenario_id(self):
         """validate saved scenario id"""
 
@@ -87,33 +118,6 @@ class SavedScenarioMethods(HeaderMethods, SessionMethods):
         resp = self.session.get(url, decoder='json', headers=headers)
 
         return resp
-
-    @property
-    def my_saved_scenarios(self):
-        """all saved scenarios connector to account"""
-
-        # set url
-        url = 'saved_scenarios'
-
-        # determine number of pages
-        pages = self._get_scenarios(url, page=1, limit=1)
-        pages = math.ceil(pages['meta']['total'] / 25)
-
-        if pages == 0:
-            return pd.DataFrame()
-
-        # newlist
-        scenarios = []
-        for page in range(pages):
-
-            # fetch pages and format scenarios
-            recs = self._get_scenarios(url, page=page)['data']
-
-            excl = ['scenario', 'scenario_id', 'scenario_id_history']
-            scenarios.extend([
-                self._format_scenario(scen, excl) for scen in recs])
-
-        return pd.DataFrame.from_records(scenarios, index='id')
 
     # @property
     # def scenario_history(self):
@@ -261,7 +265,7 @@ class SavedScenarioMethods(HeaderMethods, SessionMethods):
         headers = {'content-type': 'application-json'}
 
         # make request
-        self.saved_scenario_id = self.session.put(
+        self.saved_scenario_id = self.session.post(
             url, json=data, headers=headers)
 
     def delete_saved_scenario(self,
