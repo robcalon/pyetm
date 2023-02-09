@@ -5,6 +5,7 @@ from __future__ import annotations
 import calendar
 import pandas as pd
 
+
 def make_period_index(
     year: int,
     name: str | None = None,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pyETM.profiles import PECDReader
 from pyETM.utils.profiles import validate_profile
 
 import pandas as pd
@@ -10,6 +11,17 @@ from .buildings import Buildings
 from .households import HousePortfolio
 # from .cooling import Cooling
 
+
+def make_weather_profiles(
+    reader: PECDReader, zone: str, year: int) -> pd.DataFrame:
+    """Make weather profiles with reader."""
+
+    # load process weather profiles
+    profiles = reader.load_weather_profiles(year, zone)
+    with WeatherProfiles.from_defaults() as generator:
+        profiles = generator.make_weather_profiles(year=year, **profiles)
+
+    return profiles
 
 class WeatherProfiles:
     """Weather-related profile generator."""

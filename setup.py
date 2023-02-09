@@ -5,7 +5,7 @@ with open('README.md', 'rb') as file:
 
 # with open('requirements.txt') as file:
 #     requires = [[l.strip() for l in file.readlines() if not l.startswith("#")]]
-    
+
 setup(
     name='pyETM',
     version='0.8.2',
@@ -20,8 +20,8 @@ setup(
     install_requires=["requests>=2.26", "pandas>=1.3"],
     extras_require={
         "async": ["aiohttp>=3.8.1"],
-        "excel": ["xlsxwriter>=3.0"],
-        "all": ["aiohttp>=3.8.1", "xlsxwriter>=3.0"],
+        "io": ["xlsxwriter>=3.0", "sqlalchemy>=1.4"],
+        "all": ["aiohttp>=3.8.1", "xlsxwriter>=3.0", "sqlalchemy>=1.4"],
         },
     packages=find_packages(),
     include_package_data=True,
