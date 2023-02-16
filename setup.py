@@ -21,7 +21,7 @@ setup(
     extras_require={
         "async": ["aiohttp>=3.8.1"],
         "io": ["xlsxwriter>=3.0", "sqlalchemy>=1.4"],
-        "all": ["aiohttp>=3.8.1", "xlsxwriter>=3.0", "sqlalchemy>=1.4"],
+        "all": ["aiohttp>=3.8.1", "xlsxwriter>=3.0", "sqlalchemy>=2.0"],
         },
     packages=find_packages(),
     include_package_data=True,

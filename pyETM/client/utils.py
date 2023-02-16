@@ -16,7 +16,7 @@ class UtilMethods(SessionMethods):
     def categorise_curves(self, carrier: Carrier,
         mapping: pd.DataFrame | str, columns: list[str] | None = None,
         include_keys: bool = False, invert_sign: bool = False,
-        **kwargs) -> pd.DataFrame:
+        pattern_level: str | int | None = None, **kwargs) -> pd.DataFrame:
         """Categorise the hourly curves for a specific carrier with a
         specific mapping.
 
@@ -42,6 +42,10 @@ class UtilMethods(SessionMethods):
             Inverts sign convention where demand is denoted with
             a negative sign. Demand will be denoted with a positve
             value and supply with a negative value.
+        pattern_level : str or int, default None
+            Column level in which sign convention pattern is located.
+            Assumes last level by default.
+
 
 
         **kwargs arguments are passed to pd.read_csv when
@@ -74,7 +78,8 @@ class UtilMethods(SessionMethods):
         # use categorization function
         curves = categorise_curves(
             curves=carrier, mapping=mapping, columns=columns,
-            include_keys=include_keys, invert_sign=invert_sign, **kwargs)
+            include_keys=include_keys, invert_sign=invert_sign,
+            pattern_level=pattern_level, **kwargs)
 
         return curves
 
