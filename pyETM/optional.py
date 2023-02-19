@@ -13,7 +13,7 @@ from pandas.util.version import Version
 # A mapping from import name to package name (on PyPI) for packages where
 # these two names are different.
 
-VERSIONS = {"aiohttp": "3.8.1", "nest_asyncio": "1.5.3"}
+VERSIONS = {"aiohttp": "3.8.1", "xlsxwriter": "3.0"}
 INSTALL_MAPPING = {}
 
 def get_version(module: ModuleType) -> str:

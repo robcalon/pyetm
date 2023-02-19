@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pyETM.profiles import PECDReader
 from pyETM.utils.profiles import validate_profile
 
 import pandas as pd
@@ -12,22 +11,11 @@ from .households import HousePortfolio
 # from .cooling import Cooling
 
 
-def make_weather_profiles(
-    reader: PECDReader, zone: str, year: int) -> pd.DataFrame:
-    """Make weather profiles with reader."""
-
-    # load process weather profiles
-    profiles = reader.load_weather_profiles(year, zone)
-    with WeatherProfiles.from_defaults() as generator:
-        profiles = generator.make_weather_profiles(year=year, **profiles)
-
-    return profiles
-
-class WeatherProfiles:
+class WeatherDemandProfiles:
     """Weather-related profile generator."""
 
     @classmethod
-    def from_defaults(cls, name: str = 'default') -> WeatherProfiles:
+    def from_defaults(cls, name: str = 'default') -> WeatherDemandProfiles:
         """Initialize with Quintel default settings."""
 
         # default object configurations
@@ -41,7 +29,7 @@ class WeatherProfiles:
         households: HousePortfolio,
         buildings: Buildings,
         name : str | None = None
-    ) -> WeatherProfiles:
+    ) -> WeatherDemandProfiles:
         """Initialize class object.
 
         Parameters
@@ -70,7 +58,7 @@ class WeatherProfiles:
         """String name"""
         return f"WeatherProfiles(name={self.name})"
 
-    def make_weather_profiles(
+    def make_demand_profiles(
         self,
         temperature: pd.Series,
         irradiance: pd.Series,

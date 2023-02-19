@@ -60,6 +60,10 @@ def categorise_curves(curves: pd.DataFrame,
         mapping = mapping.to_frame()
         columns = mapping.columns
 
+    if curves.columns.nlevels != mapping.index.nlevels:
+        raise ValueError(
+            "Index levels of 'curves' and 'mapping' are not alligned")
+
     # check if passed curves contains columns not specified in cat
     missing_curves = curves.columns[~curves.columns.isin(mapping.index)]
     if not missing_curves.empty:

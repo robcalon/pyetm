@@ -1,3 +1,3 @@
 """Initialize module"""
-from .pecd import PECDReader
-from .weather import WeatherProfiles, make_weather_profiles
+from .capacityfactors import CapacityFactorProfiles
+from .weather import WeatherDemandProfiles
