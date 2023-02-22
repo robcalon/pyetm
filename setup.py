@@ -20,8 +20,8 @@ setup(
     install_requires=["requests>=2.26", "pandas>=1.3"],
     extras_require={
         "async": ["aiohttp>=3.8.1"],
-        "io": ["xlsxwriter>=3.0"],
-        "all": ["aiohttp>=3.8.1", "xlsxwriter>=3.0"],
+        "io": ["xlsxwriter>=3.0", "openpyxl>=3.0"],
+        "all": ["aiohttp>=3.8.1", "xlsxwriter>=3.0", "openpyxl>=3.0"],
         },
     packages=find_packages(),
     include_package_data=True,

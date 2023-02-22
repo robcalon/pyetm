@@ -84,9 +84,13 @@ class WeatherDemandProfiles:
             raise ValueError("Periods or Datetimes of 'irradiance' "
                 "and 'wind_speed' profiles are not alligned.")
 
-        # make heat demand profiles
-        households = self.households.make_heat_demand_profiles(temperature, irradiance, year)
-        buildings = self.buildings.make_heat_demand_profile(temperature, wind_speed, year)
+        # make household heat demand profiles
+        households = self.households.make_heat_demand_profiles(
+            temperature, irradiance, year)
+
+        # make buildings heat demand profile
+        buildings = self.buildings.make_heat_demand_profile(
+            temperature, wind_speed, year)
 
         # make air temperature
         key = 'weather/air_temperature'
