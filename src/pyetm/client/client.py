@@ -138,7 +138,6 @@ class Client(
             **{
                 "scenario_id": self.scenario_id,
                 "beta_engine": self.beta_engine,
-                "token": self.token,
                 "session": self.session
                 },
             **self.__kwargs
