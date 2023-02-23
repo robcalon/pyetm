@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pyETM.utils.profiles import validate_profile
+from pyetm.utils.profiles import validate_profile
 
 import pandas as pd
 

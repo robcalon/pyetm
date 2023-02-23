@@ -2,12 +2,12 @@ import unittest
 import pandas as pd
 
 from fixtures import reg, mapping, curves
-from pyETM.utils import categorise_curves, regionalise_curves, regionalise_node
+from pyetm.utils import categorise_curves, regionalise_curves, regionalise_node
 
 class UtilsTester(unittest.TestCase):
 
     def test_categorise_curves(self):
-        
+
         mapped = categorise_curves(curves, mapping)
         sol = pd.DataFrame({
             'deficit': [0, 0, 0, 0, 166],
@@ -18,7 +18,7 @@ class UtilsTester(unittest.TestCase):
         self.assertEqual(True, mapped.equals(sol))
 
     def test_regionalise_curves(self):
-        
+
         rec = regionalise_curves(curves, reg)
         sol = pd.DataFrame({
             'node_a': [135.0, 102.0, 21.0, 117.0, 34.0],
@@ -27,11 +27,11 @@ class UtilsTester(unittest.TestCase):
             'node_d': [38.0, 35.0, 24.0, 65.0, 36.0],
             'node_e': [0.0, 0.0, 0.0, 0.0, 166.0],
         })
-        
+
         self.assertEqual(True, rec.equals(sol.T))
 
     def test_regionalise_node(self):
-        
+
         rec = regionalise_node(curves, reg, "node_a")
         sol = pd.DataFrame({
             'category_a.input (MW)': [40.0, 35.0, 21.0, 42.0, 34.0],
@@ -43,7 +43,7 @@ class UtilsTester(unittest.TestCase):
             'category_c.output (MW)': [0.0, 0.0, 0.0, 0.0, 0.0],
             'deficit': [0.0, 0.0, 0.0, 0.0, 0.0]
         })
-        
+
         self.assertEqual(True, rec.equals(sol))
 
 if __name__ == "__main__":
