@@ -4,9 +4,9 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from pyETM import Client
-from pyETM.logger import get_modulelogger
-from pyETM.utils.lookup import lookup_coordinates
+from pyetm import Client
+from pyetm.logger import get_modulelogger
+from pyetm.utils.lookup import lookup_coordinates
 
 logger = get_modulelogger(__name__)
 

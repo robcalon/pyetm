@@ -1,8 +1,8 @@
 """base client object"""
 from __future__ import annotations
 
-from pyETM.logger import get_modulelogger
-from pyETM.sessions import RequestsSession, AIOHTTPSession
+from pyetm.logger import get_modulelogger
+from pyetm.sessions import RequestsSession, AIOHTTPSession
 from .header import HeaderMethods
 
 # get modulelogger

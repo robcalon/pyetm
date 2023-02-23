@@ -1,7 +1,7 @@
 """client object"""
 from __future__ import annotations
 
-from pyETM.logger import get_modulelogger
+from pyetm.logger import get_modulelogger
 
 import pandas as pd
 
@@ -29,7 +29,7 @@ class Client(
     SavedScenarioMethods,
     UtilMethods,
     BaseClient,
-    ):
+):
     """Main client object"""
 
     @classmethod

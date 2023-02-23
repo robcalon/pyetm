@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Literal
 import pandas as pd
 
-from pyETM.utils import categorise_curves, regionalise_curves, regionalise_node
+from pyetm.utils import categorise_curves, regionalise_curves, regionalise_node
 from .session import SessionMethods
 
 Carrier = Literal['electricity', 'heat', 'hydrogen', 'methane']

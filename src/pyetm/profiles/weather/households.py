@@ -4,8 +4,8 @@ https://github.com/quintel/etdataset-public/tree/master/curves/demand/households
 from __future__ import annotations
 from collections.abc import Iterable
 
-from pyETM.logger import PACKAGEPATH
-from pyETM.utils.profiles import validate_profile
+from pyetm.logger import PACKAGEPATH
+from pyetm.utils.profiles import validate_profile
 
 import pandas as pd
 

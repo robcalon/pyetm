@@ -1,7 +1,7 @@
 """parameters object"""
 import functools
 
-from pyETM.logger import get_modulelogger
+from pyetm.logger import get_modulelogger
 
 import numpy as np
 import pandas as pd

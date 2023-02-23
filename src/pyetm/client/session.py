@@ -11,8 +11,8 @@ from collections.abc import Iterable
 
 import pandas as pd
 
-from pyETM.logger import get_modulelogger
-from pyETM.sessions import RequestsSession, AIOHTTPSession
+from pyetm.logger import get_modulelogger
+from pyetm.sessions import RequestsSession, AIOHTTPSession
 
 # get modulelogger
 logger = get_modulelogger(__name__)

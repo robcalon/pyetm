@@ -3,8 +3,8 @@ https://github.com/quintel/etdataset-public/tree/master/curves/demand/buildings/
 
 from __future__ import annotations
 
-from pyETM.logger import PACKAGEPATH
-from pyETM.utils.profiles import validate_profile, validate_profile_lenght
+from pyetm.logger import PACKAGEPATH
+from pyetm.utils.profiles import validate_profile, validate_profile_lenght
 
 import pandas as pd
 

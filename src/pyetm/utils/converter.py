@@ -4,10 +4,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 import pandas as pd
 
-from pyETM import Client
-from pyETM.myc import Model
-from pyETM.logger import get_modulelogger
-from pyETM.optional import import_optional_dependency
+from pyetm import Client
+from pyetm.myc import Model
+from pyetm.logger import get_modulelogger
+from pyetm.optional import import_optional_dependency
 
 _logger = get_modulelogger(__name__)
 

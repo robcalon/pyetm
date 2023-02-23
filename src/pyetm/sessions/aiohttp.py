@@ -9,10 +9,10 @@ from urllib.parse import urljoin
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Literal
 
-from pyETM.utils.loop import _LOOP, _LOOP_THREAD
-from pyETM.logger import get_modulelogger
-from pyETM.optional import import_optional_dependency
-from pyETM.exceptions import UnprossesableEntityError, format_error_messages
+from pyetm.utils.loop import _LOOP, _LOOP_THREAD
+from pyetm.logger import get_modulelogger
+from pyetm.optional import import_optional_dependency
+from pyetm.exceptions import UnprossesableEntityError, format_error_messages
 
 import pandas as pd
 

@@ -9,8 +9,8 @@ import shutil
 import numpy as np
 import pandas as pd
 
-from pyETM.logger import get_modulelogger
-from pyETM.utils import lookup_coordinates
+from pyetm.logger import get_modulelogger
+from pyetm.utils import lookup_coordinates
 
 from .region import Region
 from .checks import (validate_scenario_ids,

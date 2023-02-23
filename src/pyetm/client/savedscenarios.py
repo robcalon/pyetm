@@ -6,7 +6,7 @@ from copy import deepcopy
 import math
 import pandas as pd
 
-from pyETM.logger import get_modulelogger
+from pyetm.logger import get_modulelogger
 from .session import SessionMethods
 from .header import HeaderMethods
 

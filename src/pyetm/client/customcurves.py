@@ -6,7 +6,7 @@ from collections.abc import Iterable
 import functools
 import pandas as pd
 
-from pyETM.logger import get_modulelogger
+from pyetm.logger import get_modulelogger
 from .session import SessionMethods
 
 # get modulelogger

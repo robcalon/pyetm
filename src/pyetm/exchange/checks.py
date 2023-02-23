@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from pyETM.logger import get_modulelogger
+from pyetm.logger import get_modulelogger
 
 _logger = get_modulelogger(__name__)
 

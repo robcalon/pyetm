@@ -2,7 +2,7 @@
 https://stackoverflow.com/questions/3985619/how-to-calculate-a-logistic-sigmoid-function-in-python"""
 
 from __future__ import annotations
-from pyETM.utils.profiles import validate_profile
+from pyetm.utils.profiles import validate_profile
 
 import numpy as np
 import pandas as pd

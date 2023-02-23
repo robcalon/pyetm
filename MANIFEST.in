@@ -1,3 +1,0 @@
-include pyETM/data/G2A_parameters.csv
-include pyETM/data/house_properties.csv
-include pyETM/data/thermostat_values.csv

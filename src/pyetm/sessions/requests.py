@@ -7,7 +7,7 @@ import json
 from urllib.parse import urljoin
 from typing import Literal
 
-from pyETM.exceptions import UnprossesableEntityError, format_error_messages
+from pyetm.exceptions import UnprossesableEntityError, format_error_messages
 
 import requests
 import pandas as pd

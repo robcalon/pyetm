@@ -7,10 +7,10 @@ import datetime
 import numpy as np
 import pandas as pd
 
-from pyETM import Client
-from pyETM.utils import categorise_curves
-from pyETM.logger import get_modulelogger, log_exception
-from pyETM.optional import import_optional_dependency
+from pyetm import Client
+from pyetm.utils import categorise_curves
+from pyetm.logger import get_modulelogger, log_exception
+from pyetm.optional import import_optional_dependency
 
 _logger = get_modulelogger(__name__)
 
