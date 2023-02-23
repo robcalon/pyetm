@@ -113,7 +113,7 @@ def log_exception(exc: Exception,
     raise exc
 
 # package globals
-PACKAGENAME = 'pyETM'
+PACKAGENAME = 'pyetm'
 PACKAGEPATH = find_dirpath(PACKAGENAME, __file__)
 
 # logger globals
