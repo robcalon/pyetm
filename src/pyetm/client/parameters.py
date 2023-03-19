@@ -54,6 +54,66 @@ class ParameterMethods(SessionMethods):
         return flows
 
     @property
+    def forecast_storage_order(self):
+        """forecast storage order"""
+        return self.get_forecast_storage_order()
+
+    @forecast_storage_order.setter
+    def heat_netforecast_storage_orderwork_order(self, order):
+        self.change_forecast_storage_order(order)
+
+    @functools.lru_cache(maxsize=1)
+    def get_forecast_storage_order(self):
+        """get the heat network order"""
+
+        # raise without scenario id
+        self._validate_scenario_id()
+
+        # make request
+        url = f'scenarios/{self.scenario_id}/forecast_storage_order'
+        resp = self.session.get(url)
+
+        # get order
+        order = resp["order"]
+
+        return order
+
+    def change_forecast_storage_order(self, order):
+        """change forecast storage order
+
+        parameters
+        ----------
+        order : list
+            Desired forecast storage order"""
+
+        # raise without scenario id
+        self._validate_scenario_id()
+
+        # convert np array to list
+        if isinstance(order, np.ndarray):
+            order = order.tolist()
+
+        # acces dict for order
+        if isinstance(order, dict):
+            order = order['order']
+
+        # check items in order
+        for item in order:
+            if item not in self.forecast_storage_order:
+                raise ValueError(
+                    f"Invalid forecast storage order item: '{item}'")
+
+        # map order to correct scenario parameter
+        data = {'forecast_storage_order': {'order': order}}
+
+        # make request
+        url = f'scenarios/{self.scenario_id}/forecast_storage_order'
+        self.session.put(url, json=data)
+
+        # reinitialize scenario
+        self._reset_cache()
+
+    @property
     def heat_network_order(self):
         """heat network order"""
         return self.get_heat_network_order()
@@ -84,28 +144,12 @@ class ParameterMethods(SessionMethods):
         parameters
         ----------
         order : list
-            desired heat_network order"""
+            Desired heat network order"""
 
         # raise without scenario id
         self._validate_scenario_id()
 
-        # check heat network order
-        order = self._check_heat_network_order(order)
-
-        # map order to correct scenario parameter
-        data = {'heat_network_order': {'order': order}}
-
-        # make request
-        url = f'scenarios/{self.scenario_id}/heat_network_order'
-        self.session.put(url, json=data)
-
-        # reinitialize scenario
-        self._reset_cache()
-
-    def _check_heat_network_order(self, order):
-        """check if items in flexbility order are in ETM."""
-
-        # convert np,array to list
+        # convert np array to list
         if isinstance(order, np.ndarray):
             order = order.tolist()
 
@@ -116,10 +160,18 @@ class ParameterMethods(SessionMethods):
         # check items in order
         for item in order:
             if item not in self.heat_network_order:
-                raise ValueError(f'"{item}" is not permitted as ' +
-                                 'heat network order item in ETM')
+                raise ValueError(
+                    f"Invalid heat network order item: '{item}'")
 
-        return order
+        # map order to correct scenario parameter
+        data = {'heat_network_order': {'order': order}}
+
+        # make request
+        url = f'scenarios/{self.scenario_id}/heat_network_order'
+        self.session.put(url, json=data)
+
+        # reinitialize scenario
+        self._reset_cache()
 
     @property
     def input_values(self):
