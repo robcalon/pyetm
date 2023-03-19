@@ -7,8 +7,8 @@ import math
 import pandas as pd
 
 from pyetm.logger import get_modulelogger
+# from .core import CoreMethods
 from .session import SessionMethods
-from .header import HeaderMethods
 
 logger = get_modulelogger(__name__)
 
@@ -17,7 +17,7 @@ logger = get_modulelogger(__name__)
 
 # include updated header information
 
-class SavedScenarioMethods(HeaderMethods, SessionMethods):
+class SavedScenarioMethods(SessionMethods):
     """saved scenario related functions"""
 
     @property
@@ -166,7 +166,7 @@ class SavedScenarioMethods(HeaderMethods, SessionMethods):
         copy: bool = True,
         metadata: dict | None = None,
         keep_compatible: bool | None = None,
-        read_only: bool = False,
+        private: bool | None = None,
     ):
         """connect to a saved scenario id"""
 
@@ -188,8 +188,9 @@ class SavedScenarioMethods(HeaderMethods, SessionMethods):
         if keep_compatible is not None:
             self.keep_compatible = keep_compatible
 
-        # set read only parameter
-        self.read_only = read_only
+        # set private parameter
+        if private is not None:
+            self.private = private
 
     def to_saved_scenario(self,
         saved_scenario_id: str | None = None):

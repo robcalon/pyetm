@@ -1,18 +1,19 @@
 """client object"""
 from __future__ import annotations
 
-from pyetm.logger import get_modulelogger
-
 import pandas as pd
 
-from .base import BaseClient
+from pyetm.logger import get_modulelogger
+from pyetm.sessions import RequestsSession, AIOHTTPSession
+
+from .account import AccountMethods
 from .curves import CurveMethods
 from .customcurves import CustomCurveMethods
 from .gqueries import GQueryMethods
-from .interpolate import InterpolationMethods
 from .meritorder import MeritOrderMethods
 from .parameters import ParameterMethods
 from .savedscenarios import SavedScenarioMethods
+from .scenario import ScenarioMethods
 from .utils import UtilMethods
 
 # get modulelogger
@@ -20,30 +21,68 @@ logger = get_modulelogger(__name__)
 
 
 class Client(
+    AccountMethods,
     CurveMethods,
     CustomCurveMethods,
     GQueryMethods,
-    InterpolationMethods,
     MeritOrderMethods,
     ParameterMethods,
+    ScenarioMethods,
     SavedScenarioMethods,
     UtilMethods,
-    BaseClient,
 ):
     """Main client object"""
 
     @classmethod
-    def from_scenario_parameters(cls, area_code: str, end_year: int,
-        metadata: dict | None = None, keep_compatible: bool = False,
-        read_only: bool = False, uvalues: dict | pd.Series | None = None,
+    def from_scenario_parameters(
+        cls,
+        area_code: str,
+        end_year: int,
+        metadata: dict | None = None,
+        keep_compatible: bool = False,
+        private: bool | None = None,
+        uvalues: dict | pd.Series | None = None,
+        forecast_storage_order: list[str] | None = None,
         heat_network_order: list[str] | None = None,
-        ccurves: pd.DataFrame | None = None, **kwargs) -> Client:
-        """create new scenario from parameters on Client initalization"""
+        ccurves: pd.DataFrame | None = None,
+        **kwargs
+    ):
+        """Create a new scenario from parameters.
 
+        Parameters
+        ----------
+        area_code : str
+            Area code of the created scenario.
+        end_year : int
+            End year of the created scenario.
+        metadata : dict, default None
+            metadata passed to scenario.
+        keep_compatible : bool, default None
+            Keep scenario compatible with future
+            versions of ETM. Defaults to settings
+            in original scenario.
+        private : bool, default None
+            Make the scenario private.
+        uvalues : dict, default None
+            The user value configuration in the scenario.
+        forecast_storage_order : list[str], default None
+            The forecast storage order in the scenario.
+        heat_network_order : list[str], default None
+            The heat network order in the scenario.
+        ccurves : pd.DataFrame, default None
+            Custom curves to use in sceneario.
+
+        **kwargs are passed to the default initialization
+        procedure of the client.
+
+        Return
+        ------
+        client : Client
+            Returns initialized client object."""
         # initialize new scenario
         client = cls(**kwargs)
         client.create_new_scenario(area_code, end_year, metadata=metadata,
-            keep_compatible=keep_compatible, read_only=read_only)
+            keep_compatible=keep_compatible, private=private)
 
         # set user values
         if uvalues is not None:
@@ -53,6 +92,10 @@ class Client(
         if ccurves is not None:
             client.upload_custom_curves(ccurves)
 
+        # set forecast storage order
+        if forecast_storage_order is not None:
+            client.forecast_storage_order = forecast_storage_order
+
         # set heat network order
         if heat_network_order is not None:
             client.heat_network_order = heat_network_order
@@ -60,16 +103,42 @@ class Client(
         return client
 
     @classmethod
-    def from_existing_scenario(cls, scenario_id: str | None = None,
-        metadata: dict | None = None, keep_compatible: bool | None = None,
-        read_only: bool = False, **kwargs) -> Client:
-        """create new scenario as copy of existing scenario"""
+    def from_existing_scenario(
+        cls,
+        scenario_id: str | None = None,
+        metadata: dict | None = None,
+        keep_compatible: bool | None = None,
+        private: bool | None = None,
+        **kwargs
+    ):
+        """create a new scenario as a copy of an existing scenario.
+
+        Parameters
+        ----------
+        scenario_id : int or str, default None
+            The scenario id from which to copy.
+        metadata : dict, default None
+            metadata passed to scenario.
+        keep_compatible : bool, default None
+            Keep scenario compatible with future
+            versions of ETM. Defaults to settings
+            in original scenario.
+        private : bool, default None
+            Make the scenario private.
+
+        **kwargs are passed to the default initialization
+        procedure of the client.
+
+        Return
+        ------
+        client : Client
+            Returns initialized client object."""
 
         # initialize client
         client = cls(scenario_id=None, **kwargs)
         client.copy_scenario(scenario_id)
 
-        # set scenario title
+        # set scenario metadata
         if metadata is not None:
             client.metadata = metadata
 
@@ -77,19 +146,22 @@ class Client(
         if keep_compatible is not None:
             client.keep_compatible = keep_compatible
 
-        # set read only parameter
-        client.read_only = read_only
+        # set private parameter
+        if private is not None:
+            client.private = private
 
         return client
 
     @classmethod
-    def from_saved_scenario_id(cls,
+    def from_saved_scenario_id(
+        cls,
         saved_scenario_id: str,
         copy: bool = True,
         metadata: dict | None = None,
         keep_compatible: bool | None = None,
-        read_only: bool = False,
-        **kwargs):
+        private: bool | None = None,
+        **kwargs
+    ):
         """initialize client from saved scenario id
 
         Parameters
@@ -105,8 +177,8 @@ class Client(
             Keep scenario compatible with future
             versions of ETM. Defaults to settings
             in original scenario.
-        read_only : bool, default False
-            The scenario cannot be modified.
+        private : bool, default None
+            Make the scenario private.
 
         **kwargs are passed to the default initialization
         procedure of the client.
@@ -125,10 +197,97 @@ class Client(
             copy=copy,
             metadata=metadata,
             keep_compatible=keep_compatible,
-            read_only=read_only
+            private=private
         )
 
         return client
+
+    def __init__(
+        self,
+        scenario_id: str | None = None,
+        beta_engine: bool = False,
+        reset: bool = False,
+        token: str | None = None,
+        session: RequestsSession | AIOHTTPSession | None = None,
+        **kwargs
+    ):
+        """client object to process ETM requests via its public API
+
+        Parameters
+        ----------
+        scenario_id : str, default None
+            The api_session_id to which the client connects. Can only access
+            a limited number of methods when scenario_id is set to None.
+        beta_engine : bool, default False
+            Connect to the beta-engine instead of the production-engine.
+        reset : bool, default False
+            Reset scenario on initalization.
+        token : str, default None
+            Personal access token to authenticate requests to your
+            personal account and scenarios. Detects token automatically
+            from environment when assigned to ETM_ACCESS_TOKEN when
+            connected to production or ETM_BETA_ACCESS_TOKEN when
+            connected to beta.
+        session: object instance, default None
+            session instance that handles requests to ETM's public API.
+            Default to use a RequestsSession.
+
+        All key-word arguments are passed directly to the init method
+        of the default session instance. All key-word arguments are
+        ignored when the session argument is not None.
+
+        Returns
+        -------
+        self : Client
+            Object that processes ETM requests via public API"""
+
+        super().__init__()
+
+        # default session
+        if session is None:
+            session = RequestsSession(**kwargs)
+
+        # set session
+        self.__kwargs = kwargs
+        self._session = session
+
+        # set engine and token
+        self.beta_engine = beta_engine
+        self.token = token
+
+        # set scenario id
+        self.scenario_id = scenario_id
+
+        # set default gqueries
+        self.gqueries = []
+
+        # reset scenario on intialization
+        if reset and (scenario_id is not None):
+            self.reset_scenario()
+
+        # make message
+        msg = (
+            "Initialised new Client: "
+                f"'scenario_id={self.scenario_id}, "
+                f"area_code={self.area_code}, "
+                f"end_year={self.end_year}'"
+        )
+
+        logger.debug(msg)
+
+    def __enter__(self):
+        """enter conext manager"""
+
+        # connect session
+        self.session.connect()
+
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        """exit context manager"""
+
+        # close session
+        self.session.close()
 
     def __repr__(self):
         """reproduction string"""
