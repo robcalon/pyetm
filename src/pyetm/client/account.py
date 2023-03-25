@@ -12,17 +12,20 @@ logger = get_modulelogger(__name__)
 
 
 class AccountMethods(SessionMethods):
-    """Authentication methods"""
+    """Account object methods"""
 
     @property
-    def my_scenarios(self):
+    def my_scenarios(self) -> pd.DataFrame:
         """ all scenarios connected to account"""
+
+        # validate token permission
+        self._validate_token_permission("scenarios:read")
 
         # set url
         url = 'scenarios'
 
         # determine number of pages
-        pages = self._get_scenarios(url=url, page=1, limit=1)
+        pages = self._get_objects(url=url, page=1, limit=1)
         pages = math.ceil(pages['meta']['total'] / 25)
 
         if pages == 0:
@@ -33,16 +36,75 @@ class AccountMethods(SessionMethods):
         for page in range(pages):
 
             # fetch pages and format scenarios
-            recs = self._get_scenarios(url, page=page)['data']
+            recs = self._get_objects(url, page=page)['data']
 
             excl = ['user_values', 'balanced_values', 'metadata', 'url']
             scenarios.extend([
-                self._format_scenario(scen, excl) for scen in recs])
+                self._format_object(scen, excl) for scen in recs])
 
         return pd.DataFrame.from_records(scenarios, index='id')
 
-    def _format_scenario(self, scenario, exclude: Iterable | None = None):
-        """helper function to reformat a saved scenario"""
+    @property
+    def my_saved_scenarios(self) -> pd.DataFrame:
+        """all saved scenarios connector to account"""
+
+        # validate token permission
+        self._validate_token_permission("scenarios:read")
+
+        # set url
+        url = 'saved_scenarios'
+
+        # determine number of pages
+        pages = self._get_objects(url, page=1, limit=1)
+        pages = math.ceil(pages['meta']['total'] / 25)
+
+        if pages == 0:
+            return pd.DataFrame()
+
+        # newlist
+        scenarios = []
+        for page in range(pages):
+
+            # fetch pages and format scenarios
+            recs = self._get_objects(url, page=page)['data']
+
+            excl = ['scenario', 'scenario_id', 'scenario_id_history']
+            scenarios.extend([
+                self._format_object(scen, excl) for scen in recs])
+
+        return pd.DataFrame.from_records(scenarios, index='id')
+
+    @property
+    def my_transition_paths(self) -> pd.DataFrame:
+        """all transition paths connected to account"""
+
+        # validate token permission
+        self._validate_token_permission("scenarios:read")
+
+        # set url
+        url = 'transition_paths'
+
+        # determine number of pages
+        pages = self._get_objects(url, page=1, limit=1)
+        pages = math.ceil(pages['meta']['total'] / 25)
+
+        if pages == 0:
+            return pd.DataFrame()
+
+        # newlist
+        paths = []
+        for page in range(pages):
+
+            # fetch pages and format scenarios
+            recs = self._get_objects(url, page=page)['data']
+
+            paths.extend([
+                self._format_object(path) for path in recs])
+
+        return pd.DataFrame.from_records(paths, index='id')
+
+    def _format_object(self, obj: dict, exclude: Iterable | None = None):
+        """helper function to reformat a object."""
 
         # default list
         if exclude is None:
@@ -54,35 +116,35 @@ class AccountMethods(SessionMethods):
 
         # flatten passed keys
         for key in ['owner']:
-            if key in scenario:
+            if key in obj:
 
                 # flatten items in dict
-                item = scenario.pop(key)
+                item = obj.pop(key)
                 item = {f'{key}_{k}': v for k, v in item.items()}
 
                 # add back to scenario
-                scenario = {**scenario, **item}
-
+                obj = {**obj, **item}
         # process datetimes
         for key in ['created_at', 'updated_at']:
-            if key in scenario:
-                if scenario.get(key) is not None:
-                    scenario[key] = pd.to_datetime(scenario[key], utc=True)
+            if key in obj:
+                if obj.get(key) is not None:
+                    obj[key] = pd.to_datetime(obj[key], utc=True)
 
         for key in ['template']:
-            if key in scenario:
-                if scenario.get(key) is None:
-                    scenario[key] = pd.NA
+            if key in obj:
+                if obj.get(key) is None:
+                    obj[key] = pd.NA
 
         # reduce items in scenario
-        return {k:v for k,v in scenario.items() if k not in exclude}
+        return {k:v for k,v in obj.items() if k not in exclude}
 
-    def _get_scenarios(self, url: str,
-        page: int = 1, limit: int = 25) -> dict:
-        """Get saved scenarios info connected to token"""
+    def _get_objects(self, url: str, page: int = 1, limit: int = 25) -> dict:
+        """Get info about object in url that are connected
+         to the user token. Object can be scenarios, saved scenarios
+         or transition paths."""
 
-        # raise without scenario id or required permission
-        self._validate_token_permission(scope='read')
+        # raise without required permission
+        self._validate_token_permission(scope='scenarios:read')
 
         # format request
         params = {'page': int(page), 'limit': int(limit)}

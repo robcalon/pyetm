@@ -7,6 +7,8 @@ import re
 import copy
 import functools
 
+import pandas as pd
+
 from pyetm.logger import get_modulelogger
 from pyetm.sessions import RequestsSession, AIOHTTPSession
 
@@ -87,14 +89,14 @@ class SessionMethods:
         self._get_scenario_header()
 
     @property
-    def token(self) -> dict | None:
+    def token(self) -> pd.Series | None:
         """optional personal access token for authorized use"""
 
         # return None without token
         if self._token is None:
             return None
 
-        # url = '/oauth/userinfo'
+        # make request
         url = '/oauth/token/info'
         headers = {'content-type': 'application/json'}
 
@@ -102,7 +104,11 @@ class SessionMethods:
         resp: dict = self.session.get(
             url, decoder='json', headers=headers)
 
-        return resp
+        # convert utc timestamps
+        resp['created_at'] = pd.to_datetime(resp['created_at'], unit='s')
+        resp['expires_in'] = pd.Timedelta(resp['expires_in'], unit='s')
+
+        return pd.Series(resp, name='token')
 
     @token.setter
     def token(self, token: str | None = None):
@@ -130,6 +136,23 @@ class SessionMethods:
             # set authorization
             authorization = {'Authorization': f'Bearer {self._token}'}
             self.session.headers.update(authorization)
+
+    @property
+    def user(self) -> pd.Series:
+        """info about token owner if token assigned"""
+
+        # validate token permission
+        self._validate_token_permission('openid')
+
+        # make request
+        url = '/oauth/userinfo'
+        headers = {'content-type': 'application/json'}
+
+        # get token information
+        resp: dict = self.session.get(
+            url, decoder='json', headers=headers)
+
+        return pd.Series(resp, name='user')
 
     @property
     def session(self) -> RequestsSession | AIOHTTPSession:
@@ -179,29 +202,16 @@ class SessionMethods:
     def _validate_token_permission(self, scope: SCOPE = 'public'):
         """validate token permission"""
 
-        # default is public
+        # raise without token
         if self._token is None:
-            raise ValueError('No personal access token assigned.')
+            raise ValueError("No personall access token asssigned")
 
-        # check read permission
-        elif scope == 'read':
-            if not 'scenarios:read' in self.token.get('scope'):
-                raise ValueError("Token has no 'read' permission")
+        # check if scope is known
+        if scope is None:
+            raise ValueError(f"Unknown token scope: '{scope}'")
 
-        # check write permission
-        elif scope == 'write':
-            if not 'scenarios:write' in self.token.get('scope'):
-                raise ValueError("Token has no 'write' permission")
-
-        # check delete permission
-        elif scope == 'delete':
-            if not 'scenarios:delete' in self.token.get('scope'):
-                raise ValueError("Token has no 'delete' permission")
-
-        else:
-            # not (yet) implemented
-            raise NotImplementedError(
-                f"Valiation for scope '{scope}' not implemented")
+        if scope not in self.token.get('scope'):
+            raise ValueError(f"Token has no '{scope}' permission.")
 
     def _reset_cache(self):
         """reset cached scenario properties"""

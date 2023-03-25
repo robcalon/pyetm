@@ -12,7 +12,6 @@ from .customcurves import CustomCurveMethods
 from .gqueries import GQueryMethods
 from .meritorder import MeritOrderMethods
 from .parameters import ParameterMethods
-from .savedscenarios import SavedScenarioMethods
 from .scenario import ScenarioMethods
 from .utils import UtilMethods
 
@@ -28,7 +27,6 @@ class Client(
     MeritOrderMethods,
     ParameterMethods,
     ScenarioMethods,
-    SavedScenarioMethods,
     UtilMethods,
 ):
     """Main client object"""
@@ -124,7 +122,8 @@ class Client(
             versions of ETM. Defaults to settings
             in original scenario.
         private : bool, default None
-            Make the scenario private.
+            Make the scenario private. Inherits the privacy
+            setting of copied scenario id by default.
 
         **kwargs are passed to the default initialization
         procedure of the client.
@@ -136,27 +135,17 @@ class Client(
 
         # initialize client
         client = cls(scenario_id=None, **kwargs)
-        client.copy_scenario(scenario_id)
 
-        # set scenario metadata
-        if metadata is not None:
-            client.metadata = metadata
-
-        # set keep compatible parameter
-        if keep_compatible is not None:
-            client.keep_compatible = keep_compatible
-
-        # set private parameter
-        if private is not None:
-            client.private = private
+        # copy scenario id
+        client.copy_scenario(
+            scenario_id, metadata, keep_compatible, private, connect=True)
 
         return client
 
     @classmethod
     def from_saved_scenario_id(
         cls,
-        saved_scenario_id: str,
-        copy: bool = True,
+        saved_scenario_id: int,
         metadata: dict | None = None,
         keep_compatible: bool | None = None,
         private: bool | None = None,
@@ -168,9 +157,6 @@ class Client(
         ----------
         saved_scenario_id : int or str, default None
             The saved scenario id to which is connected.
-        copy : bool, default True
-            Connect to a copy of the latest scenario_id. Connects
-            to the latest used scenario_id otherwise.
         metadata : dict, default None
             metadata passed to scenario.
         keep_compatible : bool, default None
@@ -191,16 +177,16 @@ class Client(
         # initialize client
         client = cls(**kwargs)
 
-        # connect to saved scenario
-        client.connect_to_saved_scenario(
-            saved_scenario_id=saved_scenario_id,
-            copy=copy,
-            metadata=metadata,
-            keep_compatible=keep_compatible,
-            private=private
-        )
+        # make request
+        url = f"saved_scenarios/{saved_scenario_id}"
+        headers = {'content-type': 'application/json'}
 
-        return client
+        # connect to saved scenario and
+        scenario_id = client.session.get(
+            url, decoder='json', headers=headers)['scenario_id']
+
+        return cls.from_existing_scenario(
+            scenario_id, metadata, keep_compatible, private, **kwargs)
 
     def __init__(
         self,

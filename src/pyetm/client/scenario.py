@@ -1,6 +1,7 @@
 """Authentication methods"""
 
 from __future__ import annotations
+from pathlib import Path
 
 import copy
 
@@ -77,7 +78,7 @@ class ScenarioMethods(SessionMethods):
     def private(self, boolean: bool):
 
         # # validate token permission
-        self._validate_token_permission(scope='write')
+        self._validate_token_permission(scope='scenarios:write')
 
         # format header and update
         header = {'private': str(bool(boolean)).lower()}
@@ -144,6 +145,9 @@ class ScenarioMethods(SessionMethods):
     def copy_scenario(
         self,
         scenario_id: str | None = None,
+        metadata: dict | None = None,
+        keep_compatible: bool | None = None,
+        private: bool | None = None,
         connect: bool = True
     ) -> int:
         """Create a new scenario that is a copy of an existing scenario
@@ -155,8 +159,18 @@ class ScenarioMethods(SessionMethods):
         scenario_id : str, default None
             The scenario_id that is copied. Defaults
             to own scenario_id.
+        metadata : dict, default None
+            Metadata passed to the scenario. Inherits the
+            metadata of the copied scenario id by default.
+        keep_compatible : bool, default None
+            Keep scenario compatible with future
+            versions of ETM. Inherits the keep compatible
+            setting of the copied scenario id by default.
+        private : bool, default None
+            Make the scenario private. Inherits the privacy
+            setting of the copied scenario id by default.
         connect : bool, default True
-            Connect to the copied scenario_id
+            Connect to the copied scenario id.
 
         Return
         ------
@@ -170,19 +184,35 @@ class ScenarioMethods(SessionMethods):
             self._validate_scenario_id()
             scenario_id = self.scenario_id
 
+        # remember original scenario id.
+        previous = copy.deepcopy(self.scenario_id)
+
         # make and set scenario
         scenario = {'scenario_id': str(scenario_id)}
         data = {"scenario": scenario}
 
-        # request response
+        # request scenario id and connect
         url = 'scenarios'
-        resp = self.session.post(url, json=data)
+        self.scenario_id = self.session.post(
+            url, json=data)['id']
 
-        # connect to scenario_id
-        if connect:
-            self.scenario_id = str(resp['id'])
+        # set metadata parmater
+        if metadata is not None:
+            self.metadata = metadata
 
-        return str(resp['id'])
+        # set compatability parameter
+        if keep_compatible is not None:
+            self.keep_compatible = keep_compatible
+
+        # set private parameter
+        if private is not None:
+            self.private = private
+
+        # revert to original scenario_id
+        if connect is False:
+            self.scenario_id = previous
+
+        return scenario_id
 
     def create_new_scenario(
         self,
@@ -242,7 +272,7 @@ class ScenarioMethods(SessionMethods):
         """Delete scenario"""
 
         # validate token
-        self._validate_token_permission(scope='delete')
+        self._validate_token_permission(scope='scenarios:delete')
 
         # use connected scenario
         previous = None
@@ -306,3 +336,83 @@ class ScenarioMethods(SessionMethods):
 
         # reinitialize connected scenario
         self._reset_cache()
+
+    def to_saved_scenario(
+        self,
+        saved_scenario_id: str | None = None,
+        title: str | None = None,
+        description: str | None = None,
+        private: bool | None = None,
+    ) -> int:
+        """Save scenario to a saved scenario id.
+
+        Parameters
+        ----------
+        saved_scenario_id : str, default None
+            The saved scenario id at which to save the scenario id.
+            Creates a new saved scenario id when None is passed.
+        title : str, default None
+            The name of the saved scenario when a new saved scenario
+            is created. Default to 'API Generated - <scenario_id>'.
+        description : str, default None
+            The description of the saved scenario when a new saved
+            scenario is created. Default to add no description.
+        private : bool, default None
+            Make the created saved scenario private. Uses the user
+            account configed setting by default.
+
+        Return
+        ------
+        saved_scenario_id : int
+            The (created) saved scenario id is returend."""
+
+        # raise without scenario id and validate permission
+        self._validate_scenario_id()
+        self._validate_token_permission("scenarios:write")
+
+        # return scenario id of copy
+        scenario_id = self.copy_scenario(connect=False)
+
+        # create new saved scenario
+        if saved_scenario_id is None:
+
+            # default title
+            if title is None:
+                title = f'API Generated - {self.scenario_id}'
+
+            # format body
+            data = {
+                'title': title,
+                'scenario_id': scenario_id,
+            }
+
+            # add privacy setting
+            if private is not None:
+                data['private']: str(bool(private)).lower()
+
+            # add description
+            if description is not None:
+                data['description'] = str(description)
+
+            # format request
+            url = 'saved_scenarios'
+            headers = {'content-type': 'application-json'}
+
+            # make request
+            saved_scenario_id = self.session.post(
+                url, json=data, headers=headers)
+
+        else:
+
+            # format request
+            data = {'scenario_id': int(self.scenario_id)}
+            headers = {'content-type': 'application/json'}
+            url = f'saved_scenarios/{saved_scenario_id}'
+
+            # make request
+            self.session.put(url, json=data, headers=headers)
+
+        return saved_scenario_id
+
+    # def to_dict(self): #, path: str | Path) -> None:
+    #     """export full scenario to dict"""
