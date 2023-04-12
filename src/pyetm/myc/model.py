@@ -388,6 +388,10 @@ class MYCClient():
         frame: pd.DataFrame) -> None:
         """set input parameters"""
 
+        # convert series to frame
+        if isinstance(frame, pd.Series):
+            frame = frame.to_frame()
+
         # convert framelike to frame
         if not isinstance(frame, pd.DataFrame):
             frame = pd.DataFrame(frame)
@@ -491,7 +495,8 @@ class MYCClient():
                 # newlist
                 items = []
 
-                for case, scenario_id in cases.iteritems():
+                # iterate over cases
+                for case, scenario_id in cases.items():
 
                     # log event
                     _logger.debug("> collecting hourly %s curves for " +
@@ -692,7 +697,7 @@ class MYCClient():
         # Due to optional import
 
         from pathlib import Path
-        from pyETM.utils import add_frame, add_series
+        from pyetm.utils.excel import add_frame, add_series
 
         if TYPE_CHECKING:
             # import xlswriter
