@@ -31,11 +31,11 @@ classifiers = [
 [project.optional-dependencies]
 async = ["aiohttp>=3.8"]
 io = ["xlsxwriter>=3.0", "openpyxl>=3.0"]
-test = ["pytest", "responses", "aioresponses"]
+test = ["pytest", "responses", "aioresponses", "build", "twine"]
 all = ["pyetm[async]", "pyetm[io]", "pyetm[test]"]
 
 [project.urls]
 repository = "https://github.com/robcalon/pyetm"
 
-[tool.distutils.bdist_wheel]
-universal = true
+# [tool.distutils.bdist_wheel]
+# universal = true
