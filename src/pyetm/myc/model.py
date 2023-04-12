@@ -608,8 +608,7 @@ class MYCClient():
         cases = self.session_ids.loc[midx]
 
         # drop reference scenario
-        scenarios = cases.index.get_level_values(level='SCENARIO')
-        if 'Reference' in scenarios.unique():
+        if 'Reference' in cases.index.unique(level='SCENARIO'):
             cases = cases.drop('Reference', level='SCENARIO', axis=0)
 
         # all cases are dropped
@@ -619,16 +618,15 @@ class MYCClient():
 
         _logger.info("making MYC URLS")
 
-        # unstack year
-        scenarios = cases.unstack(level='YEAR').astype(str)
-
-        # raise for missing ids
-        if scenarios.isna().values.any():
-            raise ValueError("missing session ids")
+        levels = "STUDY", "SCENARIO", "REGION"
+        grouper = cases.astype(str).groupby(level=levels)
 
         # convert paths to MYC urls
         urls = "https://myc.energytransitionmodel.com/"
-        urls += scenarios.apply(lambda x: ",".join(x), axis=1) + '/inputs'
+        urls += grouper.apply(lambda x: ",".join(x)) + "/inputs"
+
+        # add title
+        urls += "?title=" + urls.index.to_series().str.join("%20")
 
         return pd.Series(urls, name='URL').sort_index()
 

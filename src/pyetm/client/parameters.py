@@ -104,7 +104,7 @@ class ParameterMethods(SessionMethods):
                     f"Invalid forecast storage order item: '{item}'")
 
         # map order to correct scenario parameter
-        data = {'forecast_storage_order': {'order': order}}
+        data = {'order': order}
 
         # make request
         url = f'scenarios/{self.scenario_id}/forecast_storage_order'
@@ -164,7 +164,7 @@ class ParameterMethods(SessionMethods):
                     f"Invalid heat network order item: '{item}'")
 
         # map order to correct scenario parameter
-        data = {'heat_network_order': {'order': order}}
+        data = {'order': order}
 
         # make request
         url = f'scenarios/{self.scenario_id}/heat_network_order'
