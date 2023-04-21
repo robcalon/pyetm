@@ -288,6 +288,28 @@ class ParameterMethods(SessionMethods):
                 logger.warning(f"'{key}' not in passed scenario parameters")
 
     @property
+    def storage_parameters(self):
+        """storage volumes and capacities"""
+        return self.get_storage_parameters()
+
+    @functools.lru_cache(maxsize=1)
+    def get_storage_parameters(self):
+        """get the storage parameter data"""
+
+        # raise without scenario id
+        self._validate_scenario_id()
+
+        # make request
+        url = f'scenarios/{self.scenario_id}/storage_parameters'
+        resp = self.session.get(url, decoder="BytesIO")
+
+        # convert to frame
+        cols = ['Group', 'Carrier', 'Key', 'Parameter']
+        parameters = pd.read_csv(resp, index_col=cols)
+
+        return parameters
+
+    @property
     def user_parameters(self):
         """user parameters"""
         return self.get_user_parameters()
