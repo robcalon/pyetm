@@ -52,7 +52,7 @@ class CurveMethods(SessionMethods):
         curves = pd.read_csv(resp, index_col='Time')
         curves = curves.squeeze('columns').reset_index(drop=True)
 
-        return curves
+        return curves.round(2)
 
     @property
     def hourly_heat_curves(self):
