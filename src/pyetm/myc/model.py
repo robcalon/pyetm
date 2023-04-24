@@ -18,26 +18,29 @@ Carrier = Literal['electricity', 'heat', 'hydrogen', 'methane']
 
 """externalize hard coded ETM parameters"""
 
-def sort_frame(frame: pd.DataFrame, axis: int = 0):
+def sort_frame(
+    frame: pd.DataFrame,
+    axis: int = 0,
+    reference: str | None = None
+) -> pd.DataFrame:
     """sort frame with reference scenario at start position"""
 
     # sort columns and get scenarios
     frame = frame.sort_index(axis=axis)
     scenarios = frame.axes[axis].get_level_values(level='SCENARIO')
 
-    # return frame without reference
-    if 'Reference' not in scenarios.unique():
-        return frame
+    # handle reference scenario
+    if (reference is not None) & (reference in scenarios):
 
-    # subset reference from frame
-    ref = frame.xs('Reference', level='SCENARIO', axis=axis,
-        drop_level=False)
+        # subset reference from frame
+        ref = frame.xs(reference, level='SCENARIO', axis=axis,
+            drop_level=False)
 
-    # drop reference from frame
-    frame = frame.drop(ref.axes[axis], axis=axis)
+        # drop reference from frame and apply custom order
+        frame = frame.drop(reference, level='SCENARIO', axis=axis)
+        frame = pd.concat([ref, frame], axis=axis)
 
-    return pd.concat([ref, frame], axis=axis)
-
+    return frame
 
 class MYCClient():
     """Multi Year Chart Client"""
@@ -60,6 +63,10 @@ class MYCClient():
 
         # set session ids
         self.__session_ids = session_ids
+
+        # revalidate reference scenario
+        if hasattr(self, '_reference'):
+            self.reference = self.reference
 
     @property
     def parameters(self) -> pd.Series:
@@ -167,9 +174,30 @@ class MYCClient():
 
         return excluded
 
-    def __init__(self, session_ids: pd.Series,
+    @property
+    def reference(self) -> str | None:
+        """reference scenario key"""
+        return self._reference
+
+    @reference.setter
+    def reference(self, reference: str | None):
+
+        # validate reference key
+        scenarios = self.session_ids.index.unique(level='SCENARIO')
+        if (reference not in scenarios) & (reference is not None):
+            raise KeyError(f"Invalid reference key: '{reference}'")
+
+        # set reference key
+        self._reference = reference
+
+    def __init__(
+        self,
+        session_ids: pd.Series,
         parameters: pd.Series, gqueries: pd.Series,
-        mapping: pd.Series | pd.DataFrame | None = None, **kwargs):
+        mapping: pd.Series | pd.DataFrame | None = None,
+        reference: str | None = None,
+        **kwargs
+    ):
         """initialisation logic for Client.
 
         Parameters
@@ -184,6 +212,10 @@ class MYCClient():
             gquery unit.
         mapping : pd.Series or pd.DataFrame
             Optional mapping for carrier curves output keys.
+        reference : str, default None
+            Key of reference scenario. This scenario will be
+            excluded from the MYC links and will always be
+            placed in front when sorting results.
 
         All key-word arguments are passed directly to the Session
         that is used in combination with the pyETM.client. In this
@@ -218,6 +250,7 @@ class MYCClient():
         self.parameters = parameters
         self.gqueries = gqueries
         self.mapping = mapping
+        self.reference = reference
 
         # set kwargs
         self._kwargs = kwargs
@@ -304,8 +337,8 @@ class MYCClient():
 
         return midx
 
-    def get_input_parameters(self,
-        midx: tuple | pd.MultiIndex | None = None) -> pd.DataFrame:
+    def get_input_parameters(
+        self, midx: tuple | pd.MultiIndex | None = None) -> pd.DataFrame:
         """get input parameters for single scenario"""
 
         # subset cases of interest
@@ -382,10 +415,10 @@ class MYCClient():
         frame.index.names = ['KEY', 'UNIT']
         frame.columns.names = ['STUDY', 'SCENARIO', 'REGION', 'YEAR']
 
-        return sort_frame(frame, axis=1)
+        return sort_frame(frame, axis=1, reference=self.reference)
 
-    def set_input_parameters(self,
-        frame: pd.DataFrame) -> None:
+    def set_input_parameters(
+        self, frame: pd.DataFrame) -> None:
         """set input parameters"""
 
         # convert series to frame
@@ -434,7 +467,7 @@ class MYCClient():
             with Client(**self._kwargs) as client:
 
                 # iterate over cases
-                for case, values in frame.iteritems():
+                for case, values in frame.items():
 
                     # log event
                     _logger.debug("> changing input parameters for " +
@@ -455,12 +488,15 @@ class MYCClient():
         except Exception as exc:
             log_exception(exc, logger=_logger)
 
-    def get_hourly_carrier_curves(self, carrier: str,
+    def get_hourly_carrier_curves(
+        self,
+        carrier: str,
         midx: tuple | pd.MultiIndex | None = None,
         mapping: pd.DataFrame | None = None,
         columns: list | None = None,
         include_keys: bool = False,
-        invert_sign: bool = False) -> pd.DataFrame:
+        invert_sign: bool = False,
+    ) -> pd.DataFrame:
         """get hourly carrier curves for scenarios"""
 
         # lower carrier
@@ -530,10 +566,55 @@ class MYCClient():
         # construct frame for carrier
         frame = pd.concat(items, axis=1, keys=midx)
 
-        return sort_frame(frame, axis=1)
+        return sort_frame(frame, axis=1, reference=self.reference)
 
-    def get_output_values(self,
-        midx: tuple | pd.MultiIndex | None = None) -> pd.DataFrame:
+    def get_hourly_price_curves(
+        self,
+        midx: tuple | pd.MultiIndex | None = None,
+    ) -> pd.DataFrame:
+        """get hourly prices curves"""
+
+        # subset cases of interest
+        midx = self._make_midx(midx=midx)
+        cases = self.session_ids.loc[midx]
+
+        _logger.info("collecting hourly price curves")
+
+        try:
+
+            # make client with context manager
+            with Client(**self._kwargs) as client:
+
+                # newlist
+                items = []
+
+                # iterate over cases
+                for case, scenario_id in cases.items():
+
+                    # log event
+                    _logger.debug("> collecting hourly price curve for " +
+                        "'%s', '%s', '%s', '%s'", *case)
+
+                    # connect scenario and get curves
+                    client.scenario_id = scenario_id
+                    curves = client.hourly_electricity_price_curve
+
+                    # append curves to list
+                    items.append(curves)
+
+        # handle exception
+        except Exception as exc:
+            log_exception(exc, logger=_logger)
+
+        # construct frame for carrier
+        frame = pd.concat(items, axis=1, keys=midx)
+
+        return sort_frame(frame, axis=1, reference=self.reference)
+
+    def get_output_values(
+        self,
+        midx: tuple | pd.MultiIndex | None = None,
+    ) -> pd.DataFrame:
         """get input parameters for single scenario"""
 
         # subset cases of interest
@@ -586,10 +667,12 @@ class MYCClient():
         # fill missing values
         frame = frame.fillna(0)
 
-        return sort_frame(frame, axis=1)
+        return sort_frame(frame, axis=1, reference=self.reference)
 
-    def make_myc_urls(self,
-        midx: tuple | pd.MultiIndex | None = None) -> pd.Series:
+    def make_myc_urls(
+        self,
+        midx: tuple | pd.MultiIndex | None = None,
+    ) -> pd.Series:
         """convert session ids excel to myc urls"""
 
         # default to all
@@ -607,14 +690,20 @@ class MYCClient():
         # subset cases of interest
         cases = self.session_ids.loc[midx]
 
-        # drop reference scenario
-        if 'Reference' in cases.index.unique(level='SCENARIO'):
-            cases = cases.drop('Reference', level='SCENARIO', axis=0)
+        if self.reference is not None:
 
-        # all cases are dropped
-        if cases.empty:
-            raise ValueError("Cannot make URLs as model or passed subset " +
-                "only contains reference scenarios")
+            # drop reference scenario
+            if self.reference in cases.index.unique(level='SCENARIO'):
+                cases = cases.drop(self.reference, level='SCENARIO', axis=0)
+
+            # no cases dropped
+            if cases.empty:
+
+                # warn user
+                _logger.warning("Cannot make URLs as model or passed subset "
+                    "only contains reference scenarios")
+
+                return pd.Series()
 
         _logger.info("making MYC URLS")
 
@@ -637,6 +726,7 @@ class MYCClient():
         output_values: pd.DataFrame | None = None,
         myc_urls: pd.Series | None = None,
         include_hourly_curves: bool = False,
+        include_price_curves: bool = False,
         carriers: Carrier | list[Carrier] | None = None,
         mapping: pd.DataFrame | None = None,
         columns: list[str] | None = None,
@@ -671,6 +761,10 @@ class MYCClient():
             Include hourly carrier curves for specified
             carriers in exported result. Defaults to
             exclude carriers.
+        include_price_curves : bool, default False
+            Include hourly price curves for the
+            selected session ids. Defaults to exclude
+            the price curves.
         carriers : str | list, default None
             Carrier of list of carriers to export when
             including hourlu carrier curves. Defaults
@@ -768,13 +862,23 @@ class MYCClient():
                 name = carrier.upper()
                 add_frame(name, curves, workbook, column_width=18)
 
+        """Allow for modified price curves as well"""
+
+        # include price curves
+        if include_price_curves:
+
+            # get and add hourly price curves
+            curves = self.get_hourly_price_curves(midx=midx)
+            add_frame('EPRICE', curves, workbook, column_width=18)
+
         # default urls
         if myc_urls is None:
             myc_urls = self.make_myc_urls(midx=midx)
 
         # add urls to workbook
-        add_series('ETM_URLS', myc_urls, workbook,
-            index_width=18, column_width=80)
+        if not myc_urls.empty:
+            add_series('ETM_URLS', myc_urls, workbook,
+                index_width=18, column_width=80)
 
         # write workbook
         workbook.close()
