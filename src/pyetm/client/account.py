@@ -26,17 +26,17 @@ class AccountMethods(SessionMethods):
 
         # determine number of pages
         pages = self._get_objects(url=url, page=1, limit=1)
-        pages = math.ceil(pages['meta']['total'] / 25)
+        pages = math.ceil(pages['meta']['total'] / 100)
 
         if pages == 0:
             return pd.DataFrame()
 
         # newlist
         scenarios = []
-        for page in range(pages):
+        for page in range(1, pages + 1):
 
             # fetch pages and format scenarios
-            recs = self._get_objects(url, page=page)['data']
+            recs = self._get_objects(url, page=page, limit=100)['data']
 
             excl = ['user_values', 'balanced_values', 'metadata', 'url']
             scenarios.extend([
@@ -56,17 +56,17 @@ class AccountMethods(SessionMethods):
 
         # determine number of pages
         pages = self._get_objects(url, page=1, limit=1)
-        pages = math.ceil(pages['meta']['total'] / 25)
+        pages = math.ceil(pages['meta']['total'] / 100)
 
         if pages == 0:
             return pd.DataFrame()
 
         # newlist
         scenarios = []
-        for page in range(pages):
+        for page in range(1, pages + 1):
 
             # fetch pages and format scenarios
-            recs = self._get_objects(url, page=page)['data']
+            recs = self._get_objects(url, page=page, limit=100)['data']
 
             excl = ['scenario', 'scenario_id', 'scenario_id_history']
             scenarios.extend([
@@ -86,17 +86,17 @@ class AccountMethods(SessionMethods):
 
         # determine number of pages
         pages = self._get_objects(url, page=1, limit=1)
-        pages = math.ceil(pages['meta']['total'] / 25)
+        pages = math.ceil(pages['meta']['total'] / 100)
 
         if pages == 0:
             return pd.DataFrame()
 
         # newlist
         paths = []
-        for page in range(pages):
+        for page in range(1, pages + 1):
 
             # fetch pages and format scenarios
-            recs = self._get_objects(url, page=page)['data']
+            recs = self._get_objects(url, page=page, limit=100)['data']
 
             paths.extend([
                 self._format_object(path) for path in recs])

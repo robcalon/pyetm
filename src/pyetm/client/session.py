@@ -56,12 +56,12 @@ class SessionMethods:
         self._reset_cache()
 
     @property
-    def scenario_id(self) -> str | None:
+    def scenario_id(self) -> int | None:
         """scenario id"""
         return self._scenario_id if hasattr(self, '_scenario_id') else None
 
     @scenario_id.setter
-    def scenario_id(self, scenario_id: str | None):
+    def scenario_id(self, scenario_id: int | None):
 
         # store previous scenario id
         previous = copy.deepcopy(self.scenario_id)
@@ -70,9 +70,9 @@ class SessionMethods:
         if isinstance(scenario_id, dict):
             scenario_id = scenario_id['id']
 
-        # convert passed id to string
+        # convert passed id to integer
         if scenario_id is not None:
-            scenario_id = str(scenario_id)
+            scenario_id = int(scenario_id)
 
         # set new scenario id
         self._scenario_id = scenario_id
@@ -176,7 +176,7 @@ class SessionMethods:
 
         return header
 
-    def _get_session_id(self, scenario_id: str) -> str:
+    def _get_session_id(self, scenario_id: int) -> int:
         """get a session_id for a pro-environment scenario"""
 
         # make pro url
@@ -190,7 +190,7 @@ class SessionMethods:
         pattern = '"api_session_id":([0-9]{6,7})'
         session_id = re.search(pattern, content)
 
-        return session_id.group(1)
+        return int(session_id.group(1))
 
     def _validate_scenario_id(self):
         """raise error when scenario id is None"""

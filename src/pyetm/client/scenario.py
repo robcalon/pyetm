@@ -370,49 +370,39 @@ class ScenarioMethods(SessionMethods):
         self._validate_scenario_id()
         self._validate_token_permission("scenarios:write")
 
-        # return scenario id of copy
-        scenario_id = self.copy_scenario(connect=False)
+        # prepare request
+        url = 'saved_scenarios'
+        headers = {'content-type': 'application/json'}
 
-        # create new saved scenario
-        if saved_scenario_id is None:
+        # make data
+        data = {"scenario_id": self.copy_scenario(connect=False)}
 
-            # default title
-            if title is None:
-                title = f'API Generated - {self.scenario_id}'
+        # update exisiting saved scenario
+        if saved_scenario_id is not None:
 
-            # format body
-            data = {
-                'title': title,
-                'scenario_id': scenario_id,
-            }
+            # update url
+            url += f'/{saved_scenario_id}'
 
-            # add privacy setting
-            if private is not None:
-                data['private']: str(bool(private)).lower()
-
-            # add description
-            if description is not None:
-                data['description'] = str(description)
-
-            # format request
-            url = 'saved_scenarios'
-            headers = {'content-type': 'application-json'}
-
-            # make request
-            saved_scenario_id = self.session.post(
+            return self.session.put(
                 url, json=data, headers=headers)
 
-        else:
+        # default title
+        if title is None:
+            title = f'API Generated - {self.scenario_id}'
 
-            # format request
-            data = {'scenario_id': int(self.scenario_id)}
-            headers = {'content-type': 'application/json'}
-            url = f'saved_scenarios/{saved_scenario_id}'
+        # add title
+        data["title"] = title
 
-            # make request
-            self.session.put(url, json=data, headers=headers)
+        # add privacy setting
+        if private is not None:
+            data["private"]: str(bool(private)).lower()
 
-        return saved_scenario_id
+        # add description
+        if description is not None:
+            data["description"] = str(description)
+
+        return self.session.post(
+            url, json=data, headers=headers)
 
     # def to_dict(self): #, path: str | Path) -> None:
     #     """export full scenario to dict"""
