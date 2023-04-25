@@ -218,8 +218,8 @@ class MYCClient():
             placed in front when sorting results.
 
         All key-word arguments are passed directly to the Session
-        that is used in combination with the pyETM.client. In this
-        module the pyETM.Client uses a Requests Session object as
+        that is used in combination with the pyetm.client. In this
+        module the pyetm.Client uses a Requests Session object as
         backend.
 
         Keyword Arguments
@@ -545,6 +545,10 @@ class MYCClient():
                     attr = f"hourly_{carrier}_curves"
                     curves = getattr(client, attr)
 
+                    # continue with disabled merit order
+                    if curves.empty:
+                        continue
+
                     # set column name
                     curves.columns.names = ['KEY']
 
@@ -598,6 +602,10 @@ class MYCClient():
                     # connect scenario and get curves
                     client.scenario_id = scenario_id
                     curves = client.hourly_electricity_price_curve
+
+                    # continue with disabled merit order
+                    if curves.empty:
+                        continue
 
                     # append curves to list
                     items.append(curves)
@@ -722,11 +730,11 @@ class MYCClient():
     def to_excel(self,
         filepath: str | None = None,
         midx: tuple | pd.MultiIndex | None = None,
-        input_parameters: pd.DataFrame | None = None,
-        output_values: pd.DataFrame | None = None,
-        myc_urls: pd.Series | None = None,
-        include_hourly_curves: bool = False,
-        include_price_curves: bool = False,
+        input_parameters: bool | pd.DataFrame = True,
+        output_values: bool | pd.DataFrame = True,
+        myc_urls: bool | pd.Series = True,
+        hourly_carrier_curves: bool = False,
+        hourly_price_curves: bool = False,
         carriers: Carrier | list[Carrier] | None = None,
         mapping: pd.DataFrame | None = None,
         columns: list[str] | None = None,
@@ -745,29 +753,26 @@ class MYCClient():
             Tuple or MultiIndex with column names
             of columns to include in file. Defaults
             to all columns.
-        input_parameters : pd.DataFrame, default None
-            DataFrame to write on the inputs sheet
-            of the Excel. Defaults to get_input_values
-            method with specified midx.
-        output_values : pd.DataFrame, default None
-            DataFrame to write on the outputs sheet
-            of the Excel. Defaults to get_output_values
-            method with specified midx.
-        myc_urls : pd.Series, default None
-            Series to write on the url sheet
-            of the Excel. Default to make_myc_urls
-            method with specified midx.
-        include_hourly_curves : bool, default False
+        input_parameters : bool or pd.DataFrame, default True
+            Include input parameters in export. Can be overwritten with
+            custom parameters by passing a DataFrame instead.
+        output_values : bool or pd.DataFrame, default True
+            Include gquery results in export. Can be overwritten with
+            custom curves by passing a DataFrame instead.
+        myc_urls : bool or pd.Series, default True
+            Include myc urls in export. Can be overwritten with
+            custom myc urls by passing a Series instead.
+        hourly_carrier_curves : bool, default False
             Include hourly carrier curves for specified
             carriers in exported result. Defaults to
             exclude carriers.
-        include_price_curves : bool, default False
+        hourly_price_curves : bool, default False
             Include hourly price curves for the
             selected session ids. Defaults to exclude
             the price curves.
         carriers : str | list, default None
             Carrier of list of carriers to export when
-            including hourlu carrier curves. Defaults
+            including hourly carrier curves. Defaults
             to include all carriers.
         mapping : DataFrame, default None
             DataFrame with mapping of ETM keys and carrier in a multiindex
@@ -832,25 +837,25 @@ class MYCClient():
         workbook = xlsxwriter.Workbook(str(filepath))
 
         # default inputs
-        if input_parameters is None:
+        if input_parameters is True:
             input_parameters = self.get_input_parameters(midx=midx)
 
-        # add inputs to workbook
-        add_frame('INPUT_PARAMETERS', input_parameters, workbook,
-            index_width=[80, 18], column_width=18)
+        # write input parameters
+        if input_parameters is not False:
+            add_frame('INPUT_PARAMETERS', input_parameters, workbook,
+                index_width=[80, 18], column_width=18)
 
         # default outputs
-        if output_values is None:
+        if output_values is True:
             output_values = self.get_output_values(midx=midx)
 
-        # add outputs to workbook
-        add_frame('OUTPUT_VALUES', output_values, workbook,
-            index_width=[80, 18], column_width=18)
-
-        """Allow for modified carrier curves as well"""
+        # write output values
+        if output_values is not False:
+            add_frame('OUTPUT_VALUES', output_values, workbook,
+                index_width=[80, 18], column_width=18)
 
         # iterate over carriers
-        if include_hourly_curves:
+        if hourly_carrier_curves is True:
             for carrier in carriers:
 
                 # get carrier curves
@@ -862,23 +867,20 @@ class MYCClient():
                 name = carrier.upper()
                 add_frame(name, curves, workbook, column_width=18)
 
-        """Allow for modified price curves as well"""
-
-        # include price curves
-        if include_price_curves:
-
-            # get and add hourly price curves
+        # include hourly price curves
+        if hourly_price_curves is True:
             curves = self.get_hourly_price_curves(midx=midx)
             add_frame('EPRICE', curves, workbook, column_width=18)
 
         # default urls
-        if myc_urls is None:
+        if myc_urls is True:
             myc_urls = self.make_myc_urls(midx=midx)
 
         # add urls to workbook
-        if not myc_urls.empty:
-            add_series('ETM_URLS', myc_urls, workbook,
-                index_width=18, column_width=80)
+        if myc_urls is not False:
+            if not myc_urls.empty:
+                add_series('ETM_URLS', myc_urls, workbook,
+                    index_width=18, column_width=80)
 
         # write workbook
         workbook.close()
