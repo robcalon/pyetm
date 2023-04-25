@@ -561,7 +561,7 @@ class MYCClient():
                             include_keys=include_keys, invert_sign=invert_sign)
 
                     # append curves to list
-                    items.append(curves)
+                    items.append(curves.reset_index(drop=True))
 
         # handle exception
         except Exception as exc:
@@ -608,7 +608,7 @@ class MYCClient():
                         continue
 
                     # append curves to list
-                    items.append(curves)
+                    items.append(curves.reset_index(drop=True))
 
         # handle exception
         except Exception as exc:
