@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from pyetm import Client
-from pyetm.myc import Model
+from pyetm.myc import MYCClient
 from pyetm.logger import get_modulelogger
 from pyetm.optional import import_optional_dependency
 
 _logger = get_modulelogger(__name__)
 
-def copy_study_session_ids(session_ids: pd.Series | Model,
+def copy_study_session_ids(session_ids: pd.Series | MYCClient,
     study: str | None = None, metadata: dict | None = None,
     keep_compatible: bool = False, **kwargs) -> pd.Series:
     """make a copy of an existing study. The returned
@@ -19,7 +19,7 @@ def copy_study_session_ids(session_ids: pd.Series | Model,
     but contain the same values"""
 
     # load study session ids from model
-    if isinstance(session_ids, Model):
+    if isinstance(session_ids, MYCClient):
         kwargs = {**session_ids._kwargs, **kwargs}
         session_ids = session_ids.session_ids.copy()
 
@@ -46,7 +46,7 @@ def copy_study_session_ids(session_ids: pd.Series | Model,
 
     return session_ids
 
-def copy_study_configuration(filepath: str, model: Model,
+def copy_study_configuration(filepath: str, model: MYCClient,
     study: str | None = None, copy_session_ids: bool = True,
     metadata: dict | None = None, keep_compatible: bool = False) -> None:
     """copy study configuration"""
@@ -55,7 +55,7 @@ def copy_study_configuration(filepath: str, model: Model,
     # Due to optional import
 
     from pathlib import Path
-    from pyETM.utils import add_series, add_frame
+    from pyetm.utils import add_series, add_frame
 
     if TYPE_CHECKING:
         # import xlsxwriter

@@ -13,7 +13,7 @@
 #     Parameters
 #     ----------
 #     clients: list
-#         List of pyETM.client.Client objects that
+#         List of pyetm.client.Client objects that
 #         are used to interpolate the scenario.
 #     cfill : string, default 'linear'
 #         Method for filling continious user values
@@ -54,8 +54,8 @@
 
 #         # check client in list
 #         for client in clients:
-#             if not isinstance(client, pyETM.Client):
-#                 raise TypeError('client must be of type pyETM.client.Client')
+#             if not isinstance(client, pyetm.Client):
+#                 raise TypeError('client must be of type pyetm.client.Client')
 
 #         # validate area codes and sort area codes
 #         self._validate_area_codes(clients)
@@ -73,7 +73,7 @@
 #         Parameters
 #         ----------
 #         clients : list
-#             List of pyETM.client.Client objects that
+#             List of pyetm.client.Client objects that
 #             are used to interpolate the scenario. Clients
 #             are by end year on initialization."""
 
