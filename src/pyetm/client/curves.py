@@ -40,7 +40,7 @@ class CurveMethods(SessionMethods):
 
         # warn for disabled merit order
         if self._merit_order_enabled is False:
-            logger.warning("%s: merit order disabled")
+            logger.warning("%s: merit order disabled", self)
 
     @property
     def hourly_electricity_curves(self) -> pd.DataFrame:
@@ -84,7 +84,7 @@ class CurveMethods(SessionMethods):
 
         # return empty series with disabled merit order
         if self._merit_order_enabled is False:
-            return None
+            return pd.Series()
 
         # make request
         post = f'scenarios/{self.scenario_id}/curves/electricity_price'
