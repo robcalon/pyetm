@@ -46,6 +46,16 @@ class MYCClient():
     """Multi Year Chart Client"""
 
     @property
+    def beta_engine(self) -> bool:
+        """connects to beta-engine when True and
+        to production-engine when False."""
+        return self._beta_engine
+
+    @beta_engine.setter
+    def beta_engine(self, boolean: bool) -> None:
+        self._beta_engine = bool(boolean)
+
+    @property
     def session_ids(self) -> pd.Series:
         """series of scenario_ids"""
         return self.__session_ids
@@ -196,6 +206,7 @@ class MYCClient():
         parameters: pd.Series, gqueries: pd.Series,
         mapping: pd.Series | pd.DataFrame | None = None,
         reference: str | None = None,
+        beta_engine: bool = False,
         **kwargs
     ):
         """initialisation logic for Client.
@@ -216,11 +227,12 @@ class MYCClient():
             Key of reference scenario. This scenario will be
             excluded from the MYC links and will always be
             placed in front when sorting results.
+        beta_engine : bool, default False
+            Connect to the beta-engine instead of the production-engine.
 
         All key-word arguments are passed directly to the Session
         that is used in combination with the pyetm.client. In this
-        module the pyetm.Client uses a Requests Session object as
-        backend.
+        module the pyetm.Client uses a Requests Session object by default.
 
         Keyword Arguments
         -----------------
@@ -251,13 +263,35 @@ class MYCClient():
         self.gqueries = gqueries
         self.mapping = mapping
         self.reference = reference
+        self.beta_engine = beta_engine
 
         # set kwargs
         self._kwargs = kwargs
 
     @classmethod
-    def from_excel(cls, filepath: str, **kwargs):
-        """initate from excel file with standard structure"""
+    def from_excel(
+        cls,
+        filepath: str,
+        reference: str | None = None,
+        beta_engine: bool = False,
+        **kwargs
+    ):
+        """initate from excel file with standard structure
+
+        Parameters
+        ----------
+        filepath : str
+            Path to excel file that is red.
+        reference : str, default None
+            Key of reference scenario. This scenario will be
+            excluded from the MYC links and will always be
+            placed in front when sorting results.
+        beta_engine : bool, default False
+            Connect to the beta-engine instead of the production-engine.
+
+        All key-word arguments are passed directly to the Session that is
+        used in combination with the pyetm.client. In this module the
+        pyetm.Client uses a Requests Session object by default."""
 
         # connect to excel file
         xlsx = pd.ExcelFile(filepath)
@@ -287,8 +321,15 @@ class MYCClient():
             mapping = None
 
         # intialize model
-        model = cls(session_ids=session_ids, parameters=parameters,
-            gqueries=gqueries, mapping=mapping, **kwargs)
+        model = cls(
+            session_ids=session_ids,
+            parameters=parameters,
+            gqueries=gqueries,
+            mapping=mapping,
+            reference=reference,
+            beta_engine=beta_engine,
+            **kwargs
+        )
 
         # set source in model
         model._source = filepath
@@ -350,7 +391,8 @@ class MYCClient():
         try:
 
             # make client with context manager
-            with Client(**self._kwargs) as client:
+            with Client(
+                beta_engine=self.beta_engine, **self._kwargs) as client:
 
                 # newlist
                 values = []
@@ -464,7 +506,8 @@ class MYCClient():
         try:
 
             # make client with context manager
-            with Client(**self._kwargs) as client:
+            with Client(
+                beta_engine=self.beta_engine, **self._kwargs) as client:
 
                 # iterate over cases
                 for case, values in frame.items():
@@ -526,7 +569,8 @@ class MYCClient():
         try:
 
             # make client with context manager
-            with Client(**self._kwargs) as client:
+            with Client(
+                beta_engine=self.beta_engine, **self._kwargs) as client:
 
                 # newlist
                 items = []
@@ -587,7 +631,8 @@ class MYCClient():
         try:
 
             # make client with context manager
-            with Client(**self._kwargs) as client:
+            with Client(
+                beta_engine=self.beta_engine, **self._kwargs) as client:
 
                 # newlist
                 items = []
@@ -634,7 +679,8 @@ class MYCClient():
         try:
 
             # make client with context manager
-            with Client(**self._kwargs) as client:
+            with Client(
+                beta_engine=self.beta_engine, **self._kwargs) as client:
 
                 # newlist
                 values = []
@@ -718,8 +764,12 @@ class MYCClient():
         levels = "STUDY", "SCENARIO", "REGION"
         grouper = cases.astype(str).groupby(level=levels)
 
-        # convert paths to MYC urls
+        # get myc url
         urls = "https://myc.energytransitionmodel.com/"
+        if self.beta_engine:
+            urls = "https://myc-beta.energytransitionmodel.com/"
+
+        # convert paths to MYC urls
         urls += grouper.apply(lambda x: ",".join(x)) + "/inputs"
 
         # add title
