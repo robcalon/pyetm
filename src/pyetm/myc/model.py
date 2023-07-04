@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
-from urllib.parse import urljoin
 
 import datetime
 import numpy as np
@@ -10,6 +9,7 @@ import pandas as pd
 
 from pyetm import Client
 from pyetm.utils import categorise_curves
+from pyetm.utils.url import make_myc_url, set_url_parameters
 from pyetm.logger import get_modulelogger, log_exception
 from pyetm.optional import import_optional_dependency
 
@@ -477,7 +477,9 @@ class MYCClient():
         return sort_frame(frame, axis=1, reference=self.reference)
 
     def set_input_parameters(
-        self, frame: pd.DataFrame) -> None:
+        self,
+        frame: pd.DataFrame,
+        allow_external_coupling_parameters: bool = False) -> None:
         """set input parameters"""
 
         # convert series to frame
@@ -502,12 +504,16 @@ class MYCClient():
 
         _logger.info("changing input parameters")
 
-        # list external coupling related keys
-        key = 'external_coupling'
-        external = list(frame.index[frame.index.str.contains(key)])
-
         # make collection of illegal parameters
-        illegal = external + self.excluded + self.depricated
+        illegal = self.excluded + self.depricated
+
+        if allow_external_coupling_parameters is False:
+
+            # list external coupling related keys
+            key = 'external_coupling'
+            illegal += list(frame.index[frame.index.str.contains(key)])
+
+        # illegal parameters
         illegal = frame.index[frame.index.isin(illegal)]
 
         # trigger warnings for mapped but disabled parameters
@@ -515,7 +521,7 @@ class MYCClient():
 
             # warn for keys
             for key in illegal:
-                _logger.warning("excluded '{key}' from upload")
+                _logger.warning(f"excluded '{key}' from upload")
 
             # drop excluded parameters
             frame = frame.drop(illegal)
@@ -739,6 +745,9 @@ class MYCClient():
     def make_myc_urls(
         self,
         midx: tuple | pd.MultiIndex | None = None,
+        path: str | None = None,
+        params : dict[str, str] | None = None,
+        add_title: bool = True
     ) -> pd.Series:
         """convert session ids excel to myc urls"""
 
@@ -774,13 +783,21 @@ class MYCClient():
 
         _logger.info("making MYC URLS")
 
+        # group scenario ids
         levels = "STUDY", "SCENARIO", "REGION"
-        grouper = cases.astype(str).groupby(level=levels)
+        urls = cases.astype(str).groupby(level=levels)
 
-        # convert paths to MYC urls and add title
-        urls = grouper.apply(
-            lambda x: urljoin(self.myc_url, ",".join(map(str, x))))
-        urls += "/inputs?title=" + urls.index.to_series().str.join("%20")
+        # make urls
+        urls = urls.apply(lambda sids: make_myc_url(
+            url=self.myc_url, scenario_ids=sids, path=path, params=params))
+
+        # add title
+        if bool(add_title) is True:
+            for idx, url in urls.items():
+
+                # make title and append parameter inplace
+                params =  {'title': " ".join(map(str, idx))}
+                urls.at[idx] = set_url_parameters(url, params=params)
 
         return pd.Series(urls, name='URL').sort_index()
 
