@@ -1,9 +1,9 @@
 """Authentication methods"""
 
 from __future__ import annotations
-# from pathlib import Path
 
 import copy
+from urllib.parse import urljoin
 
 import pandas as pd
 from .session import SessionMethods
@@ -87,15 +87,7 @@ class ScenarioMethods(SessionMethods):
     @property
     def pro_url(self) -> str:
         """get pro url for session id"""
-
-        # specify base url
-        base = 'https://energytransitionmodel.com'
-
-        # update to beta server
-        if self.beta_engine:
-            base = base.replace('https://', 'https://beta.')
-
-        return f'{base}/scenarios/{self.scenario_id}/load'
+        return urljoin(self.etm_url, f'scenarios/{self.scenario_id}/load/')
 
     @property
     def scaling(self):

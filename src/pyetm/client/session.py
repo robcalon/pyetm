@@ -7,6 +7,8 @@ import re
 import copy
 import functools
 
+from urllib.parse import urljoin
+
 import pandas as pd
 
 from pyetm.logger import get_modulelogger
@@ -22,38 +24,61 @@ class SessionMethods:
     """Core methods for API interaction"""
 
     @property
+    def _default_engine_url(self) -> str:
+        """default engine url"""
+        return "https://engine.energytransitionmodel.com/api/v3/"
+
+    @property
+    def connected_to_default_engine(self) -> bool:
+        """connected to default engine url?"""
+        return self.engine_url == self._default_engine_url
+
+    @property
     def _scenario_header(self) -> dict:
         """get full scenario header"""
         return self._get_scenario_header()
 
     @property
-    def base_url(self) -> str:
-        """"base url for carbon transition model"""
+    def engine_url(self) -> str:
+        """engine URL"""
+        return self._engine_url
 
-        # return beta engine url
-        if self.beta_engine:
-            return "https://beta-engine.energytransitionmodel.com/api/v3/"
+    @engine_url.setter
+    def engine_url(self, url: str | None):
 
-        return "https://engine.energytransitionmodel.com/api/v3/"
+        # default url
+        if url is None:
+            url = self._default_engine_url
+
+        # set engine
+        self._engine_url = str(url)
+
+        # reset token and change base url
+        self.token = None
+        self.session.base_url = self._engine_url
+
+        # reset cache
+        self._reset_cache()
 
     @property
-    def beta_engine(self) -> bool:
-        """connects to beta-engine when True and to production-engine
-        when False."""
-        return self._beta_engine
+    def etm_url(self) -> str:
+        """model URL"""
 
-    @beta_engine.setter
-    def beta_engine(self, boolean: bool) -> None:
-        """set beta engine attribute"""
+        # raise error
+        if self.etm_url is None:
+            raise ValueError("ETModel URL not set on initialisation.")
 
-        # set boolean and reset session
-        self._beta_engine = bool(boolean)
+        return self._etm_url
 
-        # set related settings
-        self.token = None
-        self.session.base_url = self.base_url
+    @etm_url.setter
+    def etm_url(self, url: str | None):
 
-        self._reset_cache()
+        # use default pro location
+        if (url is None) & (self.connected_to_default_engine):
+            url = "https://energytransitionmodel.com/"
+
+        # set etmodel
+        self._etm_url = str(url)
 
     @property
     def scenario_id(self) -> int | None:
@@ -113,13 +138,9 @@ class SessionMethods:
     @token.setter
     def token(self, token: str | None = None):
 
-        # check environment variables for production token
-        if (token is None) & (not self.beta_engine):
+        # check environment variables for token
+        if token is None:
             token = os.getenv('ETM_ACCESS_TOKEN')
-
-        # check environment variables for beta token
-        if (token is None) & self.beta_engine:
-            token = os.getenv('ETM_BETA_ACCESS_TOKEN')
 
         # store token
         self._token = token
@@ -179,11 +200,8 @@ class SessionMethods:
     def _get_session_id(self, scenario_id: int) -> int:
         """get a session_id for a pro-environment scenario"""
 
-        # make pro url
-        host = "https://energytransitionmodel.com"
-        url = f"{host}/saved_scenarios/{scenario_id}/load"
-
         # extract content from url
+        url = urljoin(self.etm_url, f'saved_scenarios/{scenario_id}/load/')
         content = self.session.request("get", url, decoder='text')
 
         # get session id from content

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
+from urllib.parse import urljoin
 
 import datetime
 import numpy as np
@@ -46,14 +47,29 @@ class MYCClient():
     """Multi Year Chart Client"""
 
     @property
-    def beta_engine(self) -> bool:
-        """connects to beta-engine when True and
-        to production-engine when False."""
-        return self._beta_engine
+    def myc_url(self) -> str:
+        """specifies URL that points to mutli-year charts."""
+        return self._myc_url
 
-    @beta_engine.setter
-    def beta_engine(self, boolean: bool) -> None:
-        self._beta_engine = bool(boolean)
+    @myc_url.setter
+    def myc_url(self, url: str | None):
+
+        if url is None:
+
+            # check for default engine
+            with Client(**self._kwargs) as client:
+                default_engine = client.connected_to_default_engine
+
+            # pass default engine myc URL
+            if default_engine is True:
+                url = "https://myc.energytransitionmodel.com/"
+
+            else:
+                # raise for missing myc URL
+                raise ValueError("must specify the related "
+                    "custom myc_url for the specified custom engine_url.")
+
+        self._myc_url = str(url)
 
     @property
     def session_ids(self) -> pd.Series:
@@ -206,7 +222,7 @@ class MYCClient():
         parameters: pd.Series, gqueries: pd.Series,
         mapping: pd.Series | pd.DataFrame | None = None,
         reference: str | None = None,
-        beta_engine: bool = False,
+        myc_url: str | None = None,
         **kwargs
     ):
         """initialisation logic for Client.
@@ -227,8 +243,9 @@ class MYCClient():
             Key of reference scenario. This scenario will be
             excluded from the MYC links and will always be
             placed in front when sorting results.
-        beta_engine : bool, default False
-            Connect to the beta-engine instead of the production-engine.
+        myc_url : str, default None
+            Specify URL that points to ETM MYC, default to public
+            multi-year charts.
 
         All key-word arguments are passed directly to the Session
         that is used in combination with the pyetm.client. In this
@@ -257,23 +274,23 @@ class MYCClient():
             If string; path to ssl client cert file (.pem).
             If tuple; ('cert', 'key') pair."""
 
+        # set kwargs
+        self._kwargs = kwargs
+
         # set optional parameters
         self.session_ids = session_ids
         self.parameters = parameters
         self.gqueries = gqueries
         self.mapping = mapping
         self.reference = reference
-        self.beta_engine = beta_engine
-
-        # set kwargs
-        self._kwargs = kwargs
+        self.myc_url = myc_url
 
     @classmethod
     def from_excel(
         cls,
         filepath: str,
         reference: str | None = None,
-        beta_engine: bool = False,
+        myc_url: str | None = None,
         **kwargs
     ):
         """initate from excel file with standard structure
@@ -286,8 +303,9 @@ class MYCClient():
             Key of reference scenario. This scenario will be
             excluded from the MYC links and will always be
             placed in front when sorting results.
-        beta_engine : bool, default False
-            Connect to the beta-engine instead of the production-engine.
+        myc_url : str, default None
+            Specify URL that points to ETM MYC, default to public
+            multi-year charts.
 
         All key-word arguments are passed directly to the Session that is
         used in combination with the pyetm.client. In this module the
@@ -327,7 +345,7 @@ class MYCClient():
             gqueries=gqueries,
             mapping=mapping,
             reference=reference,
-            beta_engine=beta_engine,
+            myc_url=myc_url,
             **kwargs
         )
 
@@ -391,8 +409,7 @@ class MYCClient():
         try:
 
             # make client with context manager
-            with Client(
-                beta_engine=self.beta_engine, **self._kwargs) as client:
+            with Client(**self._kwargs) as client:
 
                 # newlist
                 values = []
@@ -506,8 +523,7 @@ class MYCClient():
         try:
 
             # make client with context manager
-            with Client(
-                beta_engine=self.beta_engine, **self._kwargs) as client:
+            with Client(**self._kwargs) as client:
 
                 # iterate over cases
                 for case, values in frame.items():
@@ -569,8 +585,7 @@ class MYCClient():
         try:
 
             # make client with context manager
-            with Client(
-                beta_engine=self.beta_engine, **self._kwargs) as client:
+            with Client(**self._kwargs) as client:
 
                 # newlist
                 items = []
@@ -631,8 +646,7 @@ class MYCClient():
         try:
 
             # make client with context manager
-            with Client(
-                beta_engine=self.beta_engine, **self._kwargs) as client:
+            with Client(**self._kwargs) as client:
 
                 # newlist
                 items = []
@@ -679,8 +693,7 @@ class MYCClient():
         try:
 
             # make client with context manager
-            with Client(
-                beta_engine=self.beta_engine, **self._kwargs) as client:
+            with Client(**self._kwargs) as client:
 
                 # newlist
                 values = []
@@ -764,16 +777,10 @@ class MYCClient():
         levels = "STUDY", "SCENARIO", "REGION"
         grouper = cases.astype(str).groupby(level=levels)
 
-        # get myc url
-        urls = "https://myc.energytransitionmodel.com/"
-        if self.beta_engine:
-            urls = "https://myc-beta.energytransitionmodel.com/"
-
-        # convert paths to MYC urls
-        urls += grouper.apply(lambda x: ",".join(x)) + "/inputs"
-
-        # add title
-        urls += "?title=" + urls.index.to_series().str.join("%20")
+        # convert paths to MYC urls and add title
+        urls = grouper.apply(
+            lambda x: urljoin(self.myc_url, ",".join(map(str, x))))
+        urls += "/inputs?title=" + urls.index.to_series().str.join("%20")
 
         return pd.Series(urls, name='URL').sort_index()
 
