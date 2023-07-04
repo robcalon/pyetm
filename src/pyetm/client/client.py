@@ -191,8 +191,8 @@ class Client(
     def __init__(
         self,
         scenario_id: str | None = None,
-        beta_engine: bool = False,
-        reset: bool = False,
+        engine_url: str | None = None,
+        etm_url: str | None = None,
         token: str | None = None,
         session: RequestsSession | AIOHTTPSession | None = None,
         **kwargs
@@ -204,16 +204,15 @@ class Client(
         scenario_id : str, default None
             The api_session_id to which the client connects. Can only access
             a limited number of methods when scenario_id is set to None.
-        beta_engine : bool, default False
-            Connect to the beta-engine instead of the production-engine.
-        reset : bool, default False
-            Reset scenario on initalization.
         token : str, default None
             Personal access token to authenticate requests to your
             personal account and scenarios. Detects token automatically
-            from environment when assigned to ETM_ACCESS_TOKEN when
-            connected to production or ETM_BETA_ACCESS_TOKEN when
-            connected to beta.
+            from environment when assigned to ETM_ACCESS_TOKEN.
+        engine_url : str, default None
+            Specify URL that points to ETM engine, default to public engine.
+        etm_url : str, default None
+            Specify URL that points to ETM model (pro), default to public
+            energy transition model.
         session: object instance, default None
             session instance that handles requests to ETM's public API.
             Default to use a RequestsSession.
@@ -238,7 +237,8 @@ class Client(
         self._session = session
 
         # set engine and token
-        self.beta_engine = beta_engine
+        self.engine_url = engine_url
+        self.etm_url = etm_url
         self.token = token
 
         # set scenario id
@@ -246,10 +246,6 @@ class Client(
 
         # set default gqueries
         self.gqueries = []
-
-        # reset scenario on intialization
-        if reset and (scenario_id is not None):
-            self.reset_scenario()
 
         # make message
         msg = (
@@ -282,7 +278,7 @@ class Client(
         params = {
             **{
                 "scenario_id": self.scenario_id,
-                "beta_engine": self.beta_engine,
+                "engine_url": self.engine_url,
                 "session": self.session
                 },
             **self.__kwargs
