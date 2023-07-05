@@ -176,26 +176,11 @@ class MYCClient():
             # hidden parameter for HOLON project
             'holon_gas_households_useful_demand_heat_per_person_absolute',
 
-            # issues with regard to min/max ranges and non-demand units
-            'efficiency_industry_chp_combined_cycle_gas_power_fuelmix_electricity',
-            'efficiency_industry_chp_combined_cycle_gas_power_fuelmix_heat',
-            'efficiency_industry_chp_engine_gas_power_fuelmix_electricity',
-            'efficiency_industry_chp_engine_gas_power_fuelmix_heat',
-            'efficiency_industry_chp_turbine_gas_power_fuelmix_electricity',
-            'efficiency_industry_chp_turbine_gas_power_fuelmix_heat',
-            'efficiency_industry_chp_ultra_supercritical_coal_electricity',
-            'efficiency_industry_chp_ultra_supercritical_coal_heat',
-            'efficiency_industry_chp_wood_pellets_electricity',
-            'efficiency_industry_chp_wood_pellets_heat',
-
             # set flh parameters instead
             'flh_of_energy_power_wind_turbine_coastal_user_curve',
             'flh_of_energy_power_wind_turbine_inland_user_curve',
             'flh_of_energy_power_wind_turbine_offshore_user_curve',
             'flh_of_solar_pv_solar_radiation_user_curve',
-
-            # breaking paramter for scenarios
-            'capacity_of_industry_metal_flexibility_load_shifting_electricity',
         ]
 
         return excluded
