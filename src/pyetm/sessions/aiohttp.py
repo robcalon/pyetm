@@ -1,36 +1,27 @@
 """aiohttp session object"""
 from __future__ import annotations
 
-import io
-import json
+from io import BytesIO
+from typing import Any, Literal, Mapping, overload, TYPE_CHECKING
+
 import asyncio
 
-from urllib.parse import urljoin
-from collections.abc import Mapping
-from typing import TYPE_CHECKING, Literal
-
-from pyetm.utils.loop import _LOOP, _LOOP_THREAD
-from pyetm.logger import get_modulelogger
-from pyetm.optional import import_optional_dependency
-from pyetm.exceptions import UnprossesableEntityError, format_error_messages
+from typing_extensions import Self
 
 import pandas as pd
 
+from pyetm.sessions.abc import SessionTemplate, ContentType, Method
+from pyetm.optional import import_optional_dependency
+from pyetm.utils.loop import _LOOP, _LOOP_THREAD
+
 if TYPE_CHECKING:
-
-    import ssl
-    import aiohttp
-
     from yarl import URL
-
-logger = get_modulelogger(__name__)
-
-Decoder = Literal['bytes', 'BytesIO', 'json', 'text']
-Method = Literal['delete', 'get', 'post', 'put']
+    from ssl import SSLContext
+    from aiohttp import ClientResponse, ClientSession, FormData, Fingerprint, BasicAuth
 
 
-class AIOHTTPSession:
-    """aiohttp-based session object"""
+class AIOHTTPSession(SessionTemplate):
+    """aiohttps based adaptation"""
 
     @property
     def loop(self):
@@ -42,50 +33,18 @@ class AIOHTTPSession:
         """seperate thread for event loop"""
         return _LOOP_THREAD
 
-    @property
-    def base_url(self) -> str | None:
-        """base url used in make_url"""
-        return self.__base_url
-
-    @base_url.setter
-    def base_url(self, base_url: str | None) -> None:
-
-        if base_url is None:
-            self.__base_url = base_url
-
-        if base_url is not None:
-            self.__base_url = str(base_url)
-
-    @property
-    def headers(self) -> dict:
-        """headers that are passed in each request"""
-        return self.__headers
-
-    @headers.setter
-    def headers(self, headers: dict | None) -> None:
-
-        if headers is None:
-            headers = {}
-
-        self.__headers = dict(headers)
-
-    def __init__(self, base_url: str | None = None,
-        headers: dict | None = None,
+    def __init__(
+        self,
         proxy: str | URL | None = None,
-        proxy_auth: aiohttp.BasicAuth | None = None,
-        ssl: ssl.SSLContext | bool | aiohttp.Fingerprint | None = None,
+        proxy_auth: BasicAuth | None = None,
+        ssl: SSLContext | bool | Fingerprint | None = None,
         proxy_headers: Mapping | None = None,
-        trust_env: bool = False):
+        trust_env: bool = False,
+    ):
         """session object for pyETM clients
 
         Parameters
         ----------
-        base_url: str, default None
-            Base url to which the session connects, all request urls
-            will be merged with the base url to create a destination.
-        headers : dict, default None
-            Headers that are always passed during requests, e.g. an
-            authorization token.
         proxy: str or URL, default None
             Proxy URL
         proxy_auth : aiohttp.BasicAuth, default None
@@ -102,252 +61,205 @@ class AIOHTTPSession:
             Should get proxies information from HTTP_PROXY / HTTPS_PROXY
             environment variables or ~/.netrc file if present."""
 
-        # set parameters
-        self.base_url = base_url
-        self.headers = headers
-
         # set environment kwargs for session construction
-        self._session_env = {
-            "trust_env": trust_env}
+        self.context = {"trust_env": trust_env}
 
         # set environment kwargs for method requests
-        self._request_env = {
-            "proxy": proxy, "proxy_auth": proxy_auth,
-            "ssl": ssl, "proxy_headers": proxy_headers}
+        self.kwargs = {
+            "proxy": proxy,
+            "proxy_auth": proxy_auth,
+            "ssl": ssl,
+            "proxy_headers": proxy_headers,
+        }
 
         # start loop thread if not already running
         if not self.loop_thread.is_alive():
             self.loop_thread.start()
 
-        # set session
-        self._session = None
+        # # set session
+        self._session: ClientSession | None = None
 
         # start loop thread if not already running
         if not self.loop_thread.is_alive():
             self.loop_thread.start()
-
-    def __repr__(self):
-        """reprodcution string"""
-
-        # object environment
-        env = ", ".join(f'{k}={v}' for k, v in {
-            **self._request_env, **self._session_env}.items())
-
-        return f"AIOHTTPSession({env})"
-
-    def __str__(self):
-        """stringname"""
-        return 'AIOHTTPSession'
-
-    def __enter__(self):
-        """enter context manager"""
-
-        # create session
-        self.connect()
-
-        return self
-
-    def __exit__(self, *args, **kwargs):
-        """exit context manager"""
-
-        # close session
-        self.close()
-
-    def make_url(self, url: str | None = None):
-        """join url with base url"""
-        return urljoin(self.base_url, url)
-
-    def connect(self):
-        """connect session"""
-
-        # specify coroutine and get future
-        coro = self.async_connect()
-        asyncio.run_coroutine_threadsafe(coro, self.loop).result()
-
-        return self
-
-    def close(self):
-        """close session"""
-
-        # specify coroutine and get future
-        coro = self.async_close()
-        asyncio.run_coroutine_threadsafe(coro, self.loop).result()
-
-    def request(self, method: Method, url: str,
-            decoder: Decoder = "bytes", **kwargs):
-        """request and handle api response"""
-
-        # specify coroutine and get future
-        coro = self.async_request(method, url, decoder, **kwargs)
-        future = asyncio.run_coroutine_threadsafe(coro, self.loop)
-
-        return future.result()
-
-    def delete(self, url: str | None = None,
-        decoder: Decoder = 'text', **kwargs):
-        """delete request"""
-        return self.request("delete", self.make_url(url), decoder, **kwargs)
-
-    def get(self, url: str | None = None,
-        decoder: Decoder = 'json', **kwargs):
-        """get request"""
-        return self.request("get", self.make_url(url), decoder, **kwargs)
-
-    def post(self, url: str | None = None,
-        decoder: Decoder = 'json', **kwargs):
-        """post request"""
-        return self.request("post", self.make_url(url), decoder, **kwargs)
-
-    def put(self, url: str | None = None,
-        decoder: Decoder = 'json', **kwargs):
-        """put request"""
-        return self.request("put", self.make_url(url), decoder, **kwargs)
-
-    def upload_series(self, url: str | None = None,
-        series: pd.Series | None = None, name: str | None = None, **kwargs):
-        """upload series object"""
-
-        # optional module import
-        aiohttp = import_optional_dependency('aiohttp')
-
-        # default to empty series
-        if series is None:
-            series = pd.Series()
-
-        # set key as name
-        if name is None:
-            name = "not specified"
-
-        # convert values to string
-        data = series.to_string(index=False)
-
-        # insert data in form
-        form = aiohttp.FormData()
-        form.add_field("file", data, filename=name)
-
-        return self.put(url, data=form, **kwargs)
 
     async def __aenter__(self):
         """enter async context manager"""
 
         # start up session
-        await self.async_connect()
+        await self.connect_async()
+        return self
+
+    async def __aexit__(self, *args, **kwargs):
+        """exit async context manager"""
+        await self.close_async()
+
+    def connect(self) -> Self:
+        """sync wrapper for async session connect"""
+
+        # specify coroutine and get future
+        coro = self.connect_async()
+        asyncio.run_coroutine_threadsafe(coro, self.loop).result()
 
         return self
 
-    async def __aexit__(self, *args, **kwargs) -> None:
-        """exit async context manager"""
-        await self.async_close()
+    async def connect_async(self):
+        """async session connect"""
 
-    async def async_connect(self):
-        """connect session"""
+        # import module and create session
+        aiohttp = import_optional_dependency("aiohttp")
+        self._session = aiohttp.ClientSession(**self.context)
 
-        # optional module import
-        aiohttp = import_optional_dependency('aiohttp')
+    def close(self):
+        """sync wrapper for async session close"""
 
-        # create session
-        self._session = aiohttp.ClientSession(**self._session_env)
+        # specify coroutine and get future
+        coro = self.close_async()
+        asyncio.run_coroutine_threadsafe(coro, self.loop).result()
 
-    async def async_close(self):
-        """close session"""
+    async def close_async(self):
+        """async session close"""
 
-        # close and remove session
-        await self._session.close()
+        # await session close
+        if self._session is not None:
+            await self._session.close()
+
+        # reset session
         self._session = None
 
-    async def async_request(self, method: Method, url: str,
-        decoder: Decoder = 'bytes', **kwargs):
-        """make request to api session"""
+    def upload(
+        self,
+        url: str,
+        series: pd.Series,
+        name: str | None = None,
+    ) -> dict[str, Any]:
+        """upload series"""
 
         # optional module import
-        aiohttp = import_optional_dependency('aiohttp')
+        aiohttp = import_optional_dependency("aiohttp")
 
-        retries = 5
-        while retries:
+        # set key as name
+        if name is None:
+            name = "unnamed"
 
-            try:
+        # convert series to string
+        data = series.to_string(index=False)
 
-                # merge kwargs with session envioronment kwargs
-                kwargs = {**self._request_env, **kwargs}
+        # insert data in form
+        form: FormData = aiohttp.FormData()
+        form.add_field("file", data, filename=name)
 
-                # add persistent headers
-                headers = kwargs.get('headers', {})
-                kwargs['headers'] = {**headers, **self.headers}
+        return self.request(
+            method="put", url=url, content_type="application/json", data=form)
 
-                # reusable existing session
-                session = bool(self._session)
+    @overload
+    def request(
+        self,
+        method: Method,
+        url: str,
+        content_type: Literal["application/json"],
+        **kwargs,
+    ) -> dict[str, Any]:
+        pass
 
-                # create session
-                if not session:
-                    await self.async_connect()
+    @overload
+    def request(
+        self,
+        method: Method,
+        url: str,
+        content_type: Literal["text/csv"],
+        **kwargs,
+    ) -> BytesIO:
+        pass
 
-                # make method request
-                request = getattr(self._session, method)
-                async with request(url, **kwargs) as resp:
+    @overload
+    def request(
+        self,
+        method: Method,
+        url: str,
+        content_type: Literal["text/html"],
+        **kwargs,
+    ) -> str:
+        pass
 
-                    # check response
-                    if not resp.status <= 400:
+    def request(
+        self,
+        method: Method,
+        url: str,
+        content_type: ContentType,
+        **kwargs,
+    ) -> dict[str, Any] | BytesIO | str:
+        """make request to api session"""
 
-                        # report error messages
-                        if resp.status == 422:
-                            await self._error_report(resp)
+        # specify coroutine and get future
+        coro = self.make_async_request(method, url, content_type, **kwargs)
+        future = asyncio.run_coroutine_threadsafe(coro, self.loop)
 
-                        # raise for status
-                        resp.raise_for_status()
+        return future.result()
 
-                    # bytes decoding
-                    if decoder == "bytes":
-                        resp = await resp.read()
+    async def make_async_request(
+        self,
+        method: Method,
+        url: str,
+        content_type: ContentType,
+        **kwargs,
+    ):
+        """make request to api session"""
 
-                    # bytes as BytesIO
-                    elif decoder == "BytesIO":
-                        byts = await resp.read()
-                        resp = io.BytesIO(byts)
+        # reusable existing session
+        session = bool(self._session)
 
-                    # json decoding
-                    elif decoder == "json":
-                        resp = await resp.json(encoding="utf-8")
+        # create session
+        if not session:
+            await self.connect_async()
 
-                    # text decoding
-                    elif decoder == "text":
-                        resp = await resp.text(encoding="utf-8")
+        # merge base and request headers
+        headers = kwargs.get("headers")
+        kwargs["headers"] = self.merge_headers(headers)
 
-                    else:
-                        msg = f"decoding method '{decoder}' not implemented"
-                        raise NotImplementedError(msg)
+        # merge base and request kwargs
+        kwargs = {**self.kwargs, **kwargs}
 
-                    return resp
-
-            # except connectionerrors and retry
-            except aiohttp.ClientConnectorError as error:
-                retries -= 1
-
-                # raise after retries
-                if not retries:
-                    raise error
-
-            finally:
-
-                # close session
-                if not session:
-                    await self.async_close()
-
-    async def _error_report(self, resp: aiohttp.ClientResponse) -> None:
-        """create error report when api returns error messages."""
+        # get request method
+        request = getattr(self._session, method)
 
         try:
+            # make request
+            async with request(url=url, **kwargs) as response:
 
-            # attempt decode error message(s)
-            msg = await resp.json(encoding="utf-8")
-            errors = msg.get("errors")
+                # assign type
+                response: ClientResponse = response
 
-        except json.decoder.JSONDecodeError:
+                # handle engine error message
+                if response.status == 422:
 
-            # no message returned
-            errors = None
+                    # raise for api error
+                    self.raise_for_api_error(
+                        await response.json(encoding='utf-8')
+                    )
 
-        if errors:
+                # handle other error messages
+                response.raise_for_status()
 
-            # format error message(s)
-            msg = format_error_messages(errors)
-            raise UnprossesableEntityError(msg)
+                # decode application/json
+                if content_type == "application/json":
+                    json: dict[str, Any] = await response.json(encoding='utf-8')
+                    return json
+
+                # decode text/csv
+                if content_type == "text/csv":
+                    content: bytes = await response.read()
+                    return BytesIO(content)
+
+                # decode text/html
+                if content_type == "text/html":
+                    text: str = await response.text(encoding='utf-8')
+                    return text
+
+            raise NotImplementedError(
+                f"Content-type '{content_type}' not implemented")
+
+        finally:
+            # handle session
+            if not session:
+                await self.close_async()
