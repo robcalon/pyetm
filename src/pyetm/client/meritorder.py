@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from pyetm.logger import get_modulelogger
+
 from .session import SessionMethods
 
 # get modulelogger
@@ -14,46 +15,49 @@ logger = get_modulelogger(__name__)
 class MeritOrderMethods(SessionMethods):
     """Merit Order Methods"""
 
-    def _get_merit_configuration(self, include_curves=True):
+    def _get_merit_configuration(self, include_curves: bool = True):
         """get merit configuration JSON"""
 
-        # lower cased boolean for params
-        include_curves = str(bool(include_curves))
+        # request parameters
+        params = {"include_curves": str(bool(include_curves)).lower()}
+        url = self.make_endpoint_url(endpoint="scenario_id", extra="merit")
 
-        # raise without scenario id
-        self._validate_scenario_id()
+        # make request
+        configuration = self.session.get(
+            url, params=params, content_type="application/json"
+        )
 
-        # prepare request
-        params = {'include_curves': include_curves.lower()}
-        url = f'scenarios/{self.scenario_id}/merit'
-
-        # request response
-        resp = self.session.get(url, params=params)
-
-        return resp
+        return configuration
 
     def get_participants(self, subset=None):
         """get particpants from merit configuration"""
 
         # supported subtypes
-        supported =  ['total_consumption', 'with_curve', 'generic',
-                      'storage', 'dispatchable', 'must_run', 'volatile']
+        supported = [
+            "total_consumption",
+            "with_curve",
+            "generic",
+            "storage",
+            "dispatchable",
+            "must_run",
+            "volatile",
+        ]
 
         # subset all types
         if subset is None:
             subset = supported
 
         # subset consumer types
-        elif (subset == 'consumer') | (subset == 'consumers'):
-            subset = ['total_consumption', 'with_curve']
+        elif (subset == "consumer") | (subset == "consumers"):
+            subset = ["total_consumption", "with_curve"]
 
         # subset flexible types
-        elif (subset == 'flexible') | (subset == 'flexibles'):
-            subset = ['generic', 'storage']
+        elif (subset == "flexible") | (subset == "flexibles"):
+            subset = ["generic", "storage"]
 
         # subset producer types
-        elif (subset == 'producer') | (subset == 'producers'):
-            subset = ['dispatchable', 'must_run', 'volatile']
+        elif (subset == "producer") | (subset == "producers"):
+            subset = ["dispatchable", "must_run", "volatile"]
 
         # other keys always in list
         if isinstance(subset, str):
@@ -64,22 +68,24 @@ class MeritOrderMethods(SessionMethods):
             subset = list(subset)
 
         # correct response JSON
-        recs = self._get_merit_configuration(False)['participants']
-        recs = [rec for rec in recs if rec.get('type') in subset]
+        recs = self._get_merit_configuration(False)["participants"]
+        recs = [rec for rec in recs if rec.get("type") in subset]
 
         def correct(rec):
             """null correction in recordings"""
-            return {k: (v if (v != 'null') & (v is not None) else np.nan)
-                    for k, v in rec.items()}
+            return {
+                k: (v if (v != "null") & (v is not None) else np.nan)
+                for k, v in rec.items()
+            }
 
         # correct records to replace null with None
         recs = [correct(rec) for rec in recs]
-        frame = pd.DataFrame.from_records(recs, index='key')
+        frame = pd.DataFrame.from_records(recs, index="key")
         frame = frame.rename_axis(None, axis=0).sort_index()
 
         # drop curve column
-        if 'curve' in frame.columns:
-            frame = frame.drop(columns='curve')
+        if "curve" in frame.columns:
+            frame = frame.drop(columns="curve")
 
         return frame
 
@@ -91,11 +97,11 @@ class MeritOrderMethods(SessionMethods):
 
         # map participants to curve names
         # drops paricipants without curve
-        recs = response['participants']
-        cmap = {rec['key']: rec['curve'] for rec in recs if rec['curve']}
+        recs = response["participants"]
+        cmap = {rec["key"]: rec["curve"] for rec in recs if rec["curve"]}
 
         # extract curves from response
-        curves = response['curves']
+        curves = response["curves"]
         curves = pd.DataFrame.from_dict(curves)
 
         def sset_column(key, value):
@@ -113,17 +119,13 @@ class MeritOrderMethods(SessionMethods):
         returns both marginal costs and installed capacity"""
 
         # get all dispatchable units
-        units = self.get_participants(subset='dispatchable')
+        units = self.get_participants(subset="dispatchable")
 
         # cap related keys
-        keys = [
-            'availability',
-            'number_of_units',
-            'output_capacity_per_unit'
-        ]
+        keys = ["availability", "number_of_units", "output_capacity_per_unit"]
 
         # evalaute capacity and specify relevant columns
-        units['capacity'] = units[keys].product(axis=1)
-        units = units[['marginal_costs', 'capacity']]
+        units["capacity"] = units[keys].product(axis=1)
+        units = units[["marginal_costs", "capacity"]]
 
-        return units.sort_values(by='marginal_costs')
+        return units.sort_values(by="marginal_costs")

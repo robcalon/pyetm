@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 import copy
-import shutil
 import logging
+import shutil
 
-from datetime import datetime
+from os import PathLike
 from pathlib import Path
 
-def find_dirpath(dirname:  str, dirpath: str) -> Path:
+
+def find_dirpath(dirname: str | PathLike, dirpath: str | PathLike) -> Path:
     """reduce dirpath until dirname in path found"""
 
     # convert to Path
@@ -20,10 +21,8 @@ def find_dirpath(dirname:  str, dirpath: str) -> Path:
 
     # iterate over dirpath until basename matched dirname
     while mdirpath.stem != dirname:
-
         # limit number of recursions
         if recursions >= max_recursions:
-
             # make message
             msg = f"Could not find '{dirname} in '{dirpath}'"
 
@@ -35,11 +34,12 @@ def find_dirpath(dirname:  str, dirpath: str) -> Path:
 
     return mdirpath
 
-def _create_mainlogger(logdir) -> None:
+
+def _create_mainlogger(logdir) -> logging.Logger:
     """create mainlogger"""
 
     # make logdir
-    logdir = Path(logdir).joinpath('logs')
+    logdir = Path(logdir).joinpath("logs")
     Path.mkdir(logdir, exist_ok=True)
 
     # get rootlogger
@@ -47,13 +47,13 @@ def _create_mainlogger(logdir) -> None:
     logger.setLevel(logging.DEBUG)
 
     # create formatter
-    fmt = '%(asctime)s | %(levelname)s | %(name)s | %(message)s'
-    datefmt = '%Y-%m-%d %H:%M'
+    fmt = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+    datefmt = "%Y-%m-%d %H:%M"
     formatter = logging.Formatter(fmt, datefmt=datefmt)
 
     # create file handler
-    filepath = logdir.joinpath(PACKAGENAME + '.log')
-    file_handler = logging.FileHandler(filepath, mode='w+')
+    filepath = logdir.joinpath(PACKAGENAME + ".log")
+    file_handler = logging.FileHandler(filepath, mode="w+")
     file_handler.setFormatter(formatter)
     file_handler.setLevel(logging.DEBUG)
 
@@ -68,6 +68,7 @@ def _create_mainlogger(logdir) -> None:
 
     return logger
 
+
 def get_modulelogger(name: str) -> logging.Logger:
     """get instance of modulelogger"""
 
@@ -77,7 +78,8 @@ def get_modulelogger(name: str) -> logging.Logger:
 
     return _moduleloggers[name]
 
-def export_logfile(dst: str | None = None) -> None:
+
+def export_logfile(dst: str | PathLike | None = None) -> None:
     """Export logfile to targetfolder,
     defaults to current working directory."""
 
@@ -88,32 +90,34 @@ def export_logfile(dst: str | None = None) -> None:
     # export file
     shutil.copyfile(LOGDIR, dst)
 
-def log_exception(exc: Exception,
-    logger: logging.Logger | None = None) -> None:
-    """report error message and export logs"""
 
-    # default logger
-    if logger is None:
-        logger = get_modulelogger(__name__)
+# def log_exception(exc: Exception, logger: logging.Logger | None = None
+# ) -> None:
+#     """report error message and export logs"""
 
-    # get current time
-    now = datetime.now()
-    now = now.strftime("%Y%m%d%H%M")
+#     # default logger
+#     if logger is None:
+#         logger = get_modulelogger(__name__)
 
-    # make filepath
-    filepath = Path.cwd().joinpath(now + '.log')
+#     # get current time
+#     now = datetime.now()
+#     now = now.strftime("%Y%m%d%H%M")
 
-    # log exception as error
-    logger.error("Encountered error: exported logs to '%s'", filepath)
-    logger.debug("Traceback for encountered error:", exc_info=True)
+#     # make filepath
+#     filepath = Path.cwd().joinpath(now + ".log")
 
-    # export logfile
-    export_logfile(filepath)
+#     # log exception as error
+#     logger.error("Encountered error: exported logs to '%s'", filepath)
+#     logger.debug("Traceback for encountered error:", exc_info=True)
 
-    raise exc
+#     # export logfile
+#     export_logfile(filepath)
+
+#     raise exc
+
 
 # package globals
-PACKAGENAME = 'pyetm'
+PACKAGENAME = "pyetm"
 PACKAGEPATH = find_dirpath(PACKAGENAME, __file__)
 
 # logger globals

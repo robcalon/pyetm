@@ -1,5 +1,6 @@
 """graph query methods"""
 import functools
+
 import pandas as pd
 
 from .session import SessionMethods
@@ -9,7 +10,7 @@ class GQueryMethods(SessionMethods):
     """Graph query methods"""
 
     @property
-    def gqueries(self) -> pd.Index:
+    def gqueries(self):
         """returns a list of set gqueries"""
         return self._gqueries
 
@@ -41,10 +42,10 @@ class GQueryMethods(SessionMethods):
 
         # subset curves from gquery_results
         gqueries = self.gquery_results
-        gqueries = gqueries[gqueries.unit == 'curve']
+        gqueries = gqueries[gqueries.unit == "curve"]
 
         # subset future column and convert to series
-        gqueries =  gqueries.future.apply(pd.Series)
+        gqueries = gqueries.future.apply(pd.Series)
 
         return gqueries.T
 
@@ -54,7 +55,7 @@ class GQueryMethods(SessionMethods):
 
         # subset deltas from gquery_results
         gqueries = self.gquery_results
-        gqueries = gqueries[gqueries.unit != 'curve']
+        gqueries = gqueries[gqueries.unit != "curve"]
 
         return gqueries
 
@@ -74,14 +75,13 @@ class GQueryMethods(SessionMethods):
         self._validate_scenario_id()
 
         # create gquery request
-        data = {'gqueries': self.gqueries}
-        url = f'scenarios/{self.scenario_id}'
+        data = {"gqueries": self.gqueries}
+        url = self.make_endpoint_url(endpoint="scenario_id")
 
         # evaluate post
-        response = self.session.put(url, json=data)
+        message = self.session.put(url, json=data)
 
         # transform into dataframe
-        records = response['gqueries']
-        gquery_results = pd.DataFrame.from_dict(records, orient='index')
+        gquery_results = pd.DataFrame.from_dict(message["gqueries"], orient="index")
 
         return gquery_results

@@ -10,14 +10,15 @@ from typing_extensions import Self
 
 import pandas as pd
 
-from pyetm.sessions.abc import SessionTemplate, ContentType, Method
 from pyetm.optional import import_optional_dependency
-from pyetm.utils.loop import _LOOP, _LOOP_THREAD
+from pyetm.sessions.abc import SessionTemplate
+from pyetm.types import ContentType, Method
+from pyetm.utils.loop import _loop, _loop_thread
 
 if TYPE_CHECKING:
     from yarl import URL
     from ssl import SSLContext
-    from aiohttp import ClientResponse, ClientSession, FormData, Fingerprint, BasicAuth
+    from aiohttp import ClientSession, FormData, Fingerprint, BasicAuth
 
 
 class AIOHTTPSession(SessionTemplate):
@@ -26,12 +27,12 @@ class AIOHTTPSession(SessionTemplate):
     @property
     def loop(self):
         """used event loop"""
-        return _LOOP
+        return _loop
 
     @property
     def loop_thread(self):
         """seperate thread for event loop"""
-        return _LOOP_THREAD
+        return _loop_thread
 
     def __init__(
         self,
@@ -131,7 +132,7 @@ class AIOHTTPSession(SessionTemplate):
         self,
         url: str,
         series: pd.Series,
-        name: str | None = None,
+        filename: str | None = None,
     ) -> dict[str, Any]:
         """upload series"""
 
@@ -139,18 +140,19 @@ class AIOHTTPSession(SessionTemplate):
         aiohttp = import_optional_dependency("aiohttp")
 
         # set key as name
-        if name is None:
-            name = "unnamed"
+        if filename is None:
+            filename = "filename not specified"
 
         # convert series to string
         data = series.to_string(index=False)
 
         # insert data in form
         form: FormData = aiohttp.FormData()
-        form.add_field("file", data, filename=name)
+        form.add_field("file", data, filename=filename)
 
         return self.request(
-            method="put", url=url, content_type="application/json", data=form)
+            method="put", url=url, content_type="application/json", data=form
+        )
 
     @overload
     def request(
@@ -226,24 +228,17 @@ class AIOHTTPSession(SessionTemplate):
         try:
             # make request
             async with request(url=url, **kwargs) as response:
-
-                # assign type
-                response: ClientResponse = response
-
                 # handle engine error message
                 if response.status == 422:
-
                     # raise for api error
-                    self.raise_for_api_error(
-                        await response.json(encoding='utf-8')
-                    )
+                    self.raise_for_api_error(await response.json(encoding="utf-8"))
 
                 # handle other error messages
                 response.raise_for_status()
 
                 # decode application/json
                 if content_type == "application/json":
-                    json: dict[str, Any] = await response.json(encoding='utf-8')
+                    json: dict[str, Any] = await response.json(encoding="utf-8")
                     return json
 
                 # decode text/csv
@@ -253,11 +248,10 @@ class AIOHTTPSession(SessionTemplate):
 
                 # decode text/html
                 if content_type == "text/html":
-                    text: str = await response.text(encoding='utf-8')
+                    text: str = await response.text(encoding="utf-8")
                     return text
 
-            raise NotImplementedError(
-                f"Content-type '{content_type}' not implemented")
+            raise NotImplementedError(f"Content-type '{content_type}' not implemented")
 
         finally:
             # handle session

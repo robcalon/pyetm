@@ -2,7 +2,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from io import BytesIO
-from typing import Any, Literal, overload
+from typing import Any, Literal, Mapping, overload
 from urllib.parse import urljoin
 
 import re
@@ -10,19 +10,9 @@ import re
 import pandas as pd
 
 from pyetm.exceptions import UnprossesableEntityError
+from pyetm.types import ContentType, Method
+from pyetm.utils.general import mapping_to_str
 
-ContentType = Literal[
-    "application/json",
-    "text/csv",
-    "text/html"
-]
-
-Method = Literal[
-    "delete",
-    "get",
-    "post",
-    "put"
-]
 
 class SessionABC(ABC):
     """Session abstract base class for properties and methods
@@ -48,9 +38,7 @@ class SessionABC(ABC):
 
     @abstractmethod
     def delete(
-        self,
-        url: str,
-        headers: dict[str, str] | None = None
+        self, url: str, headers: Mapping[str, str] | None = None
     ) -> dict[str, Any]:
         """delete request"""
 
@@ -60,8 +48,8 @@ class SessionABC(ABC):
         self,
         url: str,
         content_type: Literal["application/json"],
-        params: dict | None = None,
-        headers: dict[str, str] | None = None
+        params: Mapping[str, str | int] | None = None,
+        headers: Mapping[str, str] | None = None,
     ) -> dict[str, Any]:
         pass
 
@@ -71,8 +59,8 @@ class SessionABC(ABC):
         self,
         url: str,
         content_type: Literal["text/csv"],
-        params: dict | None = None,
-        headers: dict[str, str] | None = None
+        params: Mapping[str, str | int] | None = None,
+        headers: Mapping[str, str] | None = None,
     ) -> BytesIO:
         pass
 
@@ -82,8 +70,8 @@ class SessionABC(ABC):
         self,
         url: str,
         content_type: Literal["text/html"],
-        params: dict | None = None,
-        headers: dict[str, str] | None = None
+        params: Mapping[str, str | int] | None = None,
+        headers: Mapping[str, str] | None = None,
     ) -> str:
         pass
 
@@ -92,8 +80,8 @@ class SessionABC(ABC):
         self,
         url: str,
         content_type: ContentType,
-        params: dict | None = None,
-        headers: dict[str, str] | None = None
+        params: Mapping[str, str | int] | None = None,
+        headers: Mapping[str, str] | None = None,
     ) -> dict[str, Any] | BytesIO | str:
         """get request"""
 
@@ -101,8 +89,8 @@ class SessionABC(ABC):
     def post(
         self,
         url: str,
-        json: dict | None = None,
-        headers: dict[str, str] | None = None
+        json: Mapping[str, Any] | None = None,
+        headers: Mapping[str, str] | None = None,
     ) -> dict[str, Any]:
         """post request"""
 
@@ -110,17 +98,14 @@ class SessionABC(ABC):
     def put(
         self,
         url: str,
-        json: dict | None = None,
-        headers: dict[str, str] | None = None
+        json: Mapping[str, Any] | None = None,
+        headers: Mapping[str, str] | None = None,
     ) -> dict[str, Any]:
         """put request"""
 
     @abstractmethod
     def upload(
-        self,
-        url: str,
-        series: pd.Series,
-        name: str | None = None
+        self, url: str, series: pd.Series, filename: str | None = None
     ) -> dict[str, Any]:
         """upload series request"""
 
@@ -139,7 +124,7 @@ class SessionTemplate(SessionABC):
         """passed session environment parameters"""
 
         # check for attribute
-        if not hasattr(self, '_context'):
+        if not hasattr(self, "_context"):
             self.context = None
 
         return self._context
@@ -153,7 +138,7 @@ class SessionTemplate(SessionABC):
         """passed session kwargs"""
 
         # check for attribute
-        if not hasattr(self, '_kwargs'):
+        if not hasattr(self, "_kwargs"):
             self.kwargs = None
 
         return self._kwargs
@@ -166,7 +151,7 @@ class SessionTemplate(SessionABC):
         return self.__class__.__name__
 
     def __repr__(self):
-        return f"{self}({self.kwargs_to_str({**self.kwargs, **self.context})})"
+        return f"{self}({mapping_to_str({**self.kwargs, **self.context})})"
 
     def __enter__(self):
         self.connect()
@@ -188,15 +173,10 @@ class SessionTemplate(SessionABC):
     def headers(self, headers: dict[str, str] | None) -> None:
         self._headers = dict(headers) if headers else {}
 
-    @staticmethod
-    def kwargs_to_str(kwargs: dict):
-        """transform kwargs dict to string of arguments"""
-        return ", ".join(f"{key}={value}" for key, value in kwargs.items())
-
     def delete(
         self,
         url: str,
-        headers: dict[str, str] | None = None,
+        headers: Mapping[str, str] | None = None,
     ):
         """delete request"""
         return self.request(
@@ -210,8 +190,8 @@ class SessionTemplate(SessionABC):
         self,
         url: str,
         content_type: ContentType,
-        params: dict | None = None,
-        headers: dict[str, str] |None = None,
+        params: Mapping[str, str | int] | None = None,
+        headers: Mapping[str, str] | None = None,
     ):
         """get request"""
         return self.request(
@@ -219,14 +199,14 @@ class SessionTemplate(SessionABC):
             url=url,
             content_type=content_type,
             headers=headers,
-            params=params
+            params=params,
         )
 
     def post(
         self,
         url: str,
-        json: dict | None = None,
-        headers: dict[str, str] | None = None,
+        json: Mapping[str, Any] | None = None,
+        headers: Mapping[str, str] | None = None,
     ):
         """post request"""
         return self.request(
@@ -240,8 +220,8 @@ class SessionTemplate(SessionABC):
     def put(
         self,
         url: str,
-        json: dict | None = None,
-        headers: dict[str, str] | None = None,
+        json: Mapping[str, Any] | None = None,
+        headers: Mapping[str, str] | None = None,
     ):
         """put request"""
         return self.request(
@@ -287,11 +267,7 @@ class SessionTemplate(SessionABC):
 
     @abstractmethod
     def request(
-        self,
-        method: Method,
-        url: str,
-        content_type: ContentType,
-        **kwargs
+        self, method: Method, url: str, content_type: ContentType, **kwargs
     ) -> Any | dict[str, Any] | BytesIO | str:
         """make request"""
 

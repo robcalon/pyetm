@@ -4,7 +4,7 @@ from __future__ import annotations
 import pandas as pd
 
 from pyetm.logger import get_modulelogger
-from pyetm.sessions import RequestsSession, AIOHTTPSession
+from pyetm.sessions import AIOHTTPSession, RequestsSession
 
 from .account import AccountMethods
 from .curves import CurveMethods
@@ -43,7 +43,7 @@ class Client(
         forecast_storage_order: list[str] | None = None,
         heat_network_order: list[str] | None = None,
         ccurves: pd.DataFrame | None = None,
-        **kwargs
+        **kwargs,
     ):
         """Create a new scenario from parameters.
 
@@ -77,10 +77,16 @@ class Client(
         ------
         client : Client
             Returns initialized client object."""
+
         # initialize new scenario
         client = cls(**kwargs)
-        client.create_new_scenario(area_code, end_year, metadata=metadata,
-            keep_compatible=keep_compatible, private=private)
+        client.create_new_scenario(
+            area_code,
+            end_year,
+            metadata=metadata,
+            keep_compatible=keep_compatible,
+            private=private,
+        )
 
         # set user values
         if uvalues is not None:
@@ -103,11 +109,11 @@ class Client(
     @classmethod
     def from_existing_scenario(
         cls,
-        scenario_id: str | None = None,
+        scenario_id: int | None = None,
         metadata: dict | None = None,
         keep_compatible: bool | None = None,
         private: bool | None = None,
-        **kwargs
+        **kwargs,
     ):
         """create a new scenario as a copy of an existing scenario.
 
@@ -138,7 +144,8 @@ class Client(
 
         # copy scenario id
         client.copy_scenario(
-            scenario_id, metadata, keep_compatible, private, connect=True)
+            scenario_id, metadata, keep_compatible, private, connect=True
+        )
 
         return client
 
@@ -149,7 +156,7 @@ class Client(
         metadata: dict | None = None,
         keep_compatible: bool | None = None,
         private: bool | None = None,
-        **kwargs
+        **kwargs,
     ):
         """initialize client from saved scenario id
 
@@ -178,24 +185,23 @@ class Client(
         client = cls(**kwargs)
 
         # make request
-        url = f"saved_scenarios/{saved_scenario_id}"
-        headers = {'content-type': 'application/json'}
-
-        # connect to saved scenario and
-        scenario_id = client.session.get(
-            url, decoder='json', headers=headers)['scenario_id']
+        url = client.make_endpoint_url(endpoint="saved_scenarios")
+        scenario_id = int(
+            client.session.get(url, content_type="application/json")["scenario_id"]
+        )
 
         return cls.from_existing_scenario(
-            scenario_id, metadata, keep_compatible, private, **kwargs)
+            scenario_id, metadata, keep_compatible, private, **kwargs
+        )
 
     def __init__(
         self,
-        scenario_id: str | None = None,
+        scenario_id: int | None = None,
         engine_url: str | None = None,
         etm_url: str | None = None,
         token: str | None = None,
         session: RequestsSession | AIOHTTPSession | None = None,
-        **kwargs
+        **kwargs,
     ):
         """client object to process ETM requests via its public API
 
@@ -234,7 +240,7 @@ class Client(
 
         # set session
         self.__kwargs = kwargs
-        self._session = session
+        self.session = session
 
         # set engine and token
         self.engine_url = engine_url
@@ -250,9 +256,9 @@ class Client(
         # make message
         msg = (
             "Initialised new Client: "
-                f"'scenario_id={self.scenario_id}, "
-                f"area_code={self.area_code}, "
-                f"end_year={self.end_year}'"
+            f"'scenario_id={self.scenario_id}, "
+            f"area_code={self.area_code}, "
+            f"end_year={self.end_year}'"
         )
 
         logger.debug(msg)
@@ -279,13 +285,13 @@ class Client(
             **{
                 "scenario_id": self.scenario_id,
                 "engine_url": self.engine_url,
-                "session": self.session
-                },
-            **self.__kwargs
-            }
+                "session": self.session,
+            },
+            **self.__kwargs,
+        }
 
         # object environment
-        env = ", ".join(f'{k}={v}' for k, v in params.items())
+        env = ", ".join(f"{k}={v}" for k, v in params.items())
 
         return f"Client({env})"
 
@@ -295,9 +301,9 @@ class Client(
         # make stringname
         strname = (
             "Client("
-                f"scenario_id={self.scenario_id}, "
-                f"area_code={self.area_code}, "
-                f"end_year={self.end_year})"
+            f"scenario_id={self.scenario_id}, "
+            f"area_code={self.area_code}, "
+            f"end_year={self.end_year})"
         )
 
         return strname

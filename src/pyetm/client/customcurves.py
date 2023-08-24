@@ -1,12 +1,15 @@
 """custom curve methods"""
 from __future__ import annotations
-
-from collections.abc import Iterable
-
 import functools
+
+from collections.abc import Iterable, Mapping
+from typing import Any
+
 import pandas as pd
 
 from pyetm.logger import get_modulelogger
+from pyetm.utils.general import bool_to_json
+
 from .session import SessionMethods
 
 # get modulelogger
@@ -16,59 +19,51 @@ logger = get_modulelogger(__name__)
 class CustomCurveMethods(SessionMethods):
     """Custom Curve Methods"""
 
-    def __overview(self, include_unattached: bool = False,
-            include_internal: bool = False) -> pd.DataFrame:
+    def _get_overview(
+        self, include_unattached: bool = False, include_internal: bool = False
+    ) -> pd.DataFrame:
         """fetch custom curve descriptives"""
 
-        # raise without scenario id
-        self._validate_scenario_id()
-
         # newdict
-        params = {}
+        params: dict[str, str] = {}
 
-        # convert boolean
-        if include_unattached:
-            include_unattached = str(bool(include_unattached))
-            params['include_unattached'] = include_unattached.lower()
+        # include unattached
+        if include_unattached is True:
+            params["include_unattached"] = bool_to_json(include_unattached)
 
-        # convert boolean
-        if include_internal:
-            include_internal = str(bool(include_internal))
-            params['include_internal'] = include_internal.lower()
+        # include internal
+        if include_internal is True:
+            params["include_internal"] = bool_to_json(include_internal)
 
-        # request repsonse
-        url = f'scenarios/{self.scenario_id}/custom_curves'
-        resp = self.session.get(url, params=params)
+        # make url
+        url = self.make_endpoint_url("custom_curves")
+
+        # get custom curves
+        records = self.session.get(url, params=params, content_type="application/json")
 
         # check for response
-        if bool(resp) is True:
-
-            # convert response to frame
-            ccurves = pd.DataFrame.from_records(resp, index="key")
+        if bool(records) is True:
+            ccurves = pd.DataFrame.from_records(records, index="key")
 
             # format datetime column
             if "date" in ccurves.columns:
-                ccurves = self._format_datetime(ccurves)
+                ccurves["date"] = pd.to_datetime(ccurves["date"])
 
         else:
-
             # return empty frame
             ccurves = pd.DataFrame()
 
         return ccurves
 
-    def get_custom_curve_keys(self, include_unattached: bool = False,
-            include_internal: bool = False) -> pd.Index:
+    def get_custom_curve_keys(
+        self, include_unattached: bool = False, include_internal: bool = False
+    ) -> list[str]:
         """get all custom curve keys"""
+        return self._get_overview(include_unattached, include_internal).index.to_list()
 
-        # subset keys
-        params = include_unattached, include_internal
-        keys = self.__overview(*params).copy()
-
-        return pd.Index(keys.index, name='ccurve_keys')
-
-    def get_custom_curve_settings(self, include_unattached: bool = False,
-            include_internal: bool = False) -> pd.DataFrame:
+    def get_custom_curve_settings(
+        self, include_unattached: bool = False, include_internal: bool = False
+    ) -> pd.DataFrame:
         """show overview of custom curve settings"""
 
         # get relevant keys
@@ -76,327 +71,225 @@ class CustomCurveMethods(SessionMethods):
         keys = self.get_custom_curve_keys(*params)
 
         # empty frame without returned keys
-        if keys.empty:
+        if not keys:
             return pd.DataFrame()
 
         # reformat overrides
-        ccurves = self.__overview(*params).copy()
-        ccurves.overrides = ccurves.overrides.apply(len)
+        ccurves = self._get_overview(*params).copy()
+        ccurves["overrides"] = ccurves["overrides"].apply(len)
 
         # drop messy stats column
-        if 'stats' in ccurves.columns:
-            ccurves = ccurves[ccurves.columns.drop('stats')]
+        if "stats" in ccurves.columns:
+            ccurves = ccurves[ccurves.columns.drop("stats")]
 
         # drop unattached keys
         if not include_unattached:
-            ccurves = ccurves.loc[ccurves.attached]
+            ccurves = ccurves.loc[ccurves["attached"]]
             ccurves = ccurves.drop(columns="attached")
 
-        return ccurves
+        return ccurves.sort_index()
 
-    def get_custom_curve_user_value_overrides(self,
-            include_unattached: bool = False,
-            include_internal: bool = False) -> pd.DataFrame:
+    def get_custom_curve_user_value_overrides(
+        self, include_unattached: bool = False, include_internal: bool = False
+    ):
         """get overrides of user value keys by custom curves"""
 
         # subset and explode overrides
-        cols = ['overrides', 'attached']
+        cols = ["overrides", "attached"]
 
         # get overview curves
         params = include_unattached, include_internal
-        overview = self.__overview(*params).copy()
+        overview = self._get_overview(*params).copy()
+
+        # review overview
+        if overview.empty:
+            return overview
 
         # explode and drop na
-        overrides = overview[cols].explode('overrides')
+        overrides = overview[cols].explode("overrides")
         overrides = overrides.dropna()
 
         # reset index
         overrides = overrides.reset_index()
-        overrides.columns = ['overriden_by', 'user_value_key', 'active']
+        overrides.columns = pd.Index(["override_by", "user_value_key", "active"])
 
         # set index
-        overrides = overrides.set_index('user_value_key')
+        overrides = overrides.set_index("user_value_key")
 
         # subset active
         if not include_unattached:
-            return overrides.overriden_by[overrides.active]
+            return overrides.loc[overrides["active"]]
 
         return overrides
 
     @property
-    def custom_curves(self) -> pd.DataFrame:
+    def custom_curves(self) -> pd.Series[Any] | pd.DataFrame:
         """fetch custom curves"""
         return self.get_custom_curves()
 
     @custom_curves.setter
-    def custom_curves(self, ccurves: pd.DataFrame) -> None:
+    def custom_curves(self, ccurves: pd.Series[Any] | pd.DataFrame | None):
         """set custom curves without option to set a name"""
 
-        # check for old custom curves
-        keys = self.get_custom_curve_keys()
-        if not keys.empty:
-
-            # remove old custom curves
-            self.delete_custom_curves()
-
-        # set single custom curve
-        if isinstance(ccurves, pd.Series):
-
-            if ccurves.name is not None:
-                self.upload_custom_curve(ccurves, ccurves.name)
-
-            else:
-                raise KeyError("passed custom curve has no name")
-
-        elif isinstance(ccurves, pd.DataFrame):
-            self.upload_custom_curves(ccurves)
-
-        else:
-            raise TypeError("custom curves must be a series, frame or None")
-
-    def __delete_ccurve(self, key: str) -> None:
-        """delete without raising or resetting"""
-
-        # validate key
-        key = self._validate_ccurve_key(key)
-
-        # make request
-        url = f'scenarios/{self.scenario_id}/custom_curves/{key}'
-        self.session.delete(url)
-
-    def _format_datetime(self, ccurves: pd.DataFrame) -> pd.DataFrame:
-        """format datetime"""
-
-        # format datetime
-        dtype = 'datetime64[ns, UTC]'
-        ccurves.date = ccurves.date.astype(dtype)
-
-        # rename column
-        cols = {'date': 'datetime'}
-        ccurves = ccurves.rename(columns=cols)
-
-        return ccurves
-
-    def __get_ccurve(self, key: str) -> pd.Series:
-        """get custom curve"""
-
-        # validate key
-        key = self._validate_ccurve_key(key)
-
-        # make request
-        url = f'scenarios/{self.scenario_id}/custom_curves/{key}'
-        resp = self.session.get(url, decoder='BytesIO')
-
-        # convert to series
-        curve = pd.read_csv(resp, header=None, names=[key])
-
-        return curve.squeeze('columns')
-
-    def __upload_ccurve(self, curve: pd.Series, key: str | None = None,
-            name: str | None = None) -> None:
-        """upload without raising or resetting"""
-
-        # resolve None
-        if key is None:
-
-            # check series object
-            if isinstance(curve, pd.Series):
-
-                # use series name
-                if curve.name is not None:
-                    key = curve.name
-
-        # validate key
-        key = self._validate_ccurve_key(key)
-
-        # delete specified ccurve
-        if curve is None:
-            self.delete_custom_curve(key)
-
-        # check ccurve
-        curve = self._check_ccurve(curve, key)
-
-        # make request
-        url = f'scenarios/{self.scenario_id}/custom_curves/{key}'
-        self.session.upload_series(url, curve, name=name)
-
-    def _check_ccurve(self, curve: pd.Series, key: str) -> pd.Series:
-        """check if a ccurve is compatible"""
-
-        # subset columns from frame
-        if isinstance(curve, pd.DataFrame):
-            curve = curve[key]
-
-        # assume list-like
-        if not isinstance(curve, pd.Series):
-            curve = pd.Series(curve, name=key)
-
-        # check length
-        if not len(curve) == 8760:
-            raise ValueError("curve must contain 8760 entries")
-
-        return curve
-
-    def _validate_ccurve_key(self, key: str) -> str:
-        """check if key is valid ccurve"""
-
-        # raise for None
-        if key is None:
-            raise KeyError("No key specified for custom curve")
-
-        # check if key in ccurve index
-        params = {'include_unattached': True, 'include_internal': True}
-        if key not in self.get_custom_curve_keys(**params):
-            raise KeyError(f"'{key}' is not a valid custom curve key")
-
-        return key
-
-    def delete_custom_curve(self, key: str) -> None:
-        """delate an uploaded ccurve"""
-
-        # raise without scenario id
-        self._validate_scenario_id()
-
-        # if key is attached
-        if key in self.get_custom_curve_keys():
-
-            # delete ccurve and reset
-            self.__delete_ccurve(key)
-            self._reset_cache()
-
-        else:
-            # warn user for attempt
-            msg = (f"%s: attempted to remove '{key}', " +
-                   "while curve already unattached") %self
-            logger.warning(msg)
-
-    def delete_custom_curves(self,
-            keys: Iterable[str] | None = None) -> None:
-        """delete all custom curves"""
-
-        # raise without scenario id
-        self._validate_scenario_id()
-
-        # default keys
-        if keys is None:
-            keys = []
-
-        # convert iterable
-        if not isinstance(keys, pd.Index):
-            keys = pd.Index(keys)
-
-        # get keys that need deleting
-        attached = self.get_custom_curve_keys()
-
-        # default keys
-        if keys.empty:
-            keys = attached
-
-        else:
-            # subset attached keys
-            keys = keys[keys.isin(attached)]
-
-        # check validity
-        if (not attached.empty) & (not keys.empty):
-
-            # delete all ccurves
-            for key in keys:
-                self.__delete_ccurve(key)
-
-            # reset session
-            self._reset_cache()
-
-        else:
-            # warn user for attempt
-            msg = ("%s: attempted to remove custom curves, " +
-                   "without any (specified) custom curves attached") %self
-            logger.warning(msg)
-
-    def get_custom_curve(self, key: str):
-        """return specific custom curve"""
-        key = self._validate_ccurve_key(key)
-        return self.custom_curves[key]
-
-    @functools.lru_cache(maxsize=1)
-    def get_custom_curves(self,
-            keys: Iterable[str] | None = None) -> pd.DataFrame:
-        """return all attached curstom curves"""
-
-        # raise without scenario id
-        self._validate_scenario_id()
-
-        # default keys
-        if keys is None:
-            keys = []
-
-        # convert iterable
-        if not isinstance(keys, pd.Index):
-            keys = pd.Index(keys)
-
-        # get keys that need deleting
-        attached = self.get_custom_curve_keys()
-
-        # default keys
-        if keys.empty:
-            keys = attached
-
-        else:
-            # subset attached keys
-            keys = keys[keys.isin(attached)]
-
-        # check validity
-        if not attached.empty:
-
-            # get attached curves
-            func = self.__get_ccurve
-            ccurves =  pd.concat([func(key) for key in attached], axis=1)
-
-        else:
-
-            # empty dataframe
-            ccurves = pd.DataFrame()
-
-        return ccurves[keys]
-
-    def upload_custom_curve(self, curve: pd.Series, key: str | None = None,
-            name: str | None = None) -> None:
-        """upload custom curve"""
-
-        # raise without scenario id
-        self._validate_scenario_id()
-
-        # upload ccurve
-        self.__upload_ccurve(curve, key, name)
-
-        # reset session
-        self._reset_cache()
-
-    def upload_custom_curves(self, ccurves: pd.DataFrame,
-            names: list[str] | None = None) -> None:
-        """upload multiple ccurves at once"""
-
-        # raise without scenario id
-        self._validate_scenario_id()
+        # upload ccurves
+        if ccurves:
+            self.set_custom_curves(ccurves)
 
         # delete all ccurves
         if ccurves is None:
             self.delete_custom_curves()
 
-        # list of Nones
-        if names is None:
-            names = [None for _ in ccurves.columns]
+    # consider moving validation to endpoint
+    def validate_ccurve_key(self, key: str):
+        """check if key is valid ccurve"""
 
-        # convert single to list
-        if isinstance(names, str):
-            names = [names for _ in ccurves.columns]
+        # check if key in ccurve index
+        if str(key) not in self.get_custom_curve_keys(
+            include_unattached=True, include_internal=True
+        ):
+            raise KeyError(f"'{key}' is not a valid custom curve key")
 
-        # raise for errors
-        if len(names) != len(ccurves.columns):
-            raise ValueError('number of names does not match number of curves')
+    @functools.lru_cache(maxsize=1)
+    def get_custom_curves(
+        self, keys: str | Iterable[str] | None = None
+    ) -> pd.Series[Any] | pd.DataFrame:
+        """get custom curve"""
 
-        # upload all ccurves to ETM
-        for idx, key in enumerate(ccurves.columns):
-            self.__upload_ccurve(ccurves[key], key, name=names[idx])
+        # get all attached keys
+        attached = self.get_custom_curve_keys(False, True)
+
+        # handle single key
+        if isinstance(keys, str):
+            keys = [keys]
+
+        # default to all attached keys
+        if keys is None:
+            keys = attached
+
+        # warn user
+        if not keys:
+            logger.info("attempting to retrieve custom curves without any attached")
+
+        # warn user
+        for key in set(keys).symmetric_difference(attached):
+            logger.info(
+                "attempting to retrieve '%s' while custom curve not attached", key
+            )
+
+        # get curves
+        curves: list[pd.Series[Any]] = []
+        for key in set(keys).intersection(attached):
+            # validate key
+            self.validate_ccurve_key(key)
+
+            # make request
+            url = self.make_endpoint_url(endpoint="custom_curves", extra=key)
+            buffer = self.session.get(url, content_type="text/csv")
+
+            # append as series
+            curves.append(pd.read_csv(buffer, header=None, names=[key]).squeeze(axis=1))
+
+        return pd.concat(curves, axis=1).squeeze(axis=1)
+
+    def set_custom_curves(
+        self,
+        ccurves: pd.Series[Any] | pd.DataFrame,
+        filenames: str | Iterable[str | None] | Mapping[str, str] | None = None,
+    ) -> None:
+        """upload custom curves and delete curves for keys that are not
+        present in the uploaded custom curves."""
+
+        # get all attached keys
+        attached = self.get_custom_curve_keys(False, True)
+
+        # delete keys that are not reuploaded.
+        if attached:
+            # transform series
+            if isinstance(ccurves, pd.Series):
+                ccurves = ccurves.to_frame()
+
+            # delete keys
+            self.delete_custom_curves(
+                keys=set(ccurves.columns).symmetric_difference(attached)
+            )
+
+        # upload custom curves
+        self.upload_custom_curves(ccurves, filenames=filenames)
+
+    def upload_custom_curves(
+        self,
+        ccurves: pd.Series[Any] | pd.DataFrame,
+        filenames: str | Iterable[str | None] | Mapping[str, str] | None = None,
+    ) -> None:
+        """upload custom curves without deleting curves for keys that are
+        not present in the uploaded custom curves."""
+
+        # handle ccurves
+        if isinstance(ccurves, pd.Series):
+            ccurves = ccurves.to_frame()
+
+        # convert single file names or None to iterable
+        if isinstance(filenames, str) or (filenames is None):
+            filenames = [filenames for _ in ccurves.columns]
+
+        # convert iterable to mapping
+        if isinstance(filenames, Iterable):
+            # check for lenght mismatches
+            if len(list(filenames)) != len(ccurves.columns):
+                raise ValueError("lenght mismatch between ccurves and file names")
+
+            # convert to mapping
+            filenames = dict(zip(ccurves.columns, list(filenames)))
+
+        # upload columns sequentually
+        for key, curve in ccurves.items():
+            # validate key
+            key = str(key)
+            self.validate_ccurve_key(key)
+
+            # check curve length
+            if not len(curve) == 8760:
+                raise ValueError(f"ccurve '{key}' must contain 8760 entries")
+
+            # make request
+            url = self.make_endpoint_url(endpoint="custom_curves", extra=key)
+            self.session.upload(url, curve, filename=filenames[key])
 
         # reset session
+        self._reset_cache()
+
+    def delete_custom_curves(self, keys: str | Iterable[str] | None = None) -> None:
+        """delete custom curves"""
+
+        # get all attached keys
+        attached = self.get_custom_curve_keys(False, True)
+
+        # handle single key
+        if isinstance(keys, str):
+            keys = [keys]
+
+        # default to all attached keys
+        if keys is None:
+            keys = attached
+
+        # warn user
+        if not keys:
+            logger.info("attempting to unattach custom curves without any attached")
+
+        # warn user
+        for key in set(keys).symmetric_difference(attached):
+            logger.info(
+                "attempting to remove '%s' while custom curve already unattached", key
+            )
+
+        # delete curves
+        for key in set(keys).intersection(attached):
+            # validate key
+            self.validate_ccurve_key(key)
+
+            # make request
+            url = self.make_endpoint_url(endpoint="custom_curves", extra=key)
+            self.session.delete(url)
+
+        # reset cache
         self._reset_cache()

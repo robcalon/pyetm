@@ -10,7 +10,10 @@ authors = [{name = "Rob Calon", email = "robcalon@protonmail.com"}]
 readme = "README.md"
 requires-python = ">=3.9"
 license = {file = "LICENSE"}
-dependencies = ['requests>=2.26', 'pandas>=2.0']
+dependencies = [
+    'requests>=2.26',
+    'pandas>=2.0',
+]
 keywords = ["ETM", "Energy Transition Model"]
 classifiers = [
     'Development Status :: 4 - Beta',
@@ -28,14 +31,35 @@ classifiers = [
     'Programming Language :: Python :: 3.11',
 ]
 
-[project.optional-dependencies]
-async = ["aiohttp>=3.8"]
-io = ["xlsxwriter>=3.0", "openpyxl>=3.0"]
-test = ["pytest", "responses", "aioresponses", "build", "twine"]
-all = ["pyetm[async]", "pyetm[io]", "pyetm[test]"]
-
 [project.urls]
 repository = "https://github.com/robcalon/pyetm"
 
 # [tool.distutils.bdist_wheel]
 # universal = true
+
+[project.optional-dependencies]
+async = ["aiohttp>=3.8"]
+excel = ["xlsxwriter>=3.0", "openpyxl>=3.0"]
+dev = [
+    "black",
+    "mypy>=1.4.1",
+    "pre-commit",
+    "pre-commit-hooks",
+    "pyetm[async, excel]",
+    # "pylint",
+    "ruff",
+    "pandas-stubs",
+]
+
+[tool.pylint]
+max-args = 15
+max-local = 20
+
+# [tool.flake8]
+# max-line-length = 80
+# max-complexity = 15
+# extend-ignore = ['E501', 'E203', 'B019']
+# extend-select = 'B950'
+
+# [tool.isort]
+# profile = "black"

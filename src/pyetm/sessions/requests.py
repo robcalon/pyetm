@@ -6,8 +6,8 @@ from typing import Any, overload, Literal
 import pandas as pd
 import requests
 
-from requests import Response
-from pyetm.sessions.abc import SessionTemplate, ContentType, Method
+from pyetm.sessions.abc import SessionTemplate
+from pyetm.types import ContentType, Method
 
 
 class RequestsSession(SessionTemplate):
@@ -63,20 +63,21 @@ class RequestsSession(SessionTemplate):
         self,
         url: str,
         series: pd.Series,
-        name: str | None = None,
+        filename: str | None = None,
     ):
         """upload series"""
 
         # set key as name
-        if name is None:
-            name = "unnamed"
+        if filename is None:
+            filename = "filename not specified"
 
         # convert series to string
         data = series.to_string(index=False)
-        form = {"file": (name, data)}
+        form = {"file": (filename, data)}
 
         return self.request(
-            method="put", url=url, content_type="application/json", files=form)
+            method="put", url=url, content_type="application/json", files=form
+        )
 
     @overload
     def request(
@@ -129,10 +130,6 @@ class RequestsSession(SessionTemplate):
 
         # make request
         with request(url=url, **kwargs) as response:
-
-            # assign type
-            response: Response = response
-
             # handle engine error message
             if response.status_code == 422:
                 return self.raise_for_api_error(response.json())
@@ -142,7 +139,7 @@ class RequestsSession(SessionTemplate):
 
             # decode application/json
             if content_type == "application/json":
-                json: dict[str, Any] =  response.json()
+                json: dict[str, Any] = response.json()
                 return json
 
             # decode text/csv
@@ -155,5 +152,4 @@ class RequestsSession(SessionTemplate):
                 text: str = response.text
                 return text
 
-        raise NotImplementedError(
-            f"Content-type '{content_type}' not implemented")
+        raise NotImplementedError(f"Content-type '{content_type}' not implemented")

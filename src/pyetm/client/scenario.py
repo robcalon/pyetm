@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import copy
-from urllib.parse import urljoin
+from typing import Any
 
+import copy
 import pandas as pd
+
 from .session import SessionMethods
 
 
@@ -13,16 +14,16 @@ class ScenarioMethods(SessionMethods):
     """Base scenario methods"""
 
     @property
-    def area_code(self) -> str:
+    def area_code(self) -> str | None:
         """code for the area that the scenario describes"""
-        return self._scenario_header.get('area_code')
+        return self._scenario_header.get("area_code")
 
     @property
-    def created_at(self) -> pd.Timestamp:
+    def created_at(self) -> pd.Timestamp | None:
         """timestamp at which the scenario was created"""
 
         # get created at
-        datetime = self._scenario_header.get('created_at')
+        datetime = self._scenario_header.get("created_at")
 
         # format datetime
         if datetime is not None:
@@ -31,91 +32,97 @@ class ScenarioMethods(SessionMethods):
         return datetime
 
     @property
-    def end_year(self) -> int:
+    def end_year(self) -> int | None:
         """target year for which the scenario is configured"""
-        return self._scenario_header.get('end_year')
+        return self._scenario_header.get("end_year")
 
     @property
-    def esdl_exportable(self):
+    def esdl_exportable(self) -> str | None:
         """scenario can be exported as esdl"""
-        return self._scenario_header.get('esdl_exportable')
+        return self._scenario_header.get("esdl_exportable")
 
     @property
-    def keep_compatible(self) -> bool:
+    def keep_compatible(self) -> bool | None:
         """migrate scenario with ETM updates"""
-        return self._scenario_header.get('keep_compatible')
+        return self._scenario_header.get("keep_compatible")
 
     @keep_compatible.setter
     def keep_compatible(self, boolean: bool):
-
         # format header and update
-        header = {'keep_compatible': str(bool(boolean)).lower()}
+        header = {"keep_compatible": str(bool(boolean)).lower()}
         self._update_scenario_header(header)
 
     @property
-    def metadata(self) -> dict:
+    def metadata(self) -> dict[str, Any]:
         """metadata tags"""
-        return self._scenario_header.get('metadata')
+        return self._scenario_header.get("metadata", {})
 
     @metadata.setter
-    def metadata(self, metadata: dict):
-
+    def metadata(self, metadata: dict[str, Any] | None):
         # format header and update
-        header = {'metadata': dict(metadata)}
+
+        # remove metadata
+        if metadata is None:
+            metadata = {}
+
+        # apply update
+        header = {"metadata": dict(metadata)}
         self._update_scenario_header(header)
 
     @property
-    def owner(self) -> dict:
+    def owner(self) -> dict | None:
         """scenario owner if created by logged in user"""
         return self._scenario_header.get("owner")
 
     @property
-    def private(self) -> bool:
+    def private(self) -> bool | None:
         """boolean that determines if the scenario is private"""
-        return self._scenario_header.get('private')
+        return self._scenario_header.get("private")
 
     @private.setter
     def private(self, boolean: bool):
-
         # # validate token permission
-        self._validate_token_permission(scope='scenarios:write')
+        self._validate_token_permission(scope="scenarios:write")
 
         # format header and update
-        header = {'private': str(bool(boolean)).lower()}
+        header = {"private": str(bool(boolean)).lower()}
         self._update_scenario_header(header)
-
-    @property
-    def pro_url(self) -> str:
-        """get pro url for session id"""
-        return urljoin(self.etm_url, f'scenarios/{self.scenario_id}/load/')
 
     @property
     def scaling(self):
         """applied scaling factor"""
-        return self._scenario_header.get('scaling')
+        return self._scenario_header.get("scaling")
 
     @property
     def source(self):
         """origin of the scenario"""
-        return self._scenario_header.get('source')
+        return self._scenario_header.get("source")
 
     @property
-    def start_year(self) -> int:
+    def start_year(self) -> int | None:
         """get the reference year on which the default settings are based"""
-        return self._scenario_header.get('start_year')
+        return self._scenario_header.get("start_year")
 
     @property
     def template(self) -> int | None:
         """the id of the scenario that was used as a template,
         or None if no template was used."""
-        return str(self._scenario_header.get('template'))
+
+        # get template scenario
+        template = self._scenario_header.get("template")
+
+        # convert to id
+        if template is not None:
+            template = int(template)
+
+        return template
 
     @property
-    def updated_at(self) -> pd.Timestamp:
+    def updated_at(self) -> pd.Timestamp | None:
         """get timestamp of latest change"""
 
         # get created at
-        datetime = self._scenario_header.get('updated_at')
+        datetime = self._scenario_header.get("updated_at")
 
         # format datetime
         if datetime is not None:
@@ -123,24 +130,21 @@ class ScenarioMethods(SessionMethods):
 
         return datetime
 
-    @property
-    def url(self) -> str:
-        """get url"""
-        return self._scenario_header.get('url')
-
-    def add_metadata(self, metadata: dict):
+    def add_metadata(self, metadata: dict[str, Any]) -> dict[str, Any]:
         """append metadata"""
 
         original = copy.deepcopy(self.metadata)
         self.metadata = {**original, **metadata}
 
+        return self.metadata
+
     def copy_scenario(
         self,
-        scenario_id: str | None = None,
+        scenario_id: int | None = None,
         metadata: dict | None = None,
         keep_compatible: bool | None = None,
         private: bool | None = None,
-        connect: bool = True
+        connect: bool = True,
     ) -> int:
         """Create a new scenario that is a copy of an existing scenario
         based on its id. The client automatically connects to the the
@@ -171,7 +175,6 @@ class ScenarioMethods(SessionMethods):
 
         # use own scenario id
         if scenario_id is None:
-
             # raise without scenario id
             self._validate_scenario_id()
             scenario_id = self.scenario_id
@@ -179,14 +182,17 @@ class ScenarioMethods(SessionMethods):
         # remember original scenario id.
         previous = copy.deepcopy(self.scenario_id)
 
-        # make and set scenario
-        scenario = {'scenario_id': str(scenario_id)}
-        data = {"scenario": scenario}
+        # request parameters
+        data = {"scenario": {"scenario_id": str(scenario_id)}}
+        headers = {"content-type": "application/json"}
+        url = self.make_endpoint_url(endpoint="scenarios")
 
-        # request scenario id and connect
-        url = 'scenarios'
-        self.scenario_id = self.session.post(
-            url, json=data)['id']
+        # get scenario_id
+        scenario_id = int(self.session.post(url, json=data, headers=headers)["id"])
+
+        # request scenario id
+        url = self.session.make_url(self.engine_url, "scenarios")
+        scenario_id = int(self.session.post(url, json=data)["id"])
 
         # set metadata parmater
         if metadata is not None:
@@ -212,8 +218,8 @@ class ScenarioMethods(SessionMethods):
         end_year: int,
         metadata: dict | None = None,
         keep_compatible: bool | None = None,
-        private: bool | None = None
-    ) -> None:
+        private: bool | None = None,
+    ) -> int:
         """Create a new scenario on the ETM server.
 
         Parameters
@@ -236,17 +242,18 @@ class ScenarioMethods(SessionMethods):
             end_year = int(end_year)
 
         # make scenario dict based on args
-        scenario = {'end_year': end_year, 'area_code' : area_code}
+        scenario = {"end_year": end_year, "area_code": area_code}
 
-        # set scenario parameter
+        # request parameters
         data = {"scenario": scenario}
+        headers = {"content-type": "application/json"}
+        url = self.make_endpoint_url(endpoint="scenarios")
 
-        # make request
-        url = 'scenarios'
-        response = self.session.post(url, json=data)
+        # get scenario_id
+        scenario_id = int(self.session.post(url, json=data, headers=headers)["id"])
 
-        # update scenario_id
-        self.scenario_id = str(response['id'])
+        # connect to new scenario
+        self.scenario_id = scenario_id
 
         # set scenario metadata
         if metadata is not None:
@@ -260,23 +267,23 @@ class ScenarioMethods(SessionMethods):
         if private is not None:
             self.private = private
 
-    def delete_scenario(self, scenario_id: str | None = None) -> None:
+        return scenario_id
+
+    def delete_scenario(self, scenario_id: int | None = None) -> None:
         """Delete scenario"""
 
         # validate token
-        self._validate_token_permission(scope='scenarios:delete')
+        self._validate_token_permission(scope="scenarios:delete")
 
         # use connected scenario
         previous = None
-        if (scenario_id is not None) & ((str(scenario_id)) != self.scenario_id):
-
-            # remember original connected scenario
-            # and connect to passed scenario id
-            previous = copy.deepcopy(self.scenario_id)
-            self.scenario_id = scenario_id
+        if scenario_id is not None:
+            if int(scenario_id) != self.scenario_id:
+                previous = copy.deepcopy(self.scenario_id)
+                self.scenario_id = scenario_id
 
         # delete scenario
-        url = f'scenarios/{self.scenario_id}'
+        url = self.make_endpoint_url(endpoint="scenario_id")
         self.session.delete(url=url)
 
         # connect to previous or None
@@ -296,18 +303,15 @@ class ScenarioMethods(SessionMethods):
 
         # check scenario end year
         if self.end_year != 2050:
-            raise NotImplementedError(
-                'Can only interpolate based on 2050 scenarios')
+            raise NotImplementedError("Can only interpolate based on 2050 scenarios")
 
-        # pass end year to interpolate tool
-        data = {'end_year': ryear}
+        # request parameters
+        data = {"end_year": ryear}
+        headers = {"content-type": "application/json"}
+        url = self.make_endpoint_url(endpoint="scenario_id", extra="interpolate")
 
-        # make requestd
-        url = f'scenarios/{self.scenario_id}/interpolate'
-        scenario = self.session.post(url, json=data, decoder='json')
-
-        # get scenario id
-        scenario_id = scenario['id']
+        # get scenario_id
+        scenario_id = int(self.session.post(url, json=data, headers=headers)["id"])
 
         # connect to new scenario
         if connect is True:
@@ -321,10 +325,11 @@ class ScenarioMethods(SessionMethods):
 
         # set reset parameter
         data = {"reset": True}
-        url = f'scenarios/{self.scenario_id}'
+        headers = {"content-type": "application/json"}
+        url = self.make_endpoint_url(endpoint="scenario_id")
 
         # make request
-        self.session.put(url, json=data)
+        self.session.put(url, json=data, headers=headers)
 
         # reinitialize connected scenario
         self._reset_cache()
@@ -363,38 +368,45 @@ class ScenarioMethods(SessionMethods):
         self._validate_token_permission("scenarios:write")
 
         # prepare request
-        url = 'saved_scenarios'
-        headers = {'content-type': 'application/json'}
-
-        # make data
-        data = {"scenario_id": self.copy_scenario(connect=False)}
+        headers = {"content-type": "application/json"}
+        data = {"scenario_id": str(self.copy_scenario(connect=False))}
 
         # update exisiting saved scenario
         if saved_scenario_id is not None:
+            # make url
+            url = self.make_endpoint_url(
+                endpoint="saved_scenarios", extra=str(saved_scenario_id)
+            )
 
-            # update url
-            url += f'/{saved_scenario_id}'
+            # make request
+            saved_scenario = int(
+                self.session.put(url, json=data, headers=headers)["id"]
+            )
 
-            return self.session.put(
-                url, json=data, headers=headers)
+            return saved_scenario
 
         # default title
         if title is None:
-            title = f'API Generated - {self.scenario_id}'
+            title = f"API Generated - {self.scenario_id}"
 
         # add title
         data["title"] = title
 
         # add privacy setting
         if private is not None:
-            data["private"]: str(bool(private)).lower()
+            data["private"] = str(bool(private)).lower()
 
         # add description
         if description is not None:
             data["description"] = str(description)
 
-        return self.session.post(
-            url, json=data, headers=headers)
+        # make url
+        url = self.make_endpoint_url(endpoint="saved_scenarios")
+
+        # make request
+        saved_scenario = int(self.session.put(url, json=data, headers=headers)["id"])
+
+        return saved_scenario
 
     # def to_dict(self): #, path: str | Path) -> None:
     #     """export full scenario to dict"""

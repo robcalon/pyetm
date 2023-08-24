@@ -1,10 +1,13 @@
 """parameters object"""
+from __future__ import annotations
 import functools
 
-from pyetm.logger import get_modulelogger
+from typing import Any
 
 import numpy as np
 import pandas as pd
+
+from pyetm.logger import get_modulelogger
 
 from .session import SessionMethods
 
@@ -23,14 +26,15 @@ class ParameterMethods(SessionMethods):
     def get_application_demands(self):
         """get the application demands"""
 
-        # raise without scenario id
-        self._validate_scenario_id()
+        # make url
+        url = self.make_endpoint_url(
+            endpoint="scenario_id", extra="application_demands"
+        )
 
         # make request
-        url = f'scenarios/{self.scenario_id}/application_demands'
-        resp = self.session.get(url, decoder="BytesIO")
+        buffer = self.session.get(url, content_type="text/csv")
 
-        return pd.read_csv(resp, index_col='key')
+        return pd.read_csv(buffer, index_col="key")
 
     @property
     def energy_flows(self):
@@ -41,17 +45,13 @@ class ParameterMethods(SessionMethods):
     def get_energy_flows(self):
         """get the energy flows"""
 
-        # raise without scenario id
-        self._validate_scenario_id()
+        # make url
+        url = self.make_endpoint_url(endpoint="scenario_id", extra="energy_flow")
 
         # make request
-        url = f'scenarios/{self.scenario_id}/energy_flow'
-        resp = self.session.get(url, decoder="BytesIO")
+        buffer = self.session.get(url, content_type="text/csv")
 
-        # convert to frame
-        flows = pd.read_csv(resp, index_col='key')
-
-        return flows
+        return pd.read_csv(buffer, index_col="key")
 
     @property
     def forecast_storage_order(self):
@@ -59,26 +59,24 @@ class ParameterMethods(SessionMethods):
         return self.get_forecast_storage_order()
 
     @forecast_storage_order.setter
-    def heat_netforecast_storage_orderwork_order(self, order):
+    def forecast_storage_order(self, order: list[str]):
         self.change_forecast_storage_order(order)
 
     @functools.lru_cache(maxsize=1)
     def get_forecast_storage_order(self):
         """get the heat network order"""
 
-        # raise without scenario id
-        self._validate_scenario_id()
+        # make url
+        url = self.make_endpoint_url(
+            endpoint="scenario_id", extra="forecast_storage_order"
+        )
 
         # make request
-        url = f'scenarios/{self.scenario_id}/forecast_storage_order'
-        resp = self.session.get(url)
+        order = self.session.get(url, content_type="application/json")
 
-        # get order
-        order = resp["order"]
+        return order["order"]
 
-        return order
-
-    def change_forecast_storage_order(self, order):
+    def change_forecast_storage_order(self, order: list[str] | dict[str, list[str]]):
         """change forecast storage order
 
         parameters
@@ -95,20 +93,22 @@ class ParameterMethods(SessionMethods):
 
         # acces dict for order
         if isinstance(order, dict):
-            order = order['order']
+            order = order["order"]
 
         # check items in order
         for item in order:
             if item not in self.forecast_storage_order:
-                raise ValueError(
-                    f"Invalid forecast storage order item: '{item}'")
+                raise ValueError(f"Invalid forecast storage order item: '{item}'")
 
-        # map order to correct scenario parameter
-        data = {'order': order}
+        # request parameters
+        data = {"order": order}
+        headers = {"content-type": "application/json"}
+        url = self.make_endpoint_url(
+            endpoint="scenario_id", extra="forecast_storage_order"
+        )
 
         # make request
-        url = f'scenarios/{self.scenario_id}/forecast_storage_order'
-        self.session.put(url, json=data)
+        self.session.put(url, json=data, headers=headers)
 
         # reinitialize scenario
         self._reset_cache()
@@ -126,17 +126,13 @@ class ParameterMethods(SessionMethods):
     def get_heat_network_order(self):
         """get the heat network order"""
 
-        # raise without scenario id
-        self._validate_scenario_id()
+        # make url
+        url = self.make_endpoint_url(endpoint="scenario_id", extra="heat_network_order")
 
         # make request
-        url = f'scenarios/{self.scenario_id}/heat_network_order'
-        resp = self.session.get(url)
+        order = self.session.get(url, content_type="application/json")
 
-        # get order
-        order = resp["order"]
-
-        return order
+        return order["order"]
 
     def change_heat_network_order(self, order):
         """change heat network order
@@ -146,29 +142,26 @@ class ParameterMethods(SessionMethods):
         order : list
             Desired heat network order"""
 
-        # raise without scenario id
-        self._validate_scenario_id()
-
         # convert np array to list
         if isinstance(order, np.ndarray):
             order = order.tolist()
 
         # acces dict for order
         if isinstance(order, dict):
-            order = order['order']
+            order = order["order"]
 
         # check items in order
         for item in order:
             if item not in self.heat_network_order:
-                raise ValueError(
-                    f"Invalid heat network order item: '{item}'")
+                raise ValueError(f"Invalid heat network order item: '{item}'")
 
-        # map order to correct scenario parameter
-        data = {'order': order}
+        # request parameters
+        data = {"order": order}
+        headers = {"content-type": "application/json"}
+        url = self.make_endpoint_url(endpoint="scenario_id", extra="heat_network_order")
 
         # make request
-        url = f'scenarios/{self.scenario_id}/heat_network_order'
-        self.session.put(url, json=data)
+        self.session.put(url, json=data, headers=headers)
 
         # reinitialize scenario
         self._reset_cache()
@@ -179,33 +172,30 @@ class ParameterMethods(SessionMethods):
         return self.get_input_values()
 
     @input_values.setter
-    def input_values(self, uparams):
-        raise AttributeError('protected attribute; change user values instead.')
+    def input_values(self, _: Any):
+        raise AttributeError("protected attribute; change user values instead.")
 
     @functools.lru_cache(maxsize=1)
     def get_input_values(self):
         """get configuration information of all available input parameters.
         direct dump of inputs json from engine."""
 
-        # raise without scenario id
-        self._validate_scenario_id()
-
         # make request
-        url = f'scenarios/{self.scenario_id}/inputs'
-        resp = self.session.get(url)
+        url = self.make_endpoint_url(endpoint="inputs")
+        records = self.session.get(url, content_type="application/json")
 
         # convert to frame
-        ivalues = pd.DataFrame.from_dict(resp, orient='index')
+        inputs = pd.DataFrame.from_dict(records, orient="index")
 
         # add user to column when absent
-        if 'user' not in ivalues.columns:
-            ivalues.insert(loc=5, column='user', value=np.nan)
+        if "user" not in inputs.columns:
+            inputs.insert(loc=5, column="user", value=np.nan)
 
         # convert user dtype to object and set disabled
-        ivalues.user = ivalues.user.astype('object')
-        ivalues.disabled = ivalues.disabled.fillna(False)
+        inputs["user"] = inputs["user"].astype("object")
+        inputs["disabled"] = inputs["disabled"].fillna(False)
 
-        return ivalues
+        return inputs
 
     @property
     def production_parameters(self):
@@ -216,14 +206,15 @@ class ParameterMethods(SessionMethods):
     def get_production_parameters(self):
         """get the production parameters"""
 
-        # raise without scenario id
-        self._validate_scenario_id()
+        # make url
+        url = self.make_endpoint_url(
+            endpoint="scenario_id", extra="production_parameters"
+        )
 
         # make request
-        url = f'scenarios/{self.scenario_id}/production_parameters'
-        resp = self.session.get(url, decoder="BytesIO")
+        buffer = self.session.get(url, content_type="text/csv")
 
-        return pd.read_csv(resp)
+        return pd.read_csv(buffer)
 
     @property
     def sankey(self):
@@ -234,16 +225,13 @@ class ParameterMethods(SessionMethods):
     def get_sankey(self):
         """get the sankey data"""
 
-        # raise without scenario id
-        self._validate_scenario_id()
-
         # make request
-        url = f'scenarios/{self.scenario_id}/sankey'
-        resp = self.session.get(url, decoder="BytesIO")
+        url = self.make_endpoint_url(endpoint="scenario_id", extra="sankey")
+        buffer = self.session.get(url, content_type="text/csv")
 
         # convert to frame
-        cols = ['Group', 'Carrier', 'Category', 'Type']
-        sankey = pd.read_csv(resp, index_col=cols)
+        cols = ["Group", "Carrier", "Category", "Type"]
+        sankey = pd.read_csv(buffer, index_col=cols)
 
         return sankey
 
@@ -256,13 +244,12 @@ class ParameterMethods(SessionMethods):
         sparams = uparams.user.fillna(uparams.default)
 
         # set name of series
-        sparams.name = 'scenario'
+        sparams.name = "scenario"
 
         return sparams
 
     @scenario_parameters.setter
     def scenario_parameters(self, sparams):
-
         # check and set scenario parameters
         self._check_scenario_parameters(sparams)
         self.change_user_values(sparams)
@@ -296,16 +283,13 @@ class ParameterMethods(SessionMethods):
     def get_storage_parameters(self):
         """get the storage parameter data"""
 
-        # raise without scenario id
-        self._validate_scenario_id()
-
         # make request
-        url = f'scenarios/{self.scenario_id}/storage_parameters'
-        resp = self.session.get(url, decoder="BytesIO")
+        url = self.make_endpoint_url(endpoint="scenario_id", extra="storage_parameters")
+        buffer = self.session.get(url, content_type="text/csv")
 
         # convert to frame
-        cols = ['Group', 'Carrier', 'Key', 'Parameter']
-        parameters = pd.read_csv(resp, index_col=cols)
+        cols = ["Group", "Carrier", "Key", "Parameter"]
+        parameters = pd.read_csv(buffer, index_col=cols)
 
         return parameters
 
@@ -315,18 +299,15 @@ class ParameterMethods(SessionMethods):
         return self.get_user_parameters()
 
     @user_parameters.setter
-    def user_parameters(self, uparams):
-        raise AttributeError('protected attribute; change user values instead.')
+    def user_parameters(self, _: Any):
+        raise AttributeError("protected attribute; change user values instead.")
 
     def get_user_parameters(self):
         """get configuration information of all available user parameters"""
 
-        # raise without scenario id
-        self._validate_scenario_id()
-
         # drop disabled parameters
         ivalues = self.input_values
-        uparams = ivalues[~ivalues.disabled]
+        uparams = ivalues[~ivalues["disabled"]]
 
         return uparams
 
@@ -346,7 +327,7 @@ class ParameterMethods(SessionMethods):
         self._validate_scenario_id()
 
         # subset values from user parameter df
-        uvalues = self.user_parameters['user']
+        uvalues = self.user_parameters["user"]
         uvalues = uvalues.dropna()
 
         return uvalues
@@ -372,7 +353,7 @@ class ParameterMethods(SessionMethods):
         data = {"scenario": {"user_values": uvalues}, "detailed": True}
 
         # evaluate request
-        url = f'scenarios/{self.scenario_id}'
+        url = f"scenarios/{self.scenario_id}"
         self.session.put(url, json=data)
 
         # reinitialize scenario
@@ -387,7 +368,7 @@ class ParameterMethods(SessionMethods):
 
         # convert dict to series
         if isinstance(uvalues, dict):
-            uvalues = pd.Series(uvalues, name='user', dtype='object')
+            uvalues = pd.Series(uvalues, name="user", dtype="object")
 
         # subset series from df
         if isinstance(uvalues, pd.DataFrame):
@@ -402,39 +383,4 @@ class ParameterMethods(SessionMethods):
         uparams = self.user_parameters
         sparams = self.scenario_parameters
 
-        return sparams[uparams.share_group == key]
-
-    # @property
-    # def _cvalues(self):
-    #     """continous user values"""
-
-    #     # get relevant parameters
-    #     keys = self._dvalues.index
-    #     cvalues = self.scenario_parameters
-
-    #     # get continious parameters
-    #     cvalues = cvalues[~cvalues.index.isin(keys)]
-
-    #     return cvalues.astype('float64')
-
-    # @property
-    # def _dvalues(self):
-    #     """discrete user values"""
-
-    #     keys = [
-    #         'heat_storage_enabled',
-    #         'merit_order_subtype_of_energy_power_nuclear_uranium_oxide',
-    #         'settings_enable_merit_order',
-    #         'settings_enable_storage_optimisation_energy_flexibility_hv_opac_electricity',
-    #         'settings_enable_storage_optimisation_energy_flexibility_pumped_storage_electricity',
-    #         'settings_enable_storage_optimisation_energy_flexibility_mv_batteries_electricity',
-    #         'settings_enable_storage_optimisation_energy_flexibility_flow_batteries_electricity',
-    #         'settings_enable_storage_optimisation_transport_car_flexibility_p2p_electricity',
-    #         'settings_weather_curve_set',
-    #     ]
-
-    #     # get discrete parameters
-    #     dvalues = self.scenario_parameters
-    #     dvalues = dvalues[dvalues.index.isin(keys)]
-
-    #     return dvalues
+        return sparams[uparams["share_group"] == key]
