@@ -79,7 +79,6 @@ repos:
       - id: mypy
         name: mypy
         entry: mypy
-        files: "^(src/pyetm/sessions|src/pyetm/client)"
+        files: "^(src/pyetm/sessions|src/pyetm/client|src/pyetm/profiles)"
         language: python
         types: [ python ]
-        args: [--check-untyped-defs]

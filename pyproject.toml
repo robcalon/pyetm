@@ -55,11 +55,6 @@ dev = [
 max-args = 15
 max-local = 20
 
-# [tool.flake8]
-# max-line-length = 80
-# max-complexity = 15
-# extend-ignore = ['E501', 'E203', 'B019']
-# extend-select = 'B950'
-
-# [tool.isort]
-# profile = "black"
+[tool.mypy]
+disallow_untypes_defs = true
+# disallow_incomplete_defs = true

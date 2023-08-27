@@ -2,6 +2,7 @@
 https://ec.europa.eu/eurostat/statistics-explained/index.php?title=Heating_and_cooling_degree_days_-_statistics#Heating_and_cooling_degree_days_at_EU_level"""
 
 from __future__ import annotations
+
 import pandas as pd
 
 
@@ -12,8 +13,8 @@ class Cooling:
         self,
         daily_threshold: float | None = None,
         hourly_threshold: float | None = None,
-        name : str | None = None
-    ) -> Cooling:
+        name: str | None = None,
+    ):
         """Initialize class object.
 
         Parameters
@@ -66,10 +67,11 @@ class Cooling:
 
         # construct mask for daily threshold
         # daily average temperature exceeds daily threshold value
-        daily = temperature.groupby(
-            pd.Grouper(freq='1D'), group_keys=False).apply(
-                lambda group: pd.Series(
-                    group.mean() > self.daily_threshold, index=group.index))
+        daily = temperature.groupby(pd.Grouper(freq="1D"), group_keys=False).apply(
+            lambda group: pd.Series(
+                group.mean() > self.daily_threshold, index=group.index
+            )
+        )
 
         # construct mask for hourly threshold
         # hourly temperature exceeds hourly threshold value
@@ -77,8 +79,8 @@ class Cooling:
 
         # set values outside mutual masks to zero
         # subtract hourly threshold value from cooling degrees
-        temperature = temperature.where(
-            daily & hourly, self.hourly_threshold).sub(
-                self.hourly_threshold)
+        temperature = temperature.where(daily & hourly, self.hourly_threshold).sub(
+            self.hourly_threshold
+        )
 
         return temperature.div(temperature.sum())

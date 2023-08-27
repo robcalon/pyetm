@@ -3,17 +3,17 @@ https://github.com/quintel/etdataset-public/tree/master/curves/demand/buildings/
 
 from __future__ import annotations
 
+import pandas as pd
+
 from pyetm.logger import PACKAGEPATH
 from pyetm.utils.profiles import validate_profile, validate_profile_lenght
-
-import pandas as pd
 
 
 class Buildings:
     """Aggregate heating model for buildings."""
 
     @classmethod
-    def from_defaults(cls, name: str = 'default') -> Buildings:
+    def from_defaults(cls, name: str = "default") -> Buildings:
         """Initialize with Quintel default values.
 
         Parameters
@@ -21,19 +21,35 @@ class Buildings:
         name : str, default 'default'
             name of object."""
 
-        # load G2A parameters
-        file = PACKAGEPATH.joinpath('data/G2A_parameters.csv')
-        parameters = pd.read_csv(file)
+        # relevant columns
+        dtypes = {"reference": float, "slope": float, "constant": float}
 
-        return cls(name=name, **parameters)
+        # filepath
+        file = PACKAGEPATH.joinpath("data/G2A_parameters.csv")
+        usecols = [key for key in dtypes]
+
+        # load G2A parameters
+        frame = pd.read_csv(file, usecols=usecols, dtype=dtypes)
+
+        # get relevant profiles
+        reference = frame["reference"]
+        slope = frame["slope"]
+        constant = frame["constant"]
+
+        return cls(
+            name=name,
+            reference=reference,
+            slope=slope,
+            constant=constant,
+        )
 
     def __init__(
         self,
-        reference: pd.Series,
-        slope: pd.Series,
-        constant: pd.Series,
-        name: str | None = None
-    ) -> Buildings:
+        reference: pd.Series[float],
+        slope: pd.Series[float],
+        constant: pd.Series[float],
+        name: str | None = None,
+    ):
         """Initialize class object.
 
         Parameters
@@ -61,12 +77,8 @@ class Buildings:
         return f"Buildings(name={self.name})"
 
     def _calculate_heat_demand(
-            self,
-            effective: float,
-            reference: float,
-            slope: float,
-            constant: float
-        ) -> float:
+        self, effective: float, reference: float, slope: float, constant: float
+    ) -> float:
         """Calculates the required heating demand for the hour.
 
         Parameters
@@ -85,9 +97,13 @@ class Buildings:
         ------
         demand : float
             Required heating demand"""
-        return (reference - effective) * slope + constant if effective < reference else constant
+        return (
+            (reference - effective) * slope + constant
+            if effective < reference
+            else constant
+        )
 
-    def _make_parameters(self, effective: pd.Series) -> pd.DataFrame:
+    def _make_parameters(self, effective: pd.Series[float]) -> pd.DataFrame:
         """Make parameters frame from effective temperature
          and G2A parameters.
 
@@ -102,17 +118,19 @@ class Buildings:
             Merged parameters with correct index."""
 
         # resample effective temperature for each hour
-        effective = effective.resample('H').ffill()
+        effective = effective.resample("H").ffill()
 
         # check for index equality
-        if ((not self.reference.index.equals(self.slope.index))
-            | (not self.slope.index.equals(self.constant.index))):
-            raise ValueError("indices for 'reference', 'slope' and "
-                "'constant' profiles are not alligned.")
+        if (not self.reference.index.equals(self.slope.index)) or (
+            not self.slope.index.equals(self.constant.index)
+        ):
+            raise ValueError(
+                "indices for 'reference', 'slope' and "
+                "'constant' profiles are not alligned."
+            )
 
         # merge G2A parameters
-        parameters = pd.concat(
-            [self.reference, self.slope, self.constant], axis=1)
+        parameters = pd.concat([self.reference, self.slope, self.constant], axis=1)
 
         # reindex parameters
         parameters.index = effective.index
@@ -121,9 +139,10 @@ class Buildings:
 
     def make_heat_demand_profile(
         self,
-        temperature: pd.Series,
-        wind_speed : pd.Series,
-        year: int | None = None) -> pd.DataFrame:
+        temperature: pd.Series[float],
+        wind_speed: pd.Series[float],
+        year: int | None = None,
+    ) -> pd.Series[float]:
         """Make heat demand profile for buildings.
 
         Effective temperature is defined as daily average temperature
@@ -148,35 +167,34 @@ class Buildings:
             Heat demand profile for buildings."""
 
         # validate temperature profile
-        temperature = validate_profile(
-            temperature, name='temperature', year=year)
+        temperature = validate_profile(temperature, name="temperature", year=year)
 
         # validate irradiance profile
-        wind_speed = validate_profile(
-            wind_speed, name='wind_speed', year=year)
+        wind_speed = validate_profile(wind_speed, name="wind_speed", year=year)
 
         # check for allignment
         if not temperature.index.equals(wind_speed.index):
-            raise ValueError("Periods or Datetimes of 'temperature' "
-                "and 'wind_speed' profiles are not alligned.")
+            raise ValueError(
+                "Periods or Datetimes of 'temperature' "
+                "and 'wind_speed' profiles are not alligned."
+            )
 
         # merge profiles and get daily average
-        effective = pd.concat([temperature, wind_speed], axis=1)
-        effective = effective.groupby(pd.Grouper(freq='1D')).mean()
+        merged = pd.concat([temperature, wind_speed], axis=1)
+        merged = merged.groupby(pd.Grouper(freq="1D")).mean()
 
         # evaluate effective temperature
-        effective = effective['temperature'] - (effective['wind_speed'] / 1.5)
-        effective = pd.Series(effective, name='effective')
+        effective = merged["temperature"] - (merged["wind_speed"] / 1.5)
+        effective = pd.Series(effective, name="effective", dtype=float)
 
         # make parameters
         profiles = self._make_parameters(effective)
 
         # apply calculate demand functon
-        profile = profiles.apply(
-            lambda row: self._calculate_heat_demand(**row), axis=1)
+        profile = profiles.apply(lambda row: self._calculate_heat_demand(**row), axis=1)
 
         # name profile
-        name = 'weather/buildings_heating'
-        profile = pd.Series(profile, name=name, dtype='float64')
+        name = "weather/buildings_heating"
+        profile = pd.Series(profile, name=name, dtype=float)
 
         return profile / profile.sum() / 3.6e3

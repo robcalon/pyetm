@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from pyetm.utils.profiles import validate_profile
-
 import pandas as pd
+
+from pyetm.utils.profiles import validate_profile
 
 from .buildings import Buildings
 from .households import HousePortfolio
+
 # from .cooling import Cooling
 
 
@@ -15,7 +16,7 @@ class WeatherDemandProfiles:
     """Weather-related profile generator."""
 
     @classmethod
-    def from_defaults(cls, name: str = 'default') -> WeatherDemandProfiles:
+    def from_defaults(cls, name: str = "default") -> WeatherDemandProfiles:
         """Initialize with Quintel default settings."""
 
         # default object configurations
@@ -25,11 +26,8 @@ class WeatherDemandProfiles:
         return cls(households, buildings, name=name)
 
     def __init__(
-        self,
-        households: HousePortfolio,
-        buildings: Buildings,
-        name : str | None = None
-    ) -> WeatherDemandProfiles:
+        self, households: HousePortfolio, buildings: Buildings, name: str | None = None
+    ):
         """Initialize class object.
 
         Parameters
@@ -62,46 +60,46 @@ class WeatherDemandProfiles:
         self,
         temperature: pd.Series,
         irradiance: pd.Series,
-        wind_speed : pd.Series,
-        year: int | None = None
+        wind_speed: pd.Series,
+        year: int,
     ) -> pd.DataFrame:
         """weather related profiles"""
 
         # validate temperature profile
-        temperature = validate_profile(
-            temperature, name='temperature', year=year)
+        temperature = validate_profile(temperature, name="temperature", year=year)
 
         # validate irradiance profile
-        irradiance = validate_profile(
-            irradiance, name='irradiance', year=year)
+        irradiance = validate_profile(irradiance, name="irradiance", year=year)
 
         # validate wind_speed profile
-        wind_speed = validate_profile(
-            wind_speed, name='wind_speed', year=year)
+        wind_speed = validate_profile(wind_speed, name="wind_speed", year=year)
 
         # check for allignment
         if not irradiance.index.equals(wind_speed.index):
-            raise ValueError("Periods or Datetimes of 'irradiance' "
-                "and 'wind_speed' profiles are not alligned.")
+            raise ValueError(
+                "Periods or Datetimes of 'irradiance' "
+                "and 'wind_speed' profiles are not alligned."
+            )
 
         # make household heat demand profiles
         households = self.households.make_heat_demand_profiles(
-            temperature, irradiance, year)
+            temperature, irradiance, year
+        )
 
         # make buildings heat demand profile
         buildings = self.buildings.make_heat_demand_profile(
-            temperature, wind_speed, year)
+            temperature, wind_speed, year
+        )
 
         # make air temperature
-        key = 'weather/air_temperature'
+        key = "weather/air_temperature"
         temperature = pd.Series(temperature, name=key)
 
         # add agriculture
-        key = 'weather/agriculture_heating'
+        key = "weather/agriculture_heating"
         agriculture = pd.Series(buildings, name=key)
 
         # merge profiles
-        profiles = pd.concat(
-            [agriculture, temperature, buildings, households], axis=1)
+        profiles = pd.concat([agriculture, temperature, buildings, households], axis=1)
 
         return profiles.sort_index(axis=1)

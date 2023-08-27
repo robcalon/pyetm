@@ -2,7 +2,6 @@
 from __future__ import annotations
 from typing import Literal
 
-import pandas as pd
 
 Carrier = Literal["electricity", "heat", "hydrogen", "methane"]
 ContentType = Literal["application/json", "text/csv", "text/html"]
