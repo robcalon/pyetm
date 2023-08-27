@@ -10,23 +10,29 @@ ErrorHandling = Literal["ignore", "warn", "raise"]
 Method = Literal["delete", "get", "post", "put"]
 
 
-class ETMTyped:
-    """module defined object base class"""
+# class ETMTyped:
+#     """module defined object base class"""
 
-class HourlyElectricityPriceCurve(pd.Series, ETMTyped):
-    """hourly electricity price curve"""
 
-class HourlyElectricityCurves(pd.DataFrame, ETMTyped):
-    """hourly electricity curves"""
+# class HourlyElectricityPriceCurve(pd.Series, ETMTyped):
+#     """hourly electricity price curve"""
 
-class HourlyHydrogenCurves(pd.DataFrame, ETMTyped):
-    """hourly hydrogen curves"""
 
-class HourlyMethaneCurves(pd.DataFrame, ETMTyped):
-    """hourly methane curves"""
+# class HourlyElectricityCurves(pd.DataFrame, ETMTyped):
+#     """hourly electricity curves"""
 
-class HourlyHeatCurves(pd.DataFrame, ETMTyped):
-    """hourly heat curves"""
 
-class HourlyHouseholdCurves(pd.DataFrame, ETMTyped):
-    """hourly household curves"""
+# class HourlyHydrogenCurves(pd.DataFrame, ETMTyped):
+#     """hourly hydrogen curves"""
+
+
+# class HourlyMethaneCurves(pd.DataFrame, ETMTyped):
+#     """hourly methane curves"""
+
+
+# class HourlyHeatCurves(pd.DataFrame, ETMTyped):
+#     """hourly heat curves"""
+
+
+# class HourlyHouseholdCurves(pd.DataFrame, ETMTyped):
+#     """hourly household curves"""

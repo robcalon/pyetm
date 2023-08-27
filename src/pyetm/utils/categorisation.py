@@ -61,7 +61,7 @@ def validate_categorisation(
 def categorise_curves(
     curves: pd.DataFrame,
     mapping: pd.DataFrame,
-    columns: Iterable[str] | None = None,
+    columns: str | Iterable[str] | None = None,
     include_keys: bool = False,
     invert_sign: bool = False,
 ) -> pd.DataFrame:
@@ -109,14 +109,16 @@ def categorise_curves(
     validate_categorisation(curves, mapping)
     curves = assigin_sign_convention(curves, invert_sign=invert_sign)
 
-    # subset columns
-    if columns is not None:
-        # check columns argument
-        if isinstance(columns, str):
-            columns = [columns]
+    # default columns
+    if columns is None:
+        columns = mapping.columns
 
-        # subset categorization
-        mapping = mapping[columns]
+    # check columns argument
+    if isinstance(columns, str):
+        columns = [columns]
+
+    # subset categorization
+    mapping = mapping.loc[:, list(columns)]
 
     # include index in mapping
     if include_keys is True:
@@ -135,7 +137,7 @@ def categorise_curves(
 
     if len(mapping.columns) == 1:
         # extract column
-        column = columns[0]
+        column = list(columns)[0]
 
         # apply mapping to curves
         curves.columns = curves.columns.map(mapping[column])
@@ -147,13 +149,15 @@ def categorise_curves(
     else:
         # make mapper for multiindex
         names = list(mapping.columns)
-        mapping = dict(zip(mapping.index, pd.MultiIndex.from_frame(mapping)))
+        mapper = dict(zip(mapping.index, pd.MultiIndex.from_frame(mapping)))
 
         # apply mapping to curves
-        midx = curves.columns.to_series().map(mapping)
+        midx = curves.columns.to_series().map(mapper)
         curves.columns = pd.MultiIndex.from_tuples(midx, names=names)
 
         # aggregate over levels
+        # incorrect pandas type for midx, fix in pandas 2.1
+        # https://github.com/pandas-dev/pandas/pull/53469
         curves = curves.groupby(level=names, axis=1).sum()
 
     return curves.sort_index(axis=1)

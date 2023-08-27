@@ -1,8 +1,9 @@
 """PeriodIndex related utilities."""
-
 from __future__ import annotations
+from typing import Any
 
 import calendar
+
 import pandas as pd
 
 
@@ -10,7 +11,7 @@ def make_period_index(
     year: int,
     name: str | None = None,
     periods: int | None = None,
-    as_datetime: bool = False
+    as_datetime: bool = False,
 ) -> pd.PeriodIndex | pd.DatetimeIndex:
     """Make a PeriodIndex for a specific year.
 
@@ -33,15 +34,15 @@ def make_period_index(
         The constructed index."""
 
     # make start period
-    start = f'{year}-01-01 00:00'
+    start = f"{year}-01-01 00:00"
 
     # default name for datetime index
     if (name is None) & as_datetime:
-        name = 'Datetime'
+        name = "Datetime"
 
     # default name for period index
     if (name is None) & (not as_datetime):
-        name = 'Period'
+        name = "Period"
 
     # check periods
     if periods is None:
@@ -52,20 +53,18 @@ def make_period_index(
         periods = len(periods)
 
     # make periodindex
-    index = pd.period_range(
-        start=start, periods=periods, freq='H', name=name)
+    index = pd.period_range(start=start, periods=periods, freq="H", name=name)
 
     # convert type
     if as_datetime:
-        index = index.astype('datetime64[ns]')
+        index = index.astype("datetime64[ns]")
 
     return index
 
+
 def validate_profile(
-    series: pd.Series,
-    name: str | None = None,
-    year: int | None = None
-) -> pd.Series:
+    series: pd.Series[Any], name: str | None = None, year: int | None = None
+) -> pd.Series[Any]:
     """Validate profile object.
 
     Parameters
@@ -87,34 +86,41 @@ def validate_profile(
 
     # squeeze dataframe
     if isinstance(series, pd.DataFrame):
-        series = series.squeeze('columns')
+        squeezed = pd.DataFrame(series).squeeze(axis=1)
+
+        # cannot process frames
+        if not isinstance(squeezed, pd.Series):
+            raise TypeError("Cannot squeeze DataFrame to Series")
+
+        # assign squeezed
+        series = squeezed
 
     # default to series name
     if name is None:
-        name = series.name
+        name = str(series.name)
 
     # check series lenght
     series = validate_profile_lenght(series, length=8760)
 
     # check index type
     objs = (pd.DatetimeIndex, pd.PeriodIndex)
-    if (not isinstance(series.index, objs)) & (year is None):
-
-        # raise for missing year parameter
-        raise ValueError(f"Must specify year for profile '{name}' when "
-            "passed without pd.DatetimeIndex or pd.PeriodIndex")
-
-    # assign periodindex otherwise
     if not isinstance(series.index, objs):
+        # check for year parameter
+        if year is None:
+            raise ValueError(
+                f"Must specify year for profile '{name}' when "
+                "passed without pd.DatetimeIndex or pd.PeriodIndex"
+            )
+
+        # assign period index
         series.index = make_period_index(year, periods=8760)
 
     return pd.Series(series, name=name)
 
+
 def validate_profile_lenght(
-    series: pd.Series,
-    name: str | None = None,
-    length: int | None = None
-) -> pd.Series:
+    series: pd.Series[Any], name: str | None = None, length: int | None = None
+) -> pd.Series[Any]:
     """Validate profile length.
 
     Parameters
@@ -138,11 +144,13 @@ def validate_profile_lenght(
 
     # default name
     if name is None:
-        name = series.name
+        name = str(series.name)
 
     # check series lenght
     if len(series) != 8760:
-        raise ValueError(f"Profile '{name}' must contain 8760 values, "
-            f"counted '{len(series)}' instead.")
+        raise ValueError(
+            f"Profile '{name}' must contain 8760 values, "
+            f"counted '{len(series)}' instead."
+        )
 
     return pd.Series(series, name=name)

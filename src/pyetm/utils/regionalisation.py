@@ -50,7 +50,7 @@ def validate_hourly_curves_balance(
 def validate_regionalisation(
     curves: pd.DataFrame,
     reg: pd.DataFrame,
-    n: int = 3,
+    prec: int = 3,
     errors: ErrorHandling = "warn",
 ) -> None:
     """helper function to validate regionalisation table"""
@@ -74,16 +74,16 @@ def validate_regionalisation(
             raise KeyError(f"Unused key(s) in regionalisation: {error}")
 
     # check if regionalizations add up to 1.000
-    sums = reg.sum(axis=0).round(n)
+    sums = reg.sum(axis=0).round(prec)
     checksum_errors = sums[sums != 1]
     if not checksum_errors.empty:
         if errors == "warn":
             for key, value in checksum_errors.items():
-                error = f"{key}={value:.{n}f}"
+                error = f"{key}={value:.{prec}f}"
                 logger.warning("Regionalisation key does not sum to 1: %s", error)
 
         if errors == "raise":
-            error = mapped_floats_to_str((dict(checksum_errors)), n=n)
+            error = mapped_floats_to_str((dict(checksum_errors)), prec=prec)
             raise ValueError(f"Regionalisation key(s) do not sum to 1: {error}")
 
 
