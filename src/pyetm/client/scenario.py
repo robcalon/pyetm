@@ -185,14 +185,13 @@ class ScenarioMethods(SessionMethods):
         # request parameters
         data = {"scenario": {"scenario_id": str(scenario_id)}}
         headers = {"content-type": "application/json"}
-        url = self.make_endpoint_url(endpoint="scenarios")
 
-        # get scenario_id
+        # make request
+        url = self.make_endpoint_url(endpoint="scenarios")
         scenario_id = int(self.session.post(url, json=data, headers=headers)["id"])
 
-        # request scenario id
-        url = self.session.make_url(self.engine_url, "scenarios")
-        scenario_id = int(self.session.post(url, json=data)["id"])
+        # connect to new scenario id
+        self.scenario_id = scenario_id
 
         # set metadata parmater
         if metadata is not None:

@@ -29,7 +29,7 @@ def assigin_sign_convention(
 
 
 def validate_categorisation(
-    curves: pd.DataFrame, mapping: pd.DataFrame, errors: ErrorHandling = "warn"
+    curves: pd.DataFrame, mapping: pd.Series[str] | pd.DataFrame, errors: ErrorHandling = "warn"
 ) -> None:
     """validate categorisation"""
 
@@ -60,7 +60,7 @@ def validate_categorisation(
 
 def categorise_curves(
     curves: pd.DataFrame,
-    mapping: pd.DataFrame,
+    mapping: pd.Series[str] | pd.DataFrame,
     columns: str | Iterable[str] | None = None,
     include_keys: bool = False,
     invert_sign: bool = False,

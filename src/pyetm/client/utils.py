@@ -17,7 +17,7 @@ class UtilMethods(SessionMethods):
     def categorise_curves(
         self,
         carrier: Carrier,
-        mapping: pd.DataFrame,
+        mapping: pd.Series[str] | pd.DataFrame,
         columns: list[str] | None = None,
         include_keys: bool = False,
         invert_sign: bool = False,

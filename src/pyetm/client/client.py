@@ -39,7 +39,7 @@ class Client(
         metadata: dict | None = None,
         keep_compatible: bool = False,
         private: bool | None = None,
-        uvalues: dict | pd.Series | None = None,
+        input_parameters: pd.Series[str | float] | None = None,
         forecast_storage_order: list[str] | None = None,
         heat_network_order: list[str] | None = None,
         ccurves: pd.DataFrame | None = None,
@@ -61,8 +61,9 @@ class Client(
             in original scenario.
         private : bool, default None
             Make the scenario private.
-        uvalues : dict, default None
-            The user value configuration in the scenario.
+        input_parameters : dict, default None
+            The user specified input parameter value
+            configuration of the scenario.
         forecast_storage_order : list[str], default None
             The forecast storage order in the scenario.
         heat_network_order : list[str], default None
@@ -89,8 +90,8 @@ class Client(
         )
 
         # set user values
-        if uvalues is not None:
-            client.user_values = uvalues
+        if input_parameters is not None:
+            client.input_parameters = input_parameters
 
         # set ccurves
         if ccurves is not None:
@@ -162,7 +163,7 @@ class Client(
 
         Parameters
         ----------
-        saved_scenario_id : int or str, default None
+        saved_scenario_id : int, default None
             The saved scenario id to which is connected.
         metadata : dict, default None
             metadata passed to scenario.
@@ -184,8 +185,12 @@ class Client(
         # initialize client
         client = cls(**kwargs)
 
-        # make request
-        url = client.make_endpoint_url(endpoint="saved_scenarios")
+        # make url
+        url = client.make_endpoint_url(
+            endpoint="saved_scenarios", extra=str(saved_scenario_id)
+        )
+
+        # get most recent scenario id
         scenario_id = int(
             client.session.get(url, content_type="application/json")["scenario_id"]
         )
@@ -313,14 +318,14 @@ class Client(
 
         # clear parameter caches
         self._get_scenario_header.cache_clear()
-        self.get_input_values.cache_clear()
+        self._get_input_parameters.cache_clear()
 
         # clear frame caches
         self.get_application_demands.cache_clear()
         self.get_energy_flows.cache_clear()
-        self.get_heat_network_order.cache_clear()
         self.get_production_parameters.cache_clear()
         self.get_sankey.cache_clear()
+        self.get_storage_parameters.cache_clear()
 
         # reset gqueries
         self.get_gquery_results.cache_clear()

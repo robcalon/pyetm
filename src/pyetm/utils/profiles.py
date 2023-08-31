@@ -63,7 +63,7 @@ def make_period_index(
 
 
 def validate_profile(
-    series: pd.Series[Any], name: str | None = None, year: int | None = None
+    series: pd.Series[Any], name: str | None = None
 ) -> pd.Series[Any]:
     """Validate profile object.
 
@@ -73,10 +73,6 @@ def validate_profile(
         Series to be validated.
     name : str
         Name of returned series.
-    year : int, default None
-        Optional year to help construct a
-        PeriodIndex when a series is passed
-        without PeriodIndex or DatetimeIndex
 
     Return
     ------
@@ -102,18 +98,18 @@ def validate_profile(
     # check series lenght
     series = validate_profile_lenght(series, length=8760)
 
-    # check index type
-    objs = (pd.DatetimeIndex, pd.PeriodIndex)
-    if not isinstance(series.index, objs):
-        # check for year parameter
-        if year is None:
-            raise ValueError(
-                f"Must specify year for profile '{name}' when "
-                "passed without pd.DatetimeIndex or pd.PeriodIndex"
-            )
+    # # check index type
+    # objs = (pd.DatetimeIndex, pd.PeriodIndex)
+    # if not isinstance(series.index, objs):
+    #     # check for year parameter
+    #     if year is None:
+    #         raise ValueError(
+    #             f"Must specify year for profile '{name}' when "
+    #             "passed without pd.DatetimeIndex or pd.PeriodIndex"
+    #         )
 
-        # assign period index
-        series.index = make_period_index(year, periods=8760)
+    #     # assign period index
+    #     series.index = make_period_index(year, periods=8760)
 
     return pd.Series(series, name=name)
 
