@@ -1,10 +1,13 @@
 """client object"""
 from __future__ import annotations
+from typing import Any, Iterable
 
+from pandas._typing import InterpolateOptions
 import pandas as pd
 
 from pyetm.logger import get_modulelogger
 from pyetm.sessions import AIOHTTPSession, RequestsSession
+from pyetm.utils.interpolation import interpolate
 
 from .account import AccountMethods
 from .curves import CurveMethods
@@ -37,9 +40,9 @@ class Client(
         area_code: str,
         end_year: int,
         metadata: dict | None = None,
-        keep_compatible: bool = False,
+        keep_compatible: bool | None = None,
         private: bool | None = None,
-        input_parameters: pd.Series[str | float] | None = None,
+        input_parameters: pd.Series[Any] | None = None,
         forecast_storage_order: list[str] | None = None,
         heat_network_order: list[str] | None = None,
         ccurves: pd.DataFrame | None = None,
@@ -184,20 +187,98 @@ class Client(
 
         # initialize client
         client = cls(**kwargs)
-
-        # make url
-        url = client.make_endpoint_url(
-            endpoint="saved_scenarios", extra=str(saved_scenario_id)
-        )
-
-        # get most recent scenario id
-        scenario_id = int(
-            client.session.get(url, content_type="application/json")["scenario_id"]
-        )
+        scenario_id = client._get_saved_scenario_id(saved_scenario_id)
 
         return cls.from_existing_scenario(
             scenario_id, metadata, keep_compatible, private, **kwargs
         )
+
+    @classmethod
+    def from_interpolation(
+        cls,
+        end_year: int,
+        scenario_ids: Iterable[int],
+        method: InterpolateOptions = 'linear',
+        saved_scenario_ids: bool = False,
+        metadata: dict | None = None,
+        keep_compatible: bool | None = None,
+        private: bool | None = None,
+        forecast_storage_order: list[str] | None = None,
+        heat_network_order: list[str] | None = None,
+        ccurves: pd.DataFrame | None = None,
+        **kwargs
+    ):
+        """Initialize from interpolation of existing scenarios. Note that
+        the custom orders are always returned to the default values.
+
+        Parameters
+        ----------
+        year: int
+            The end year for which the interpolation is made.
+        scenario_ids: int or iterable of int.
+            The scenario ids that are used for interpolation.
+        method : string, default 'linear'
+            Method for filling continious user values
+            for the passed target year(s).
+        saved_scenario_ids : bool, default False
+            Passed scenario ids are saved scenario ids.
+        metadata : dict, default None
+            metadata passed to scenario.
+        keep_compatible : bool, default None
+            Keep scenario compatible with future
+            versions of ETM. Defaults to settings
+            in original scenario.
+        private : bool, default None
+            Make the scenario private.
+        forecast_storage_order : list[str], default None
+            The forecast storage order in the scenario.
+        heat_network_order : list[str], default None
+            The heat network order in the scenario.
+        ccurves : pd.DataFrame, default None
+            Custom curves to use in sceneario.
+
+        **kwargs are passed to the default initialization
+        procedure of the client.
+
+        Return
+        ------
+        client : Client
+            Returns initialized client object."""
+
+        # handle scenario ids:
+        if saved_scenario_ids:
+
+            # Only perform read operations on these sids
+            # as saved scenario's history would otherwise be modified.
+            client = Client(**kwargs)
+            scenario_ids = [
+                client._get_saved_scenario_id(sid) for sid in scenario_ids
+            ]
+
+        clients = [Client(sid, **kwargs) for sid in scenario_ids]
+
+
+        # initialize scenario ids and sort by end year
+        clients = [Client(sid, **kwargs) for sid in scenario_ids]
+        clients = sorted(clients, key=lambda cln: cln.end_year)
+
+        # get interpolated input parameters
+        interpolated = interpolate(
+            target=end_year, clients=clients, method=method
+        )
+
+        return Client.from_scenario_parameters(
+            area_code=clients[-1].area_code,
+            end_year=end_year,
+            metadata=metadata,
+            private=private,
+            keep_compatible=keep_compatible,
+            input_parameters=interpolated[end_year],
+            forecast_storage_order=forecast_storage_order,
+            heat_network_order=heat_network_order,
+            ccurves=ccurves,
+            **kwargs
+            )
 
     def __init__(
         self,
@@ -258,15 +339,7 @@ class Client(
         # set default gqueries
         self.gqueries = []
 
-        # make message
-        msg = (
-            "Initialised new Client: "
-            f"'scenario_id={self.scenario_id}, "
-            f"area_code={self.area_code}, "
-            f"end_year={self.end_year}'"
-        )
-
-        logger.debug(msg)
+        logger.debug("Initialised new Client: %s", self)
 
     def __enter__(self):
         """enter conext manager"""
@@ -307,8 +380,8 @@ class Client(
         strname = (
             "Client("
             f"scenario_id={self.scenario_id}, "
-            f"area_code={self.area_code}, "
-            f"end_year={self.end_year})"
+            f"area_code={self.area_code if self.scenario_id else None}, "
+            f"end_year={self.end_year if self.scenario_id else None})"
         )
 
         return strname

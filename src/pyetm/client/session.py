@@ -11,26 +11,10 @@ import pandas as pd
 
 from pyetm.logger import get_modulelogger
 from pyetm.sessions.abc import SessionABC
+from pyetm.types import TokenScope, Endpoint
 
 # get modulelogger
 logger = get_modulelogger(__name__)
-
-TokenScope = Literal[
-    "openid", "public", "scenarios:read", "scenarios:write", "scenarios:delete"
-]
-
-Endpoint = Literal[
-    "scenarios",
-    "scenario_id",
-    "curves",
-    "custom_curves",
-    "inputs",
-    "merit_configuration",
-    "user",
-    "transition_paths",
-    "token",
-    "saved_scenarios",
-]
 
 
 class SessionMethods:

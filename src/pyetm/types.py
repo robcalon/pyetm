@@ -3,10 +3,52 @@ from __future__ import annotations
 from typing import Literal
 
 
-Carrier = Literal["electricity", "heat", "hydrogen", "methane"]
-ContentType = Literal["application/json", "text/csv", "text/html"]
-ErrorHandling = Literal["ignore", "warn", "raise"]
-Method = Literal["delete", "get", "post", "put"]
+Carrier = Literal[
+    "electricity",
+    "heat",
+    "hydrogen",
+    "methane"
+]
+
+ContentType = Literal[
+    "application/json",
+    "text/csv",
+    "text/html"
+]
+
+ErrorHandling = Literal[
+    "ignore",
+    "warn",
+    "raise"
+]
+
+Method = Literal[
+    "delete",
+    "get",
+    "post",
+    "put"
+]
+
+TokenScope = Literal[
+    "openid",
+    "public",
+    "scenarios:read",
+    "scenarios:write",
+    "scenarios:delete"
+]
+
+Endpoint = Literal[
+    "scenarios",
+    "scenario_id",
+    "curves",
+    "custom_curves",
+    "inputs",
+    "merit_configuration",
+    "user",
+    "transition_paths",
+    "token",
+    "saved_scenarios",
+]
 
 
 # class ETMTyped:

@@ -150,3 +150,16 @@ class AccountMethods(SessionMethods):
         )
 
         return objects
+
+    def _get_saved_scenario_id(self, saved_scenario_id: int) -> int:
+        """get latest scenario id for saved scenario"""
+
+        # make url
+        url = self.make_endpoint_url(
+            endpoint="saved_scenarios", extra=str(saved_scenario_id)
+        )
+
+        # get most recent scenario id
+        scenario = self.session.get(url, content_type="application/json")
+
+        return int(scenario["scenario_id"])

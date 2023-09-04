@@ -14,9 +14,9 @@ class ScenarioMethods(SessionMethods):
     """Base scenario methods"""
 
     @property
-    def area_code(self) -> str | None:
+    def area_code(self) -> str:
         """code for the area that the scenario describes"""
-        return self._scenario_header.get("area_code")
+        return self._scenario_header["area_code"]
 
     @property
     def created_at(self) -> pd.Timestamp | None:
@@ -32,9 +32,9 @@ class ScenarioMethods(SessionMethods):
         return datetime
 
     @property
-    def end_year(self) -> int | None:
+    def end_year(self) -> int:
         """target year for which the scenario is configured"""
-        return self._scenario_header.get("end_year")
+        return self._scenario_header["end_year"]
 
     @property
     def esdl_exportable(self) -> str | None:
@@ -188,9 +188,10 @@ class ScenarioMethods(SessionMethods):
 
         # make request
         url = self.make_endpoint_url(endpoint="scenarios")
-        scenario_id = int(self.session.post(url, json=data, headers=headers)["id"])
+        scenario = self.session.post(url, json=data, headers=headers)
 
         # connect to new scenario id
+        scenario_id = int(scenario['id'])
         self.scenario_id = scenario_id
 
         # set metadata parmater
@@ -249,9 +250,10 @@ class ScenarioMethods(SessionMethods):
         url = self.make_endpoint_url(endpoint="scenarios")
 
         # get scenario_id
-        scenario_id = int(self.session.post(url, json=data, headers=headers)["id"])
+        scenario = self.session.post(url, json=data, headers=headers)
 
         # connect to new scenario
+        scenario_id = int(scenario['id'])
         self.scenario_id = scenario_id
 
         # set scenario metadata
@@ -310,7 +312,8 @@ class ScenarioMethods(SessionMethods):
         url = self.make_endpoint_url(endpoint="scenario_id", extra="interpolate")
 
         # get scenario_id
-        scenario_id = int(self.session.post(url, json=data, headers=headers)["id"])
+        scenario = self.session.post(url, json=data, headers=headers)
+        scenario_id = int(scenario['id'])
 
         # connect to new scenario
         if connect is True:
@@ -368,7 +371,7 @@ class ScenarioMethods(SessionMethods):
 
         # prepare request
         headers = {"content-type": "application/json"}
-        data = {"scenario_id": str(self.copy_scenario(connect=False))}
+        data: dict[str, Any] = {"scenario_id": self.copy_scenario(connect=False)}
 
         # update exisiting saved scenario
         if saved_scenario_id is not None:
@@ -378,11 +381,9 @@ class ScenarioMethods(SessionMethods):
             )
 
             # make request
-            saved_scenario = int(
-                self.session.put(url, json=data, headers=headers)["id"]
-            )
+            scenario = self.session.post(url, json=data, headers=headers)
 
-            return saved_scenario
+            return int(scenario['id'])
 
         # default title
         if title is None:
@@ -393,7 +394,7 @@ class ScenarioMethods(SessionMethods):
 
         # add privacy setting
         if private is not None:
-            data["private"] = str(bool(private)).lower()
+            data["private"] = bool(private)
 
         # add description
         if description is not None:
@@ -403,9 +404,10 @@ class ScenarioMethods(SessionMethods):
         url = self.make_endpoint_url(endpoint="saved_scenarios")
 
         # make request
-        saved_scenario = int(self.session.put(url, json=data, headers=headers)["id"])
+        print(data)
+        scenario = self.session.post(url, json=data, headers=headers)
 
-        return saved_scenario
+        return int(scenario['id'])
 
     # def to_dict(self): #, path: str | Path) -> None:
     #     """export full scenario to dict"""

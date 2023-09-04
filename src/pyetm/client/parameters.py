@@ -2,7 +2,7 @@
 from __future__ import annotations
 import functools
 
-from typing import Any, overload
+from typing import overload, Literal, Any
 
 import numpy as np
 import pandas as pd
@@ -20,13 +20,13 @@ class ParameterMethods(SessionMethods):
     ## Inputs ##
 
     @property
-    def input_parameters(self) -> pd.Series[str | float]:
+    def input_parameters(self) -> pd.Series[Any]:
         """scenario input parameters"""
         return self.get_input_parameters(False, False, False)
 
     @input_parameters.setter
-    def input_parmaters(
-        self, inputs: dict[str, str | float] | pd.Series[str | float] | None
+    def input_parameters(
+        self, inputs: dict[str, str | float] | pd.Series[Any] | None
     ) -> None:
         self.set_input_parameters(inputs)
 
@@ -40,6 +40,9 @@ class ParameterMethods(SessionMethods):
 
         # convert records to frame
         parameters = pd.DataFrame.from_records(records).T
+        parameters = parameters.drop(columns='cache_error')
+
+        # infer dtypes
         parameters = parameters.infer_objects()
 
         # add user to column when absent
@@ -53,7 +56,7 @@ class ParameterMethods(SessionMethods):
         self,
         user_only: bool = False,
         include_disabled: bool = False,
-        detailed: bool = False,
+        detailed: Literal[False] = False,
         share_group: str | None = None
     ) -> pd.Series[str | float]:
         pass
@@ -63,7 +66,7 @@ class ParameterMethods(SessionMethods):
         self,
         user_only: bool = False,
         include_disabled: bool = False,
-        detailed: bool = True,
+        detailed: Literal[True] = True,
         share_group: str | None = None
     ) -> pd.DataFrame:
         pass
@@ -123,7 +126,7 @@ class ParameterMethods(SessionMethods):
             return parameters
 
         # set missing defaults
-        parameters.fillna(parameters['default'])
+        parameters['user'] = parameters['user'].fillna(parameters['default'])
 
         # subset user set inputs
         user = parameters['user']
@@ -132,7 +135,7 @@ class ParameterMethods(SessionMethods):
         return user
 
     def set_input_parameters(
-        self, inputs: dict[str, str | float] | pd.Series[str | float] | None
+        self, inputs: dict[str, str | float] | pd.Series[Any] | None
     ) -> None:
         """set scenario input parameters"""
 
