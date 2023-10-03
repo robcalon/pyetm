@@ -8,7 +8,7 @@ from collections.abc import Iterable
 import pandas as pd
 
 from pyetm.logger import PACKAGEPATH
-from pyetm.utils.profiles import validate_profile
+from pyetm.utils.profiles import validate_profile, make_period_index
 
 from .smoothing import ProfileSmoother
 
@@ -63,7 +63,7 @@ class Houses:
             "insulation_level": str,
             "behaviour": float,
             "r_value": float,
-            "windows_area": float,
+            "window_area": float,
             "surface_area": float,
             "wall_thickness": float,
         }
@@ -73,7 +73,7 @@ class Houses:
         usecols = [key for key in dtypes]
 
         # load properties
-        properties = pd.read_csv(file, usecols=usecols, dtype=dtypes)
+        properties = pd.read_csv(file, usecols=usecols, index_col=[0, 1], dtype=dtypes)
         props = properties.T[(house_type, insulation_level)]
 
         # get relevant properties
@@ -199,10 +199,10 @@ class Houses:
             Required heating demand."""
 
         # determine energy demand at hour and update inside temperature
-        demand = max(self.thermostat[hour] - self._inside, 0) * self.heat_capacity
+        demand = max(self.thermostat[int(hour)] - self._inside, 0) * self.heat_capacity
 
         # determine new inside temperature
-        self._inside = max(self.thermostat[hour], self._inside)
+        self._inside = max(self.thermostat[int(hour)], self._inside)
 
         # determine energy leakage and absorption
         leakage = (self._inside - temperature) * self.exchange_delta
@@ -214,8 +214,7 @@ class Houses:
         return demand
 
     def make_heat_demand_profile(
-        self, temperature: pd.Series, irradiance: pd.Series, year: int | None = None
-    ) -> pd.Series[float]:
+        self, temperature: pd.Series[float], irradiance: pd.Series[float]) -> pd.Series[float]:
         """Make heat demand profile for house.
 
         Parameters
@@ -225,10 +224,6 @@ class Houses:
             Celcius for 8760 hours.
         irradiance : pd.Series
             Irradiance profile in W/m2 for 8760 hours.
-        year : int, default None
-            Optional year to help construct a
-            PeriodIndex when a series are passed
-            without PeriodIndex or DatetimeIndex.
 
         Return
         ------
@@ -237,19 +232,19 @@ class Houses:
             house insulation level."""
 
         # validate profiles
-        temperature = validate_profile(temperature, name="temperature", year=year)
-        irradiance = validate_profile(irradiance, name="irradiance", year=year)
+        temperature = validate_profile(temperature, name="temperature")
+        irradiance = validate_profile(irradiance, name="irradiance")
 
-        # check for allignment
-        if not temperature.index.equals(irradiance.index):
-            raise ValueError(
-                "Periods or Datetimes of 'temperature' "
-                "and 'irradiance' profiles are not alligned."
-            )
+        # # check for allignment
+        # if not temperature.index.equals(irradiance.index):
+        #     raise ValueError(
+        #         "Periods or Datetimes of 'temperature' "
+        #         "and 'irradiance' profiles are not alligned."
+        #     )
 
-        # merge profiles and get index hours
+        # merge profiles and assign hour of day
         merged = pd.concat([temperature, irradiance], axis=1)
-        merged["hour"] = pd.PeriodIndex(merged.index).hour
+        merged["hour"] = make_period_index(2019, periods=8760).hour
 
         # apply calculate demand function
         profile = merged.apply(lambda row: self._calculate_heat_demand(**row), axis=1)
@@ -261,7 +256,7 @@ class Houses:
 
         # name profile
         name = f"weather/insulation_{self.house_type}_{self.insulation_level}"
-        profile = pd.Series(values, profile.index, dtype="float64", name=name)
+        profile = pd.Series(values, profile.index, dtype=float, name=name)
 
         return profile / profile.sum() / 3.6e3
 
@@ -298,8 +293,8 @@ class HousePortfolio:
         houses = []
 
         # iterate over house types and insulation levels
-        for house_type in properties.house_type.unique():
-            for insultation_level in properties.insulation_level.unique():
+        for house_type in properties['house_type'].unique():
+            for insultation_level in properties['insulation_level'].unique():
                 # init house from default settings
                 houses.append(Houses.from_defaults(house_type, insultation_level))
 
@@ -329,8 +324,7 @@ class HousePortfolio:
         return f"HousePortfolio(name={self.name})"
 
     def make_heat_demand_profiles(
-        self, temperature: pd.Series, irradiance: pd.Series, year: int | None = None
-    ) -> pd.DataFrame:
+        self, temperature: pd.Series[float], irradiance: pd.Series[float]) -> pd.DataFrame:
         """Make heat demand profiles for all houses.
 
         Parameters
@@ -340,10 +334,6 @@ class HousePortfolio:
             Celcius for 8760 hours.
         irradiance : pd.Series
             Irradiance profile in W/m2 for 8760 hours.
-        year : int, default None
-            Optional year to help construct a
-            PeriodIndex when a series are passed
-            without PeriodIndex or DatetimeIndex.
 
         Return
         ------
@@ -353,7 +343,7 @@ class HousePortfolio:
 
         # get heat profile for each house object
         profiles = [
-            house.make_heat_demand_profile(temperature, irradiance, year)
+            house.make_heat_demand_profile(temperature, irradiance)
             for house in self.houses
         ]
 

@@ -6,7 +6,7 @@ from __future__ import annotations
 import pandas as pd
 
 from pyetm.logger import PACKAGEPATH
-from pyetm.utils.profiles import validate_profile, validate_profile_lenght
+from pyetm.utils.profiles import validate_profile, make_period_index
 
 
 class Buildings:
@@ -68,9 +68,9 @@ class Buildings:
 
         # set parameters
         self.name = name
-        self.reference = validate_profile_lenght(reference)
-        self.slope = validate_profile_lenght(slope)
-        self.constant = validate_profile_lenght(constant)
+        self.reference = validate_profile(reference)
+        self.slope = validate_profile(slope)
+        self.constant = validate_profile(constant)
 
     def __repr__(self) -> str:
         """Reproduction string"""
@@ -141,7 +141,6 @@ class Buildings:
         self,
         temperature: pd.Series[float],
         wind_speed: pd.Series[float],
-        year: int | None = None,
     ) -> pd.Series[float]:
         """Make heat demand profile for buildings.
 
@@ -156,10 +155,6 @@ class Buildings:
             Celcius for 8760 hours.
         wind_speed : pd.Series
             Wind speed profile in m/s for 8760 hours.
-        year : int, default None
-            Optional year to help construct a
-            PeriodIndex when a series are passed
-            without PeriodIndex or DatetimeIndex.
 
         Return
         ------
@@ -167,20 +162,21 @@ class Buildings:
             Heat demand profile for buildings."""
 
         # validate temperature profile
-        temperature = validate_profile(temperature, name="temperature", year=year)
+        temperature = validate_profile(temperature, name="temperature")
+        wind_speed = validate_profile(wind_speed, name="wind_speed")
 
-        # validate irradiance profile
-        wind_speed = validate_profile(wind_speed, name="wind_speed", year=year)
+        # # check for allignment
+        # if not temperature.index.equals(wind_speed.index):
+        #     raise ValueError(
+        #         "Periods or Datetimes of 'temperature' "
+        #         "and 'wind_speed' profiles are not alligned."
+        #     )
 
-        # check for allignment
-        if not temperature.index.equals(wind_speed.index):
-            raise ValueError(
-                "Periods or Datetimes of 'temperature' "
-                "and 'wind_speed' profiles are not alligned."
-            )
-
-        # merge profiles and get daily average
+        # merge profiles and assign periodindex
         merged = pd.concat([temperature, wind_speed], axis=1)
+        merged.index = make_period_index(year=2019, periods=8760)
+
+        # evaluate daily average
         merged = merged.groupby(pd.Grouper(freq="1D")).mean()
 
         # evaluate effective temperature
@@ -197,4 +193,7 @@ class Buildings:
         name = "weather/buildings_heating"
         profile = pd.Series(profile, name=name, dtype=float)
 
-        return profile / profile.sum() / 3.6e3
+        # scale profile values
+        profile = profile / profile.sum() / 3.6e3
+
+        return profile.reset_index(drop=True)
