@@ -182,7 +182,7 @@ class SessionTemplate(SessionABC):
         return self.request(
             method="delete",
             url=url,
-            content_type="application/json",
+            content_type='text/html',
             headers=headers,
         )
 
