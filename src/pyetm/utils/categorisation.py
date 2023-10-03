@@ -45,9 +45,6 @@ def validate_categorisation(
     # check if cat specifies keys not in passed curves
     superfluous_curves = mapping.index[~mapping.index.isin(curves.columns)]
     if not superfluous_curves.empty:
-        # make message
-        superfluous_curves = "', '".join(map(str, superfluous_curves))
-        message = f"Unused key(s) in mapping: '{superfluous_curves}'"
 
         if errors == "warn":
             for key in superfluous_curves:
@@ -144,7 +141,7 @@ def categorise_curves(
         curves.columns.name = column
 
         # aggregate over mapping
-        curves = curves.groupby(by=column, axis=1).sum()
+        curves = curves.T.groupby(by=column).sum().T
 
     else:
         # make mapper for multiindex
@@ -156,8 +153,6 @@ def categorise_curves(
         curves.columns = pd.MultiIndex.from_tuples(midx, names=names)
 
         # aggregate over levels
-        # incorrect pandas type for midx, fix in pandas 2.1
-        # https://github.com/pandas-dev/pandas/pull/53469
-        curves = curves.groupby(level=names, axis=1).sum()
+        curves = curves.T.groupby(level=names).sum().T
 
     return curves.sort_index(axis=1)
