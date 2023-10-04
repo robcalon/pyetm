@@ -135,7 +135,7 @@ def categorise_curves(curves: pd.DataFrame,
         curves.columns.name = column
 
         # aggregate over mapping
-        curves = curves.groupby(by=column, axis=1).sum()
+        curves = curves.T.groupby(by=column).sum().T
 
     else:
 
@@ -148,6 +148,6 @@ def categorise_curves(curves: pd.DataFrame,
         curves.columns = pd.MultiIndex.from_tuples(midx, names=names)
 
         # aggregate over levels
-        curves = curves.groupby(level=names, axis=1).sum()
+        curves = curves.T.groupby(level=names).sum().T
 
     return curves.sort_index(axis=1)
