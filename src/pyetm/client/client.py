@@ -2,11 +2,11 @@
 from __future__ import annotations
 from typing import Any, Iterable
 
-from pandas._typing import InterpolateOptions
 import pandas as pd
 
 from pyetm.logger import get_modulelogger
 from pyetm.sessions import AIOHTTPSession, RequestsSession
+from pyetm.types import InterpolateOptions
 from pyetm.utils.interpolation import interpolate
 
 from .account import AccountMethods
@@ -85,8 +85,8 @@ class Client(
         # initialize new scenario
         client = cls(**kwargs)
         client.create_new_scenario(
-            area_code,
-            end_year,
+            area_code=area_code,
+            end_year=end_year,
             metadata=metadata,
             keep_compatible=keep_compatible,
             private=private,
@@ -198,7 +198,7 @@ class Client(
         cls,
         end_year: int,
         scenario_ids: Iterable[int],
-        method: InterpolateOptions = 'linear',
+        method: InterpolateOptions = "linear",
         saved_scenario_ids: bool = False,
         metadata: dict | None = None,
         keep_compatible: bool | None = None,
@@ -206,7 +206,7 @@ class Client(
         forecast_storage_order: list[str] | None = None,
         heat_network_order: list[str] | None = None,
         ccurves: pd.DataFrame | None = None,
-        **kwargs
+        **kwargs,
     ):
         """Initialize from interpolation of existing scenarios. Note that
         the custom orders are always returned to the default values.
@@ -247,38 +247,37 @@ class Client(
 
         # handle scenario ids:
         if saved_scenario_ids:
-
             # Only perform read operations on these sids
             # as saved scenario's history would otherwise be modified.
             client = Client(**kwargs)
-            scenario_ids = [
-                client._get_saved_scenario_id(sid) for sid in scenario_ids
-            ]
+            scenario_ids = [client._get_saved_scenario_id(sid) for sid in scenario_ids]
 
         clients = [Client(sid, **kwargs) for sid in scenario_ids]
-
 
         # initialize scenario ids and sort by end year
         clients = [Client(sid, **kwargs) for sid in scenario_ids]
         clients = sorted(clients, key=lambda cln: cln.end_year)
 
         # get interpolated input parameters
-        interpolated = interpolate(
-            target=end_year, clients=clients, method=method
-        )
+        interpolated = interpolate(target=end_year, clients=clients, method=method)
+        input_parameters = interpolated[end_year]
+
+        # get area code
+        client = clients[-1]
+        area_code = client.area_code
 
         return Client.from_scenario_parameters(
-            area_code=clients[-1].area_code,
+            area_code=area_code,
             end_year=end_year,
             metadata=metadata,
             private=private,
             keep_compatible=keep_compatible,
-            input_parameters=interpolated[end_year],
+            input_parameters=input_parameters,
             forecast_storage_order=forecast_storage_order,
             heat_network_order=heat_network_order,
             ccurves=ccurves,
-            **kwargs
-            )
+            **kwargs,
+        )
 
     def __init__(
         self,

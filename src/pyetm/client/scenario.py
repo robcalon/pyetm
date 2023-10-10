@@ -191,7 +191,7 @@ class ScenarioMethods(SessionMethods):
         scenario = self.session.post(url, json=data, headers=headers)
 
         # connect to new scenario id
-        scenario_id = int(scenario['id'])
+        scenario_id = int(scenario["id"])
         self.scenario_id = scenario_id
 
         # set metadata parmater
@@ -253,7 +253,7 @@ class ScenarioMethods(SessionMethods):
         scenario = self.session.post(url, json=data, headers=headers)
 
         # connect to new scenario
-        scenario_id = int(scenario['id'])
+        scenario_id = int(scenario["id"])
         self.scenario_id = scenario_id
 
         # set scenario metadata
@@ -313,7 +313,7 @@ class ScenarioMethods(SessionMethods):
 
         # get scenario_id
         scenario = self.session.post(url, json=data, headers=headers)
-        scenario_id = int(scenario['id'])
+        scenario_id = int(scenario["id"])
 
         # connect to new scenario
         if connect is True:
@@ -383,7 +383,7 @@ class ScenarioMethods(SessionMethods):
             # make request
             scenario = self.session.post(url, json=data, headers=headers)
 
-            return int(scenario['id'])
+            return int(scenario["id"])
 
         # default title
         if title is None:
@@ -407,7 +407,7 @@ class ScenarioMethods(SessionMethods):
         print(data)
         scenario = self.session.post(url, json=data, headers=headers)
 
-        return int(scenario['id'])
+        return int(scenario["id"])
 
     # def to_dict(self): #, path: str | Path) -> None:
     #     """export full scenario to dict"""

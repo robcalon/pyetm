@@ -62,9 +62,7 @@ def make_period_index(
     return index
 
 
-def validate_profile(
-    series: pd.Series[Any], name: str | None = None
-) -> pd.Series[Any]:
+def validate_profile(series: pd.Series[Any], name: str | None = None) -> pd.Series[Any]:
     """Validate profile object.
 
     Parameters

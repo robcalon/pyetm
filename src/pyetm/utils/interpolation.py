@@ -6,9 +6,7 @@ from typing import Iterable, TYPE_CHECKING
 import logging
 
 import pandas as pd
-from pandas._typing import InterpolateOptions
-
-from pyetm.types import ErrorHandling
+from pyetm.types import ErrorHandling, InterpolateOptions
 
 if TYPE_CHECKING:
     from pyetm import Client
@@ -79,21 +77,22 @@ def interpolate(
     params = clients[0].get_input_parameters(include_disabled=True, detailed=True)
 
     # split input parameters by value type
-    mask = params['unit'].isin(['enum', 'x'])
+    mask = params["unit"].isin(["enum", "x"])
     cinputs, dinputs = inputs.loc[~mask], inputs.loc[mask]
 
     # check for equality of discrete values
     errors = dinputs.loc[~dinputs.eq(dinputs.iloc[:, -1], axis=0).any(axis=1)]
     if not errors.empty:
-
         # make message
-        msg = ("Inconsistent scenario settings for input parameters: \n\n"
-            + errors.to_string())
+        msg = (
+            "Inconsistent scenario settings for input parameters: \n\n"
+            + errors.to_string()
+        )
 
-        if if_errors == 'warn':
+        if if_errors == "warn":
             logger.warning(msg)
 
-        if if_errors == 'raise':
+        if if_errors == "raise":
             raise ValueError(msg)
 
     # expand subsets with target year columns

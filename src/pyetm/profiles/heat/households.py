@@ -214,7 +214,8 @@ class Houses:
         return demand
 
     def make_heat_demand_profile(
-        self, temperature: pd.Series[float], irradiance: pd.Series[float]) -> pd.Series[float]:
+        self, temperature: pd.Series[float], irradiance: pd.Series[float]
+    ) -> pd.Series[float]:
         """Make heat demand profile for house.
 
         Parameters
@@ -293,8 +294,8 @@ class HousePortfolio:
         houses = []
 
         # iterate over house types and insulation levels
-        for house_type in properties['house_type'].unique():
-            for insultation_level in properties['insulation_level'].unique():
+        for house_type in properties["house_type"].unique():
+            for insultation_level in properties["insulation_level"].unique():
                 # init house from default settings
                 houses.append(Houses.from_defaults(house_type, insultation_level))
 
@@ -324,7 +325,8 @@ class HousePortfolio:
         return f"HousePortfolio(name={self.name})"
 
     def make_heat_demand_profiles(
-        self, temperature: pd.Series[float], irradiance: pd.Series[float]) -> pd.DataFrame:
+        self, temperature: pd.Series[float], irradiance: pd.Series[float]
+    ) -> pd.DataFrame:
         """Make heat demand profiles for all houses.
 
         Parameters

@@ -21,9 +21,7 @@ class HeatDemandProfileGenerator:
 
         return cls(households, buildings)
 
-    def __init__(
-        self, households: HousePortfolio, buildings: Buildings
-    ):
+    def __init__(self, households: HousePortfolio, buildings: Buildings):
         """Initialize class object.
 
         Parameters
@@ -46,14 +44,10 @@ class HeatDemandProfileGenerator:
         """heat demand related profiles"""
 
         # make household heat demand profiles
-        households = self.households.make_heat_demand_profiles(
-            temperature, irradiance
-        )
+        households = self.households.make_heat_demand_profiles(temperature, irradiance)
 
         # make buildings heat demand profile
-        buildings = self.buildings.make_heat_demand_profile(
-            temperature, wind_speed
-        )
+        buildings = self.buildings.make_heat_demand_profile(temperature, wind_speed)
 
         # add other profiles
         temperature = pd.Series(temperature, name="weather/air_temperature")

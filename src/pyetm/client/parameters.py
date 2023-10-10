@@ -40,7 +40,7 @@ class ParameterMethods(SessionMethods):
 
         # convert records to frame
         parameters = pd.DataFrame.from_records(records).T
-        parameters = parameters.drop(columns='cache_error')
+        parameters = parameters.drop(columns="cache_error")
 
         # infer dtypes
         parameters = parameters.infer_objects()
@@ -57,7 +57,7 @@ class ParameterMethods(SessionMethods):
         user_only: bool = False,
         include_disabled: bool = False,
         detailed: Literal[False] = False,
-        share_group: str | None = None
+        share_group: str | None = None,
     ) -> pd.Series[str | float]:
         pass
 
@@ -67,7 +67,7 @@ class ParameterMethods(SessionMethods):
         user_only: bool = False,
         include_disabled: bool = False,
         detailed: Literal[True] = True,
-        share_group: str | None = None
+        share_group: str | None = None,
     ) -> pd.DataFrame:
         pass
 
@@ -76,7 +76,7 @@ class ParameterMethods(SessionMethods):
         user_only: bool = False,
         include_disabled: bool = False,
         detailed: bool = False,
-        share_group: str | None = None
+        share_group: str | None = None,
     ) -> pd.Series[str | float] | pd.DataFrame:
         """Get the scenario input parameters from the ETM server.
 
@@ -100,52 +100,51 @@ class ParameterMethods(SessionMethods):
 
         # exclude parameters without unit (seem to be irrelivant and disabled)
         parameters = self._get_input_parameters()
-        parameters = parameters.loc[~parameters['unit'].isna()]
+        parameters = parameters.loc[~parameters["unit"].isna()]
 
         # drop disabled
         if not include_disabled:
-            parameters = parameters.loc[~parameters['disabled']]
+            parameters = parameters.loc[~parameters["disabled"]]
 
         # drop non-user configured parameters
         if user_only:
-            user = ~parameters['user'].isna()
+            user = ~parameters["user"].isna()
             parameters = parameters.loc[user]
 
         # subset share group
         if share_group is not None:
-
             # check share group
-            if share_group not in parameters['share_group'].unique():
+            if share_group not in parameters["share_group"].unique():
                 raise ValueError(f"share group does not exist: {share_group}")
 
             # subset share group
-            parameters = parameters[parameters['share_group'] == share_group]
+            parameters = parameters[parameters["share_group"] == share_group]
 
         # show all details
         if detailed:
             return parameters
 
         # set missing defaults
-        parameters['user'] = parameters['user'].fillna(parameters['default'])
+        parameters["user"] = parameters["user"].fillna(parameters["default"])
 
         # subset user set inputs
-        user = parameters['user']
-        user.name = 'inputs'
+        user = parameters["user"]
+        user.name = "inputs"
 
         return user
 
     def set_input_parameters(
-        self, inputs: dict[str, str | float] | pd.Series[Any] | None
+        self, inputs: dict[str, str | float] | pd.Series[Any] | pd.DataFrame | None
     ) -> None:
         """set scenario input parameters"""
 
         # convert None to dict
         if inputs is None:
-            inputs = pd.Series()
+            inputs = {}
 
         # subset series from df
         if isinstance(inputs, pd.DataFrame):
-            inputs = inputs.loc[:, 'user']
+            inputs = inputs["user"]
 
         # prepare request
         headers = {"content-type": "application/json"}
@@ -165,7 +164,7 @@ class ParameterMethods(SessionMethods):
         """heat network order"""
 
         # make url
-        extra = 'heat_network_order'
+        extra = "heat_network_order"
         url = self.make_endpoint_url(endpoint="scenario_id", extra=extra)
 
         # make request
@@ -175,7 +174,6 @@ class ParameterMethods(SessionMethods):
 
     @heat_network_order.setter
     def heat_network_order(self, order: list[str]):
-
         # check items in order
         for item in order:
             if item not in self.heat_network_order:
@@ -186,7 +184,7 @@ class ParameterMethods(SessionMethods):
         headers = {"content-type": "application/json"}
 
         # make url
-        extra = 'heat_network_order'
+        extra = "heat_network_order"
         url = self.make_endpoint_url(endpoint="scenario_id", extra=extra)
 
         # make request
@@ -200,7 +198,7 @@ class ParameterMethods(SessionMethods):
         """forecast storage order"""
 
         # make url
-        extra = 'forecast_storage_order'
+        extra = "forecast_storage_order"
         url = self.make_endpoint_url(endpoint="scenario_id", extra=extra)
 
         # make request
@@ -210,7 +208,6 @@ class ParameterMethods(SessionMethods):
 
     @forecast_storage_order.setter
     def forecast_storage_order(self, order: list[str]) -> None:
-
         # check items in order
         for item in order:
             if item not in self.forecast_storage_order:
@@ -221,7 +218,7 @@ class ParameterMethods(SessionMethods):
         headers = {"content-type": "application/json"}
 
         # make url
-        extra = 'forecast_storage_order'
+        extra = "forecast_storage_order"
         url = self.make_endpoint_url(endpoint="scenario_id", extra=extra)
 
         # make request
@@ -237,12 +234,12 @@ class ParameterMethods(SessionMethods):
         """get the application demands"""
 
         # make url
-        extra = 'application_demands'
+        extra = "application_demands"
         url = self.make_endpoint_url(endpoint="scenario_id", extra=extra)
 
         # make request and convert to frame
         buffer = self.session.get(url, content_type="text/csv")
-        demands = pd.read_csv(buffer, index_col='key')
+        demands = pd.read_csv(buffer, index_col="key")
 
         return demands
 
@@ -251,7 +248,7 @@ class ParameterMethods(SessionMethods):
         """get the storage parameter data"""
 
         # make request
-        extra = 'storage_parameters'
+        extra = "storage_parameters"
         url = self.make_endpoint_url(endpoint="scenario_id", extra=extra)
 
         # make request
@@ -268,7 +265,7 @@ class ParameterMethods(SessionMethods):
         """get the production parameters"""
 
         # make url
-        extra = 'production_parameters'
+        extra = "production_parameters"
         url = self.make_endpoint_url(endpoint="scenario_id", extra=extra)
 
         # make request and convert to frame
@@ -285,7 +282,7 @@ class ParameterMethods(SessionMethods):
         url = self.make_endpoint_url(endpoint="scenario_id", extra="energy_flow")
         buffer = self.session.get(url, content_type="text/csv")
 
-        return pd.read_csv(buffer, index_col='key')
+        return pd.read_csv(buffer, index_col="key")
 
     @functools.lru_cache(maxsize=1)
     def get_sankey(self) -> pd.DataFrame:
