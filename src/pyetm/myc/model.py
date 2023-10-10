@@ -1,49 +1,75 @@
 """myc access"""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
-
 import datetime
+from pathlib import Path
+from typing import TYPE_CHECKING, Literal, get_args, Iterable
+
 import numpy as np
 import pandas as pd
 
 from pyetm import Client
-from pyetm.utils import categorise_curves
-from pyetm.utils.url import make_myc_url, set_url_parameters
-from pyetm.logger import get_modulelogger, log_exception
+from pyetm.logger import get_modulelogger
 from pyetm.optional import import_optional_dependency
+from pyetm.utils import categorise_curves
+from pyetm.utils.excel import add_frame, add_series
+from pyetm.utils.url import make_myc_url, set_url_parameters
 
 _logger = get_modulelogger(__name__)
 
-Carrier = Literal['electricity', 'heat', 'hydrogen', 'methane']
-
 """externalize hard coded ETM parameters"""
 
+if TYPE_CHECKING:
+    # import xlswriter
+    pass
+
+Carrier = Literal["electricity", "heat", "hydrogen", "methane"]
+
+
+def check_carriers(carriers: Carrier | Iterable[Carrier] | None):
+    """check carrier"""
+
+    # default carriers
+    if carriers is None:
+        carriers = get_args(Carrier)
+
+    # add string to list
+    if isinstance(carriers, str):
+        carriers = [carriers]
+
+    # check passed carriers
+    for carrier in carriers:
+        if carrier.lower() not in get_args(Carrier):
+            raise ValueError("carrier '{carrier}' not supported")
+
+    # ensure lower cased carrier names
+    carrier = [carrier.lower() for carrier in carriers]
+
+    return carrier
+
+
 def sort_frame(
-    frame: pd.DataFrame,
-    axis: int = 0,
-    reference: str | None = None
+    frame: pd.DataFrame, axis: int = 0, reference: str | None = None
 ) -> pd.DataFrame:
     """sort frame with reference scenario at start position"""
 
     # sort columns and get scenarios
     frame = frame.sort_index(axis=axis)
-    scenarios = frame.axes[axis].get_level_values(level='SCENARIO')
+    scenarios = frame.axes[axis].get_level_values(level="SCENARIO")
 
     # handle reference scenario
     if (reference is not None) & (reference in scenarios):
-
         # subset reference from frame
-        ref = frame.xs(reference, level='SCENARIO', axis=axis,
-            drop_level=False)
+        ref = frame.xs(reference, level="SCENARIO", axis=axis, drop_level=False)
 
         # drop reference from frame and apply custom order
-        frame = frame.drop(reference, level='SCENARIO', axis=axis)
+        frame = frame.drop(reference, level="SCENARIO", axis=axis)
         frame = pd.concat([ref, frame], axis=axis)
 
     return frame
 
-class MYCClient():
+
+class MYCClient:
     """Multi Year Chart Client"""
 
     @property
@@ -53,9 +79,7 @@ class MYCClient():
 
     @myc_url.setter
     def myc_url(self, url: str | None):
-
         if url is None:
-
             # check for default engine
             with Client(**self._kwargs) as client:
                 default_engine = client.connected_to_default_engine
@@ -66,82 +90,80 @@ class MYCClient():
 
             else:
                 # raise for missing myc URL
-                raise ValueError("must specify the related "
-                    "custom myc_url for the specified custom engine_url.")
+                raise ValueError(
+                    "must specify the related "
+                    "custom myc_url for the specified custom engine_url."
+                )
 
         self._myc_url = str(url)
 
     @property
     def session_ids(self) -> pd.Series:
         """series of scenario_ids"""
-        return self.__session_ids
+        return self._session_ids
 
     @session_ids.setter
     def session_ids(self, session_ids: pd.Series):
-
         # convert to series
         if not isinstance(session_ids, pd.Series):
             session_ids = pd.Series(session_ids)
 
         # set uniform index names
-        keys = ['STUDY', 'SCENARIO', 'REGION', 'YEAR']
+        keys = ["STUDY", "SCENARIO", "REGION", "YEAR"]
         session_ids.index.names = keys
 
         # set session ids
-        self.__session_ids = session_ids
+        self._session_ids = session_ids
 
         # revalidate reference scenario
-        if hasattr(self, '_reference'):
+        if hasattr(self, "_reference"):
             self.reference = self.reference
 
     @property
     def parameters(self) -> pd.Series:
         """parameters"""
-        return self.__parameters
+        return self._parameters
 
     @parameters.setter
     def parameters(self, parameters: pd.Series):
-
         # convert to series
         if not isinstance(parameters, pd.Series):
             parameters = pd.Series(parameters)
 
         # set parameters
-        self.__parameters = parameters
+        self._parameters = parameters
 
     @property
     def gqueries(self) -> pd.Series:
         """gqueries"""
-        return self.__gqueries
+        return self._gqueries
 
     @gqueries.setter
     def gqueries(self, gqueries: pd.Series):
-
         # convert to series
         if not isinstance(gqueries, pd.Series):
             gqueries = pd.Series(gqueries)
 
         # set gqueries
-        self.__gqueries = gqueries
+        self._gqueries = gqueries
 
     @property
-    def mapping(self) -> pd.DataFrame:
+    def mapping(self) -> pd.DataFrame | None:
         """mapping"""
-        return self.__mapping
+        return self._mapping
 
     @mapping.setter
-    def mapping(self, mapping: pd.DataFrame | None):
-
+    def mapping(self, mapping: pd.Series | pd.DataFrame | None):
         # convert to dataframe
         if (not isinstance(mapping, pd.DataFrame)) & (mapping is not None):
             mapping = pd.DataFrame(mapping)
 
         # set default index names
         if isinstance(mapping, pd.DataFrame):
-            mapping.index.names = ['KEY', 'CARRIER']
+            mapping.index.names = ["KEY", "CARRIER"]
 
         # set mapping
-        self.__mapping = mapping
+        self._mapping = mapping
 
     @property
     def depricated(self) -> list[str]:
@@ -149,20 +171,20 @@ class MYCClient():
 
         # subset depricated parameters
         depricated = [
-            'areable_land',
-            'buildings_roof_surface_available_for_pv',
-            'co2_emission_1990',
-            'co2_emission_1990_aviation_bunkers',
-            'co2_emission_1990_marine_bunkers',
-            'coast_line',
-            'number_of_buildings_both',
-            'number_of_buildings_present',
-            'number_of_inhabitants',
-            'number_of_inhabitants_present',
-            'number_of_residences',
-            'offshore_suitable_for_wind',
-            'residences_roof_surface_available_for_pv',
-            ]
+            "areable_land",
+            "buildings_roof_surface_available_for_pv",
+            "co2_emission_1990",
+            "co2_emission_1990_aviation_bunkers",
+            "co2_emission_1990_marine_bunkers",
+            "coast_line",
+            "number_of_buildings_both",
+            "number_of_buildings_present",
+            "number_of_inhabitants",
+            "number_of_inhabitants_present",
+            "number_of_residences",
+            "offshore_suitable_for_wind",
+            "residences_roof_surface_available_for_pv",
+        ]
 
         return depricated
 
@@ -172,15 +194,13 @@ class MYCClient():
 
         # list of excluded parameters for TYNDP
         excluded = [
-
             # hidden parameter for HOLON project
-            'holon_gas_households_useful_demand_heat_per_person_absolute',
-
+            "holon_gas_households_useful_demand_heat_per_person_absolute",
             # set flh parameters instead
-            'flh_of_energy_power_wind_turbine_coastal_user_curve',
-            'flh_of_energy_power_wind_turbine_inland_user_curve',
-            'flh_of_energy_power_wind_turbine_offshore_user_curve',
-            'flh_of_solar_pv_solar_radiation_user_curve',
+            "flh_of_energy_power_wind_turbine_coastal_user_curve",
+            "flh_of_energy_power_wind_turbine_inland_user_curve",
+            "flh_of_energy_power_wind_turbine_offshore_user_curve",
+            "flh_of_solar_pv_solar_radiation_user_curve",
         ]
 
         return excluded
@@ -192,9 +212,8 @@ class MYCClient():
 
     @reference.setter
     def reference(self, reference: str | None):
-
         # validate reference key
-        scenarios = self.session_ids.index.unique(level='SCENARIO')
+        scenarios = self.session_ids.index.unique(level="SCENARIO")
         if (reference not in scenarios) & (reference is not None):
             raise KeyError(f"Invalid reference key: '{reference}'")
 
@@ -204,11 +223,12 @@ class MYCClient():
     def __init__(
         self,
         session_ids: pd.Series,
-        parameters: pd.Series, gqueries: pd.Series,
+        parameters: pd.Series,
+        gqueries: pd.Series,
         mapping: pd.Series | pd.DataFrame | None = None,
         reference: str | None = None,
         myc_url: str | None = None,
-        **kwargs
+        **kwargs,
     ):
         """initialisation logic for Client.
 
@@ -260,6 +280,7 @@ class MYCClient():
             If tuple; ('cert', 'key') pair."""
 
         # set kwargs
+        self._source = None
         self._kwargs = kwargs
 
         # set optional parameters
@@ -276,7 +297,7 @@ class MYCClient():
         filepath: str,
         reference: str | None = None,
         myc_url: str | None = None,
-        **kwargs
+        **kwargs,
     ):
         """initate from excel file with standard structure
 
@@ -300,26 +321,28 @@ class MYCClient():
         xlsx = pd.ExcelFile(filepath)
 
         # get session ids
-        session_ids = pd.read_excel(xlsx, sheet_name='Sessions',
-            usecols=[*range(5)], index_col=[*range(4)]).squeeze('columns')
+        session_ids = pd.read_excel(
+            xlsx, sheet_name="Sessions", usecols=[*range(5)], index_col=[*range(4)]
+        ).squeeze("columns")
 
         # get paramters
-        parameters = pd.read_excel(xlsx, sheet_name='Parameters',
-            usecols=[*range(2)], index_col=[*range(1)]).squeeze('columns')
+        parameters = pd.read_excel(
+            xlsx, sheet_name="Parameters", usecols=[*range(2)], index_col=[*range(1)]
+        ).squeeze("columns")
 
         # get gqueries
-        gqueries = pd.read_excel(xlsx, sheet_name='GQueries',
-            usecols=[*range(2)], index_col=[*range(1)]).squeeze('columns')
+        gqueries = pd.read_excel(
+            xlsx, sheet_name="GQueries", usecols=[*range(2)], index_col=[*range(1)]
+        ).squeeze("columns")
 
         # check for optional mapping
         if "Mapping" in xlsx.sheet_names:
-
             # load mapping
-            mapping = pd.read_excel(filepath, sheet_name='Mapping',
-                index_col=[*range(2)])
+            mapping = pd.read_excel(
+                filepath, sheet_name="Mapping", index_col=[*range(2)]
+            )
 
         else:
-
             # default mapping
             mapping = None
 
@@ -331,7 +354,7 @@ class MYCClient():
             mapping=mapping,
             reference=reference,
             myc_url=myc_url,
-            **kwargs
+            **kwargs,
         )
 
         # set source in model
@@ -339,14 +362,12 @@ class MYCClient():
 
         return model
 
-    def _check_for_unmapped_input_parameters(self,
-        client: Client) -> pd.Index:
-
+    def _check_for_unmapped_input_parameters(self, client: Client) -> pd.Index:
         # get parameters from client side
-        parameters = client.scenario_parameters
+        parameters = client.get_input_parameters()
 
         # subset external coupling nodes
-        key = 'external_coupling'
+        key = "external_coupling"
         subset = parameters.index.str.contains(key, regex=True)
 
         # drop external coupling nodex
@@ -359,12 +380,11 @@ class MYCClient():
 
         # keys not in parameters but in parameters
         missing = parameters[~parameters.index.isin(self.parameters.index)]
-        missing = pd.Index(missing.index, name='unmapped keys')
+        missing = pd.Index(missing.index, name="unmapped keys")
 
         return missing
 
-    def _make_midx(self,
-        midx: tuple | pd.MultiIndex | None = None) -> pd.MultiIndex:
+    def _make_midx(self, midx: tuple | pd.MultiIndex | None = None) -> pd.MultiIndex:
         """helper to handle passed multiindex"""
 
         # default to all
@@ -382,7 +402,8 @@ class MYCClient():
         return midx
 
     def get_input_parameters(
-        self, midx: tuple | pd.MultiIndex | None = None) -> pd.DataFrame:
+        self, midx: tuple | pd.MultiIndex | None = None
+    ) -> pd.DataFrame:
         """get input parameters for single scenario"""
 
         # subset cases of interest
@@ -391,61 +412,53 @@ class MYCClient():
 
         _logger.info("collecting input parameters")
 
-        try:
+        # make client with context manager
+        with Client(**self._kwargs) as client:
+            # newlist
+            values = []
 
-            # make client with context manager
-            with Client(**self._kwargs) as client:
+            # connect scenario and check for unmapped keys
+            client.gqueries = list(self.gqueries.index)
 
-                # newlist
-                values = []
+            # newset
+            warned = False
+            unmapped = set()
+
+            # get parameter settings
+            for case, scenario_id in cases.items():
+                # log event
+                _logger.debug(
+                    "> collecting inputs for " + "'%s', '%s', '%s', '%s'", *case
+                )
 
                 # connect scenario and check for unmapped keys
-                client.gqueries = list(self.gqueries.index)
+                client.scenario_id = scenario_id
+                missing = self._check_for_unmapped_input_parameters(client)
 
-                # newset
-                warned = False
-                unmapped = set()
+                if (not missing.empty) & (not warned):
+                    _logger.warning("unmapped parameters in scenario(s)")
+                    warned = True
 
-                # get parameter settings
-                for case, scenario_id in cases.items():
+                unmapped.update(set(missing))
 
-                    # log event
-                    _logger.debug("> collecting inputs for " +
-                        "'%s', '%s', '%s', '%s'", *case)
+                # reference scenario parameters
+                parameters = client.get_input_parameters()
 
-                    # connect scenario and check for unmapped keys
-                    client.scenario_id = scenario_id
-                    missing = self._check_for_unmapped_input_parameters(client)
+                # collect irrelevant parameters
+                drop = self.excluded + self.depricated
+                drop = self.parameters.index.isin(drop)
 
-                    if (not missing.empty) & (not warned):
-                        _logger.warning("unmapped parameters in scenario(s)")
-                        warned = True
+                # collect relevant parameters
+                keep = self.parameters.index[~drop]
+                keep = parameters.index.isin(keep)
 
-                    unmapped.update(set(missing))
+                # make subset amd append
+                parameters = parameters[keep]
+                values.append(parameters)
 
-                    # reference scenario parameters
-                    parameters = client.scenario_parameters
-
-                    # collect irrelevant parameters
-                    drop = self.excluded + self.depricated
-                    drop = self.parameters.index.isin(drop)
-
-                    # collect relevant parameters
-                    keep = self.parameters.index[~drop]
-                    keep = parameters.index.isin(keep)
-
-                    # make subset amd append
-                    parameters = parameters[keep]
-                    values.append(parameters)
-
-                # warn for unmapped keys
-                if unmapped:
-                    _logger.warn("encountered unmapped parameters: %s",
-                        unmapped)
-
-        # handle exception
-        except Exception as exc:
-            log_exception(exc, logger=_logger)
+            # warn for unmapped keys
+            if unmapped:
+                _logger.warn("encountered unmapped parameters: %s", unmapped)
 
         # construct frame and handle nulls
         frame = pd.concat(values, axis=1, keys=midx)
@@ -456,15 +469,14 @@ class MYCClient():
         frame = frame.set_index(units, append=True)
 
         # set names of index levels
-        frame.index.names = ['KEY', 'UNIT']
-        frame.columns.names = ['STUDY', 'SCENARIO', 'REGION', 'YEAR']
+        frame.index.names = ["KEY", "UNIT"]
+        frame.columns.names = ["STUDY", "SCENARIO", "REGION", "YEAR"]
 
         return sort_frame(frame, axis=1, reference=self.reference)
 
     def set_input_parameters(
-        self,
-        frame: pd.DataFrame,
-        allow_external_coupling_parameters: bool = False) -> None:
+        self, frame: pd.DataFrame, allow_external_coupling_parameters: bool = False
+    ) -> None:
         """set input parameters"""
 
         # convert series to frame
@@ -476,12 +488,11 @@ class MYCClient():
             frame = pd.DataFrame(frame)
 
         # drop unit from index
-        if 'UNIT' in frame.index.names:
-            frame = frame.reset_index(level='UNIT', drop=True)
+        if "UNIT" in frame.index.names:
+            frame = frame.reset_index(level="UNIT", drop=True)
 
         # ensure dataframe is consistent with session ids
-        errors = [midx for midx in frame.columns
-                    if midx not in self.session_ids.index]
+        errors = [midx for midx in frame.columns if midx not in self.session_ids.index]
 
         # raise for errors
         if errors:
@@ -493,9 +504,8 @@ class MYCClient():
         illegal = self.excluded + self.depricated
 
         if allow_external_coupling_parameters is False:
-
             # list external coupling related keys
-            key = 'external_coupling'
+            key = "external_coupling"
             illegal += list(frame.index[frame.index.str.contains(key)])
 
         # illegal parameters
@@ -503,7 +513,6 @@ class MYCClient():
 
         # trigger warnings for mapped but disabled parameters
         if not illegal.empty:
-
             # warn for keys
             for key in illegal:
                 _logger.warning(f"excluded '{key}' from upload")
@@ -511,32 +520,26 @@ class MYCClient():
             # drop excluded parameters
             frame = frame.drop(illegal)
 
-        try:
+        # make client with context manager
+        with Client(**self._kwargs) as client:
+            # iterate over cases
+            for case, values in frame.items():
+                # log event
+                _logger.debug(
+                    "> changing input parameters for " + "'%s', '%s', '%s', '%s'",
+                    *case,
+                )
 
-            # make client with context manager
-            with Client(**self._kwargs) as client:
+                # drop unchanged keys
+                values = values.dropna()
 
-                # iterate over cases
-                for case, values in frame.items():
+                # continue if no value specified
+                if values.empty:
+                    continue
 
-                    # log event
-                    _logger.debug("> changing input parameters for " +
-                        "'%s', '%s', '%s', '%s'", *case)
-
-                    # drop unchanged keys
-                    values = values.dropna()
-
-                    # continue if no value specified
-                    if values.empty:
-                        continue
-
-                    # connect to case and set values
-                    client.scenario_id = self.session_ids.loc[case]
-                    client.user_values = values
-
-        # handle exception
-        except Exception as exc:
-            log_exception(exc, logger=_logger)
+                # connect to case and set values
+                client.scenario_id = self.session_ids.loc[case]
+                client.set_input_parameters(values)
 
     def get_hourly_carrier_curves(
         self,
@@ -558,13 +561,12 @@ class MYCClient():
 
         # get default mapping
         if (mapping is None) & (self.mapping is not None):
-
             # lookup carriers in mapping and lower elements
             carriers = list(self.mapping.index.levels[1])
             lcarriers = [carrier.lower() for carrier in carriers]
 
             # check if carrier is available
-            if not carrier in lcarriers:
+            if carrier not in lcarriers:
                 raise KeyError("'%s' not specified as carrier in mapping")
 
             # subset correct carrier
@@ -573,49 +575,47 @@ class MYCClient():
 
         _logger.info("collecting hourly %s curves", carrier)
 
-        try:
+        # make client with context manager
+        with Client(**self._kwargs) as client:
+            # newlist
+            items = []
 
-            # make client with context manager
-            with Client(**self._kwargs) as client:
+            # iterate over cases
+            for case, scenario_id in cases.items():
+                # log event
+                _logger.debug(
+                    "> collecting hourly %s curves for " + "'%s', '%s', '%s', '%s'",
+                    carrier,
+                    *case,
+                )
 
-                # newlist
-                items = []
+                # connect scenario and get curves
+                client.scenario_id = scenario_id
 
-                # iterate over cases
-                for case, scenario_id in cases.items():
+                # get method for carrier curves
+                attr = f"hourly_{carrier}_curves"
+                curves = getattr(client, attr)
 
-                    # log event
-                    _logger.debug("> collecting hourly %s curves for " +
-                        "'%s', '%s', '%s', '%s'", carrier, *case)
+                # continue with disabled merit order
+                if curves.empty:
+                    continue
 
-                    # connect scenario and get curves
-                    client.scenario_id = scenario_id
+                # set column name
+                curves.columns.names = ["KEY"]
 
-                    # get method for carrier curves
-                    attr = f"hourly_{carrier}_curves"
-                    curves = getattr(client, attr)
+                # check for categorisation
+                if mapping is not None:
+                    # categorise curves
+                    curves = categorise_curves(
+                        curves,
+                        mapping,
+                        columns=columns,
+                        include_keys=include_keys,
+                        invert_sign=invert_sign,
+                    )
 
-                    # continue with disabled merit order
-                    if curves.empty:
-                        continue
-
-                    # set column name
-                    curves.columns.names = ['KEY']
-
-                    # check for categorisation
-                    if mapping is not None:
-
-                        # categorise curves
-                        curves = categorise_curves(
-                            curves, mapping, columns=columns,
-                            include_keys=include_keys, invert_sign=invert_sign)
-
-                    # append curves to list
-                    items.append(curves.reset_index(drop=True))
-
-        # handle exception
-        except Exception as exc:
-            log_exception(exc, logger=_logger)
+                # append curves to list
+                items.append(curves.reset_index(drop=True))
 
         # construct frame for carrier
         frame = pd.concat(items, axis=1, keys=midx)
@@ -634,35 +634,29 @@ class MYCClient():
 
         _logger.info("collecting hourly price curves")
 
-        try:
+        # make client with context manager
+        with Client(**self._kwargs) as client:
+            # newlist
+            items = []
 
-            # make client with context manager
-            with Client(**self._kwargs) as client:
+            # iterate over cases
+            for case, scenario_id in cases.items():
+                # log event
+                _logger.debug(
+                    "> collecting hourly price curve for " + "'%s', '%s', '%s', '%s'",
+                    *case,
+                )
 
-                # newlist
-                items = []
+                # connect scenario and get curves
+                client.scenario_id = scenario_id
+                curves = client.hourly_electricity_price_curve
 
-                # iterate over cases
-                for case, scenario_id in cases.items():
+                # continue with disabled merit order
+                if curves.empty:
+                    continue
 
-                    # log event
-                    _logger.debug("> collecting hourly price curve for " +
-                        "'%s', '%s', '%s', '%s'", *case)
-
-                    # connect scenario and get curves
-                    client.scenario_id = scenario_id
-                    curves = client.hourly_electricity_price_curve
-
-                    # continue with disabled merit order
-                    if curves.empty:
-                        continue
-
-                    # append curves to list
-                    items.append(curves.reset_index(drop=True))
-
-        # handle exception
-        except Exception as exc:
-            log_exception(exc, logger=_logger)
+                # append curves to list
+                items.append(curves.reset_index(drop=True))
 
         # construct frame for carrier
         frame = pd.concat(items, axis=1, keys=midx)
@@ -681,34 +675,28 @@ class MYCClient():
 
         _logger.info("collecting gquery results")
 
-        try:
+        # make client with context manager
+        with Client(**self._kwargs) as client:
+            # newlist
+            values = []
 
-            # make client with context manager
-            with Client(**self._kwargs) as client:
+            # connect scenario and check for unmapped keys
+            client.gqueries = list(self.gqueries.index)
 
-                # newlist
-                values = []
+            # get parameter settings
+            for case, scenario_id in cases.items():
+                # log event
+                _logger.debug(
+                    "> collecting gquery results for " + "'%s', '%s', '%s', '%s'",
+                    *case,
+                )
 
-                # connect scenario and check for unmapped keys
-                client.gqueries = list(self.gqueries.index)
+                # connect scenario and set gqueries
+                client.scenario_id = scenario_id
+                gqueries = client.gquery_results["future"]
 
-                # get parameter settings
-                for case, scenario_id in cases.items():
-
-                    # log event
-                    _logger.debug("> collecting gquery results for " +
-                        "'%s', '%s', '%s', '%s'", *case)
-
-                    # connect scenario and set gqueries
-                    client.scenario_id = scenario_id
-                    gqueries = client.gquery_results['future']
-
-                    # append gquery results
-                    values.append(gqueries)
-
-        # handle exception
-        except Exception as exc:
-            log_exception(exc, logger=_logger)
+                # append gquery results
+                values.append(gqueries)
 
         # construct frame and handle nulls
         frame = pd.concat(values, axis=1, keys=midx)
@@ -719,8 +707,8 @@ class MYCClient():
         frame = frame.set_index(units, append=True)
 
         # set names of index levels
-        frame.index.names = ['KEY', 'UNIT']
-        frame.columns.names = ['STUDY', 'SCENARIO', 'REGION', 'YEAR']
+        frame.index.names = ["KEY", "UNIT"]
+        frame.columns.names = ["STUDY", "SCENARIO", "REGION", "YEAR"]
 
         # fill missing values
         frame = frame.fillna(0)
@@ -731,8 +719,8 @@ class MYCClient():
         self,
         midx: tuple | pd.MultiIndex | None = None,
         path: str | None = None,
-        params : dict[str, str] | None = None,
-        add_title: bool = True
+        params: dict[str, str] | None = None,
+        add_title: bool = True,
     ) -> pd.Series:
         """convert session ids excel to myc urls"""
 
@@ -752,17 +740,17 @@ class MYCClient():
         cases = self.session_ids.loc[midx]
 
         if self.reference is not None:
-
             # drop reference scenario
-            if self.reference in cases.index.unique(level='SCENARIO'):
-                cases = cases.drop(self.reference, level='SCENARIO', axis=0)
+            if self.reference in cases.index.unique(level="SCENARIO"):
+                cases = cases.drop(self.reference, level="SCENARIO", axis=0)
 
             # no cases dropped
             if cases.empty:
-
                 # warn user
-                _logger.warning("Cannot make URLs as model or passed subset "
-                    "only contains reference scenarios")
+                _logger.warning(
+                    "Cannot make URLs as model or passed subset "
+                    "only contains reference scenarios"
+                )
 
                 return pd.Series()
 
@@ -773,20 +761,23 @@ class MYCClient():
         urls = cases.astype(str).groupby(level=levels)
 
         # make urls
-        urls = urls.apply(lambda sids: make_myc_url(
-            url=self.myc_url, scenario_ids=sids, path=path, params=params))
+        urls = urls.apply(
+            lambda sids: make_myc_url(
+                url=self.myc_url, scenario_ids=sids, path=path, params=params
+            )
+        )
 
         # add title
         if bool(add_title) is True:
             for idx, url in urls.items():
-
                 # make title and append parameter inplace
-                params =  {'title': " ".join(map(str, idx))}
+                params = {"title": " ".join(map(str, idx))}
                 urls.at[idx] = set_url_parameters(url, params=params)
 
-        return pd.Series(urls, name='URL').sort_index()
+        return pd.Series(urls, name="URL").sort_index()
 
-    def to_excel(self,
+    def to_excel(
+        self,
         filepath: str | None = None,
         midx: tuple | pd.MultiIndex | None = None,
         input_parameters: bool | pd.DataFrame = True,
@@ -799,7 +790,7 @@ class MYCClient():
         columns: list[str] | None = None,
         include_keys: bool = False,
         invert_sign: bool = False,
-        ) -> None:
+    ) -> None:
         """Export results of model to Excel.
 
         Parameters
@@ -849,44 +840,17 @@ class MYCClient():
             a negative sign. Demand will be denoted with a positve
             value and supply with a negative value."""
 
-        # pylint: disable=C0415
-        # Due to optional import
+        # import optional dependency
+        xlsxwriter = import_optional_dependency("xlsxwriter")
 
-        from pathlib import Path
-        from pyetm.utils.excel import add_frame, add_series
-
-        if TYPE_CHECKING:
-            # import xlswriter
-            import xlsxwriter
-
-        else:
-            # import optional dependency
-            xlsxwriter = import_optional_dependency('xlsxwriter')
-
-        # pylint: enable=C0415
-
-        # supported carriers
-        all_carriers = ['electricity', 'heat', 'hydrogen', 'methane']
-
-        # default carriers
-        if carriers is None:
-            carriers = all_carriers
-
-        # add string to list
-        if isinstance(carriers, str):
-            carriers = [carriers]
-
-        # check passed carriers
-        for carrier in carriers:
-            if carrier.lower() not in carriers:
-                raise ValueError("carrier '{carrier}' not supported")
+        # check carriers
+        carriers = check_carriers(carriers)
 
         # make filepath
         if filepath is None:
-
             # default filepath
             now = datetime.datetime.now().strftime("%Y%m%d%H%M")
-            filepath = Path.cwd().joinpath(now + '.xlsx')
+            filepath = Path.cwd().joinpath(now + ".xlsx")
 
         # check filepath
         if not Path(filepath).parent.exists:
@@ -901,8 +865,13 @@ class MYCClient():
 
         # write input parameters
         if input_parameters is not False:
-            add_frame('INPUT_PARAMETERS', input_parameters, workbook,
-                index_width=[80, 18], column_width=18)
+            add_frame(
+                "INPUT_PARAMETERS",
+                input_parameters,
+                workbook,
+                index_width=[80, 18],
+                column_width=18,
+            )
 
         # default outputs
         if output_values is True:
@@ -910,17 +879,26 @@ class MYCClient():
 
         # write output values
         if output_values is not False:
-            add_frame('OUTPUT_VALUES', output_values, workbook,
-                index_width=[80, 18], column_width=18)
+            add_frame(
+                "OUTPUT_VALUES",
+                output_values,
+                workbook,
+                index_width=[80, 18],
+                column_width=18,
+            )
 
         # iterate over carriers
         if hourly_carrier_curves is True:
             for carrier in carriers:
-
                 # get carrier curves
-                curves = self.get_hourly_carrier_curves(carrier,
-                    midx=midx, mapping=mapping, columns=columns,
-                    include_keys=include_keys, invert_sign=invert_sign)
+                curves = self.get_hourly_carrier_curves(
+                    carrier,
+                    midx=midx,
+                    mapping=mapping,
+                    columns=columns,
+                    include_keys=include_keys,
+                    invert_sign=invert_sign,
+                )
 
                 # add to excel
                 name = carrier.upper()
@@ -929,7 +907,7 @@ class MYCClient():
         # include hourly price curves
         if hourly_price_curves is True:
             curves = self.get_hourly_price_curves(midx=midx)
-            add_frame('EPRICE', curves, workbook, column_width=18)
+            add_frame("EPRICE", curves, workbook, column_width=18)
 
         # default urls
         if myc_urls is True:
@@ -938,8 +916,9 @@ class MYCClient():
         # add urls to workbook
         if myc_urls is not False:
             if not myc_urls.empty:
-                add_series('ETM_URLS', myc_urls, workbook,
-                    index_width=18, column_width=80)
+                add_series(
+                    "ETM_URLS", myc_urls, workbook, index_width=18, column_width=80
+                )
 
         # write workbook
         workbook.close()
