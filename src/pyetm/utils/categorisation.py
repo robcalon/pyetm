@@ -29,7 +29,9 @@ def assigin_sign_convention(
 
 
 def validate_categorisation(
-    curves: pd.DataFrame, mapping: pd.Series[str] | pd.DataFrame, errors: ErrorHandling = "warn"
+    curves: pd.DataFrame,
+    mapping: pd.Series[str] | pd.DataFrame,
+    errors: ErrorHandling = "warn",
 ) -> None:
     """validate categorisation"""
 
@@ -37,15 +39,14 @@ def validate_categorisation(
     missing_curves = curves.columns[~curves.columns.isin(mapping.index)]
     if not missing_curves.empty:
         # make message
-        missing_curves = "', '".join(map(str, missing_curves))
-        message = f"Missing key(s) in mapping: '{missing_curves}'"
+        errors = "', '".join(map(str, missing_curves))
+        message = f"Missing key(s) in mapping: '{errors}'"
 
         raise KeyError(message)
 
     # check if cat specifies keys not in passed curves
     superfluous_curves = mapping.index[~mapping.index.isin(curves.columns)]
     if not superfluous_curves.empty:
-
         if errors == "warn":
             for key in superfluous_curves:
                 logger.warning("Unused key in mapping: %s", key)
@@ -115,7 +116,7 @@ def categorise_curves(
         columns = [columns]
 
     # subset categorization
-    mapping = mapping.loc[:, list(columns)]
+    mapping = mapping.loc[:, columns]
 
     # include index in mapping
     if include_keys is True:
@@ -134,7 +135,7 @@ def categorise_curves(
 
     if len(mapping.columns) == 1:
         # extract column
-        column = list(columns)[0]
+        column = columns[0]
 
         # apply mapping to curves
         curves.columns = curves.columns.map(mapping[column])
@@ -145,7 +146,7 @@ def categorise_curves(
 
     else:
         # make mapper for multiindex
-        names = list(mapping.columns)
+        names = mapping.columns
         mapper = dict(zip(mapping.index, pd.MultiIndex.from_frame(mapping)))
 
         # apply mapping to curves
