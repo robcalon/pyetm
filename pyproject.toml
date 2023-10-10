@@ -51,6 +51,9 @@ dev = [
     "pandas-stubs",
 ]
 
+[tool.setuptools.package-data]
+"pyetm.data" = ["*.csv"]
+
 [tool.pylint]
 max-args = 15
 max-local = 20
