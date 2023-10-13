@@ -2,8 +2,8 @@
 import numpy as np
 import pandas as pd
 
-def lookup_coordinates(coords: pd.Series,
-        frame: pd.DataFrame, **kwargs) -> pd.Series:
+
+def lookup_coordinates(coords: pd.Series, frame: pd.DataFrame, **kwargs) -> pd.Series:
     """lookup function to get coordinate values from dataframe"""
 
     # reindex frame with factorized coords

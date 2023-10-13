@@ -5,4 +5,5 @@ dnu/
 dist/
 *.egg-info
 *.log
-.env
+*.env
+*.ruff_cache

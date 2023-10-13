@@ -2,12 +2,13 @@
 https://github.com/quintel/etdataset-public/tree/master/curves/demand/households/space_heating"""
 
 from __future__ import annotations
+
 from collections.abc import Iterable
 
-from pyetm.logger import PACKAGEPATH
-from pyetm.utils.profiles import validate_profile
-
 import pandas as pd
+
+from pyetm.logger import PACKAGEPATH
+from pyetm.utils.profiles import validate_profile, make_period_index
 
 from .smoothing import ProfileSmoother
 
@@ -23,7 +24,7 @@ class Houses:
     @property
     def c_concrete(self) -> float:
         """Concrete thermal conductance in W/kg"""
-        return .88e3
+        return 0.88e3
 
     @property
     def u_value(self) -> float:
@@ -56,31 +57,53 @@ class Houses:
         insulation_level : str
             Name of default insulation type."""
 
-        # load properties
-        file = PACKAGEPATH.joinpath('data/house_properties.csv')
-        properties = pd.read_csv(
-            file, index_col=['house_type', 'insulation_level'])
+        # relevant columns
+        dtypes = {
+            "house_type": str,
+            "insulation_level": str,
+            "behaviour": float,
+            "r_value": float,
+            "window_area": float,
+            "surface_area": float,
+            "wall_thickness": float,
+        }
 
-        # subset correct house and insulation profile
-        properties = properties.loc[(house_type, insulation_level)]
+        # filepath
+        file = PACKAGEPATH.joinpath("data/house_properties.csv")
+        usecols = [key for key in dtypes]
+
+        # load properties
+        properties = pd.read_csv(file, usecols=usecols, index_col=[0, 1], dtype=dtypes)
+        props = properties.T[(house_type, insulation_level)]
+
+        # get relevant properties
+        behaviour = props["behaviour"]
+        r_value = props["r_value"]
+        window_area = props["window_area"]
+        surface_area = props["surface_area"]
+        wall_thickness = props.loc["wall_thickness"]
 
         # load thermostat values
-        file = PACKAGEPATH.joinpath('data/thermostat_values.csv')
-        thermostat = pd.read_csv(
-            file, usecols = [insulation_level]).squeeze('columns')
+        file = PACKAGEPATH.joinpath("data/thermostat_values.csv")
+        thermostat = pd.read_csv(file, usecols=[insulation_level]).squeeze("columns")
 
         # initialize house
         house = cls(
+            behaviour=behaviour,
+            r_value=r_value,
+            window_area=window_area,
+            surface_area=surface_area,
+            wall_thickness=wall_thickness,
             thermostat=thermostat,
             house_type=house_type,
             insulation_level=insulation_level,
             smoother=ProfileSmoother(),
-            **properties,
         )
 
         return house
 
-    def __init__(self,
+    def __init__(
+        self,
         behaviour: float,
         r_value: float,
         surface_area: float,
@@ -89,9 +112,9 @@ class Houses:
         thermostat: Iterable[float],
         house_type: str | None = None,
         insulation_level: str | None = None,
-        smoother : ProfileSmoother | None = None,
-        **kwargs
-    ) -> Houses:
+        smoother: ProfileSmoother | None = None,
+        **kwargs,
+    ):
         """Initialize class object.
 
         Parameters
@@ -121,11 +144,11 @@ class Houses:
 
         # default house type
         if house_type is None:
-            house_type = 'unnamed'
+            house_type = "unnamed"
 
         # default insulation type
         if insulation_level is None:
-            insulation_level = 'unnamed'
+            insulation_level = "unnamed"
 
         # default smoother
         if smoother is None:
@@ -139,7 +162,7 @@ class Houses:
         self.window_area = window_area
 
         # set thermostat
-        self.thermostat = thermostat
+        self.thermostat = list(thermostat)
         self._inside = self.thermostat[0]
 
         # set type names
@@ -153,15 +176,13 @@ class Houses:
         """Reproduction string"""
         return (
             f"House(house_type='{self.house_type}', "
-            f"insulation_level='{self.insulation_level}')")
+            f"insulation_level='{self.insulation_level}')"
+        )
 
     def _calculate_heat_demand(
-        self,
-        temperature: float,
-        irradiance: float,
-        hour: int
+        self, temperature: float, irradiance: float, hour: int
     ) -> float:
-        """"Calculates the required heating demand for the hour.
+        """ "Calculates the required heating demand for the hour.
 
         Parameters
         ----------
@@ -178,11 +199,10 @@ class Houses:
             Required heating demand."""
 
         # determine energy demand at hour and update inside temperature
-        demand = (max(self.thermostat[hour] - self._inside, 0)
-            * self.heat_capacity)
+        demand = max(self.thermostat[int(hour)] - self._inside, 0) * self.heat_capacity
 
         # determine new inside temperature
-        self._inside = max(self.thermostat[hour], self._inside)
+        self._inside = max(self.thermostat[int(hour)], self._inside)
 
         # determine energy leakage and absorption
         leakage = (self._inside - temperature) * self.exchange_delta
@@ -194,11 +214,8 @@ class Houses:
         return demand
 
     def make_heat_demand_profile(
-        self,
-        temperature: pd.Series,
-        irradiance: pd.Series,
-        year: int | None = None
-    ) -> pd.DataFrame:
+        self, temperature: pd.Series[float], irradiance: pd.Series[float]
+    ) -> pd.Series[float]:
         """Make heat demand profile for house.
 
         Parameters
@@ -208,10 +225,6 @@ class Houses:
             Celcius for 8760 hours.
         irradiance : pd.Series
             Irradiance profile in W/m2 for 8760 hours.
-        year : int, default None
-            Optional year to help construct a
-            PeriodIndex when a series are passed
-            without PeriodIndex or DatetimeIndex.
 
         Return
         ------
@@ -219,34 +232,32 @@ class Houses:
             Heat demand profile for house type at
             house insulation level."""
 
-        # validate temperature profile
-        temperature = validate_profile(
-            temperature, name='temperature', year=year)
+        # validate profiles
+        temperature = validate_profile(temperature, name="temperature")
+        irradiance = validate_profile(irradiance, name="irradiance")
 
-        # validate irradiance profile
-        irradiance = validate_profile(
-            irradiance, name='irradiance', year=year)
+        # # check for allignment
+        # if not temperature.index.equals(irradiance.index):
+        #     raise ValueError(
+        #         "Periods or Datetimes of 'temperature' "
+        #         "and 'irradiance' profiles are not alligned."
+        #     )
 
-        # check for allignment
-        if not temperature.index.equals(irradiance.index):
-            raise ValueError("Periods or Datetimes of 'temperature' "
-                "and 'irradiance' profiles are not alligned.")
-
-        # merge profiles and get index hours
-        profile = pd.concat([temperature, irradiance], axis=1)
-        profile['hour'] = profile.index.hour
+        # merge profiles and assign hour of day
+        merged = pd.concat([temperature, irradiance], axis=1)
+        merged["hour"] = make_period_index(2019, periods=8760).hour
 
         # apply calculate demand function
-        profile = profile.apply(
-            lambda row: self._calculate_heat_demand(**row), axis=1)
+        profile = merged.apply(lambda row: self._calculate_heat_demand(**row), axis=1)
 
         # smooth resulting profile
         values = self.smoother.calculate_smoothed_demand(
-            profile.values, self.insulation_level)
+            profile.values, self.insulation_level
+        )
 
         # name profile
-        name = f'weather/insulation_{self.house_type}_{self.insulation_level}'
-        profile = pd.Series(values, profile.index, dtype='float64', name=name)
+        name = f"weather/insulation_{self.house_type}_{self.insulation_level}"
+        profile = pd.Series(values, profile.index, dtype=float, name=name)
 
         return profile / profile.sum() / 3.6e3
 
@@ -266,39 +277,31 @@ class HousePortfolio:
         # check items in iterable for House
         for house in houses:
             if not isinstance(house, Houses):
-                raise TypeError('houses must be of type House')
+                raise TypeError("houses must be of type House")
 
         # set parameter
         self._houses = houses
 
     @classmethod
-    def from_defaults(cls, name: str = 'default') -> HousePortfolio:
+    def from_defaults(cls, name: str = "default") -> HousePortfolio:
         """From Quintel default house types and insulation levels."""
 
         # load properties
-        file = PACKAGEPATH.joinpath('data/house_properties.csv')
-        properties = pd.read_csv(
-            file, usecols = ['house_type', 'insulation_level'])
+        file = PACKAGEPATH.joinpath("data/house_properties.csv")
+        properties = pd.read_csv(file, usecols=["house_type", "insulation_level"])
 
         # newlist
         houses = []
 
         # iterate over house types and insulation levels
-        for house_type in properties.house_type.unique():
-            for insultation_level in properties.insulation_level.unique():
-
+        for house_type in properties["house_type"].unique():
+            for insultation_level in properties["insulation_level"].unique():
                 # init house from default settings
-                houses.append(
-                    Houses.from_defaults(
-                        house_type, insultation_level))
+                houses.append(Houses.from_defaults(house_type, insultation_level))
 
         return cls(houses, name=name)
 
-    def __init__(
-        self,
-        houses: Iterable[Houses],
-        name: str | None = None
-    ) -> HousePortfolio:
+    def __init__(self, houses: Iterable[Houses], name: str | None = None):
         """Initialize class object.
 
         Parameters
@@ -319,13 +322,10 @@ class HousePortfolio:
 
     def __str__(self) -> str:
         """String name"""
-        return f'HousePortfolio(name={self.name})'
+        return f"HousePortfolio(name={self.name})"
 
     def make_heat_demand_profiles(
-        self,
-        temperature : pd.Series,
-        irradiance : pd.Series,
-        year: int | None = None
+        self, temperature: pd.Series[float], irradiance: pd.Series[float]
     ) -> pd.DataFrame:
         """Make heat demand profiles for all houses.
 
@@ -336,10 +336,6 @@ class HousePortfolio:
             Celcius for 8760 hours.
         irradiance : pd.Series
             Irradiance profile in W/m2 for 8760 hours.
-        year : int, default None
-            Optional year to help construct a
-            PeriodIndex when a series are passed
-            without PeriodIndex or DatetimeIndex.
 
         Return
         ------
@@ -349,7 +345,8 @@ class HousePortfolio:
 
         # get heat profile for each house object
         profiles = [
-            house.make_heat_demand_profile(
-                temperature, irradiance, year) for house in self.houses]
+            house.make_heat_demand_profile(temperature, irradiance)
+            for house in self.houses
+        ]
 
         return pd.concat(profiles, axis=1)

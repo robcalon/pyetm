@@ -10,11 +10,12 @@ from pyetm.logger import get_modulelogger
 # get modulelogger
 logger = get_modulelogger(__name__)
 
+
 def _start_loop(loop):
     asyncio.set_event_loop(loop)
     loop.run_forever()
 
+
 # create thread in which a new loop can run
-_LOOP = asyncio.new_event_loop()
-_LOOP_THREAD = threading.Thread(target=_start_loop,
-        args=[_LOOP], daemon=True)
+_loop = asyncio.new_event_loop()
+_loop_thread = threading.Thread(target=_start_loop, args=[_loop], daemon=True)
