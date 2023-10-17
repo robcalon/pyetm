@@ -74,10 +74,10 @@ def interpolate(
 
     # merge inputs and mask get input parameters
     inputs = pd.concat([cln.input_parameters for cln in clients], axis=1, keys=years)
-    params = clients[0].get_input_parameters(include_disabled=True, detailed=True)
+    params = clients[0].get_input_parameters(include_disabled=False, detailed=True)
 
     # split input parameters by value type
-    mask = params["unit"].isin(["enum", "x"])
+    mask = params["unit"].isin(["enum", "x", "bool"])
     cinputs, dinputs = inputs.loc[~mask], inputs.loc[mask]
 
     # check for equality of discrete values

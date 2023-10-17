@@ -80,10 +80,6 @@ class AIOHTTPSession(SessionTemplate):
         # # set session
         self._session: ClientSession | None = None
 
-        # start loop thread if not already running
-        if not self.loop_thread.is_alive():
-            self.loop_thread.start()
-
     async def __aenter__(self):
         """enter async context manager"""
 
