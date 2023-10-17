@@ -77,7 +77,7 @@ def interpolate(
     params = clients[0].get_input_parameters(include_disabled=False, detailed=True)
 
     # split input parameters by value type
-    mask = params["unit"].isin(["enum", "bool"])
+    mask = params["unit"].isin(["enum", "x", "bool"])
     cinputs, dinputs = inputs.loc[~mask], inputs.loc[mask]
 
     # check for equality of discrete values
