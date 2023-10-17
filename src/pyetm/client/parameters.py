@@ -125,7 +125,9 @@ class ParameterMethods(SessionMethods):
             return parameters
 
         # set missing defaults
-        parameters["user"] = parameters["user"].fillna(parameters["default"])
+        parameters.loc[:, "user"] = parameters.loc[:, "user"].fillna(
+            parameters["default"]
+        )
 
         # subset user set inputs
         user = parameters["user"]
