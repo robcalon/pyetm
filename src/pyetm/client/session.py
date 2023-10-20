@@ -60,7 +60,7 @@ class SessionMethods:
         """model URL"""
 
         # raise error
-        if self.etm_url is None:
+        if self._etm_url is None:
             raise ValueError("ETModel URL not set on initialisation.")
 
         return self._etm_url
