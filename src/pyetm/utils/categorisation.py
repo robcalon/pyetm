@@ -154,6 +154,6 @@ def categorise_curves(
         curves.columns = pd.MultiIndex.from_tuples(midx, names=names)
 
         # aggregate over levels
-        curves = curves.T.groupby(level=names).sum().T
+        curves = curves.T.groupby(level=list(names)).sum().T
 
     return curves.sort_index(axis=1)
