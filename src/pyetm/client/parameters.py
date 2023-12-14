@@ -138,7 +138,36 @@ class ParameterMethods(SessionMethods):
     def set_input_parameters(
         self, inputs: dict[str, str | float] | pd.Series[Any] | pd.DataFrame | None
     ) -> None:
-        """set scenario input parameters"""
+        """set scenario input parameters,
+        resets all other user specified parameters"""
+
+        # first collect all user input parameters
+        # check
+
+        # convert None to dict
+        if inputs is None:
+            inputs = {}
+
+        # subset series from df
+        if isinstance(inputs, pd.DataFrame):
+            inputs = inputs["user"]
+
+        # prepare request
+        headers = {"content-type": "application/json"}
+        data = {"scenario": {"user_values": dict(inputs)}, "detailed": True}
+
+        # make request
+        url = self.make_endpoint_url(endpoint="scenario_id")
+        self.session.put(url, json=data, headers=headers)
+
+        # reset cached parameters
+        self._reset_cache()
+
+    def upload_input_parameters(
+        self, inputs: dict[str, str | float] | pd.Series[Any] | pd.DataFrame | None
+    ) -> None:
+        """upload scenario input parameters,
+        appends parameters to already uploaded parameters"""
 
         # convert None to dict
         if inputs is None:

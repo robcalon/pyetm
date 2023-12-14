@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from pyetm.logger import PACKAGEPATH
+from pyetm.logger import _PACKAGEPATH_
 from pyetm.utils.profiles import validate_profile, make_period_index
 
 
@@ -25,7 +25,7 @@ class Buildings:
         dtypes = {"reference": float, "slope": float, "constant": float}
 
         # filepath
-        file = PACKAGEPATH.joinpath("data/G2A_parameters.csv")
+        file = _PACKAGEPATH_.joinpath("data/G2A_parameters.csv")
         usecols = [key for key in dtypes]
 
         # load G2A parameters
@@ -165,12 +165,11 @@ class Buildings:
         temperature = validate_profile(temperature, name="temperature")
         wind_speed = validate_profile(wind_speed, name="wind_speed")
 
-        # # check for allignment
-        # if not temperature.index.equals(wind_speed.index):
-        #     raise ValueError(
-        #         "Periods or Datetimes of 'temperature' "
-        #         "and 'wind_speed' profiles are not alligned."
-        #     )
+        # check for allignment
+        if not temperature.index.equals(wind_speed.index):
+            raise ValueError(
+                "index of 'temperature' and 'wind_speed' profiles are not alligned."
+            )
 
         # merge profiles and assign periodindex
         merged = pd.concat([temperature, wind_speed], axis=1)
@@ -196,4 +195,7 @@ class Buildings:
         # scale profile values
         profile = profile / profile.sum() / 3.6e3
 
-        return profile.reset_index(drop=True)
+        # reassign origin index
+        profile.index = temperature.index
+
+        return profile

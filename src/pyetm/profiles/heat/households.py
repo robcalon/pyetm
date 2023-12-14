@@ -7,7 +7,7 @@ from collections.abc import Iterable
 
 import pandas as pd
 
-from pyetm.logger import PACKAGEPATH
+from pyetm.logger import _PACKAGEPATH_
 from pyetm.utils.profiles import validate_profile, make_period_index
 
 from .smoothing import ProfileSmoother
@@ -69,7 +69,7 @@ class Houses:
         }
 
         # filepath
-        file = PACKAGEPATH.joinpath("data/house_properties.csv")
+        file = _PACKAGEPATH_.joinpath("data/house_properties.csv")
         usecols = [key for key in dtypes]
 
         # load properties
@@ -84,7 +84,7 @@ class Houses:
         wall_thickness = props.loc["wall_thickness"]
 
         # load thermostat values
-        file = PACKAGEPATH.joinpath("data/thermostat_values.csv")
+        file = _PACKAGEPATH_.joinpath("data/thermostat_values.csv")
         thermostat = pd.read_csv(file, usecols=[insulation_level]).squeeze("columns")
 
         # initialize house
@@ -236,12 +236,11 @@ class Houses:
         temperature = validate_profile(temperature, name="temperature")
         irradiance = validate_profile(irradiance, name="irradiance")
 
-        # # check for allignment
-        # if not temperature.index.equals(irradiance.index):
-        #     raise ValueError(
-        #         "Periods or Datetimes of 'temperature' "
-        #         "and 'irradiance' profiles are not alligned."
-        #     )
+        # check for allignment
+        if not temperature.index.equals(irradiance.index):
+            raise ValueError(
+                "index of 'temperature' and 'irradiance' profiles are not alligned."
+            )
 
         # merge profiles and assign hour of day
         merged = pd.concat([temperature, irradiance], axis=1)
@@ -258,6 +257,9 @@ class Houses:
         # name profile
         name = f"weather/insulation_{self.house_type}_{self.insulation_level}"
         profile = pd.Series(values, profile.index, dtype=float, name=name)
+
+        # reassign origin index
+        profile.index = temperature.index
 
         return profile / profile.sum() / 3.6e3
 
@@ -287,7 +289,7 @@ class HousePortfolio:
         """From Quintel default house types and insulation levels."""
 
         # load properties
-        file = PACKAGEPATH.joinpath("data/house_properties.csv")
+        file = _PACKAGEPATH_.joinpath("data/house_properties.csv")
         properties = pd.read_csv(file, usecols=["house_type", "insulation_level"])
 
         # newlist

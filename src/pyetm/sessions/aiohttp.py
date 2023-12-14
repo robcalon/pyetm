@@ -5,9 +5,6 @@ from io import BytesIO
 from typing import Any, Literal, Mapping, overload, TYPE_CHECKING
 
 import asyncio
-
-from typing_extensions import Self
-
 import pandas as pd
 
 from pyetm.optional import import_optional_dependency
@@ -91,7 +88,7 @@ class AIOHTTPSession(SessionTemplate):
         """exit async context manager"""
         await self.close_async()
 
-    def connect(self) -> Self:
+    def connect(self):
         """sync wrapper for async session connect"""
 
         # specify coroutine and get future
@@ -103,9 +100,10 @@ class AIOHTTPSession(SessionTemplate):
     async def connect_async(self):
         """async session connect"""
 
-        # import module and create session
-        aiohttp = import_optional_dependency("aiohttp")
-        self._session = aiohttp.ClientSession(**self.context)
+        if not TYPE_CHECKING:
+            ClientSession = import_optional_dependency('aiohttp.ClientSession')
+
+        self._session = ClientSession(**self.context)
 
     def close(self):
         """sync wrapper for async session close"""
