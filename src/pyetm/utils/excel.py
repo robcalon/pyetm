@@ -31,8 +31,7 @@ def _handle_nans(
 
 def _has_names(index: pd.Index | pd.MultiIndex) -> bool:
     """helper to check if index level(s) are named"""
-    return len(list(index.names)) != sum(x is not None for x in list(index.names))
-
+    return index.nlevels != list(index.names).count(None)
 
 def _set_column_width(
     worksheet: Worksheet,

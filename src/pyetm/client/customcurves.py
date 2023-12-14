@@ -251,9 +251,13 @@ class CustomCurveMethods(SessionMethods):
             if not len(curve) == 8760:
                 raise ValueError(f"ccurve '{key}' must contain 8760 entries")
 
+            # reset period / datetime index
+            if not isinstance(curve.index, pd.RangeIndex):
+                curve = curve.reset_index(drop=True)
+
             # make request
             url = self.make_endpoint_url(endpoint="custom_curves", extra=key)
-            self.session.upload(url, curve, filename=filenames[key])
+            self.session.upload(url, curve.reset_index(drop=True), filename=filenames[key])
 
         # reset session
         self._reset_cache()

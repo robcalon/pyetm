@@ -1,5 +1,7 @@
 """PeriodIndex related utilities."""
 from __future__ import annotations
+
+from datetime import datetime
 from typing import Any
 
 import calendar
@@ -34,7 +36,7 @@ def make_period_index(
         The constructed index."""
 
     # make start period
-    start = f"{year}-01-01 00:00"
+    start = datetime(year, 1, 1)
 
     # default name for datetime index
     if (name is None) & as_datetime:

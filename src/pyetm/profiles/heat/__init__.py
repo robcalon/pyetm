@@ -12,7 +12,7 @@ class HeatDemandProfileGenerator:
     """Heat demand profile generator."""
 
     @classmethod
-    def from_defaults(cls):
+    def from_defaults(cls) -> HeatDemandProfileGenerator:
         """Initialize with Quintel default settings."""
 
         # default object configurations
@@ -21,7 +21,7 @@ class HeatDemandProfileGenerator:
 
         return cls(households, buildings)
 
-    def __init__(self, households: HousePortfolio, buildings: Buildings):
+    def __init__(self, households: HousePortfolio, buildings: Buildings) -> None:
         """Initialize class object.
 
         Parameters
