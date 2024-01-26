@@ -36,7 +36,7 @@ def _get_optional_requirements(
         extras = set(extras).difference(exclude_extras)
 
     # subset all optional requirments
-    patterns = [f'extra == "{extra}"' for extra in extras]
+    patterns = [f"extra == ['\"]{extra}['\"]" for extra in extras]
     reqs = [req for req in reqs if [pat for pat in patterns if re.search(pat, req)]]
 
     return list(set(Requirement(req.split(';')[0].strip()) for req in reqs))
