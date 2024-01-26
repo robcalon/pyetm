@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyetm"
-version = "1.3.4"
+version = "1.4.0"
 
 description = "Python-ETM Connector"
 authors = [{name = "Rob Calon", email = "robcalon@protonmail.com"}]
@@ -14,6 +14,7 @@ license = {file = "LICENSE"}
 dependencies = [
     'requests>=2.26',
     'pandas>=2.0',
+    'pyarrow>=10.0.1'
 ]
 keywords = ["ETM", "Energy Transition Model"]
 classifiers = [

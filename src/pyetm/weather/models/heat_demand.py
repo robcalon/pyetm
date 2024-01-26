@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pandas as pd
 
-from .buildings import Buildings
-from .households import HousePortfolio
+from .buildings import BuildingsModel
+from .households import HousePortfolioModel
 
 
 class HeatDemandProfileGenerator:
@@ -16,12 +16,12 @@ class HeatDemandProfileGenerator:
         """Initialize with Quintel default settings."""
 
         # default object configurations
-        households = HousePortfolio.from_defaults()
-        buildings = Buildings.from_defaults()
+        households = HousePortfolioModel.from_defaults()
+        buildings = BuildingsModel.from_defaults()
 
         return cls(households, buildings)
 
-    def __init__(self, households: HousePortfolio, buildings: Buildings) -> None:
+    def __init__(self, households: HousePortfolioModel, buildings: BuildingsModel) -> None:
         """Initialize class object.
 
         Parameters

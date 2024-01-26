@@ -1,4 +1,5 @@
 """Helper to assign capacity factor names"""
+
 from __future__ import annotations
 
 import pandas as pd

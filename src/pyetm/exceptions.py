@@ -7,3 +7,6 @@ class UnprossesableEntityError(Exception):
 
 class BalanceError(Exception):
     """Balance Error"""
+
+class TokenScopeError(Exception):
+    """Token Scope Error"""

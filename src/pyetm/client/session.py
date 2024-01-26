@@ -9,6 +9,7 @@ from typing import Any
 
 import pandas as pd
 
+from pyetm.exceptions import TokenScopeError
 from pyetm.logger import get_modulelogger
 from pyetm.sessions.abc import SessionABC
 from pyetm.types import TokenScope, Endpoint
@@ -286,15 +287,15 @@ class SessionMethods:
 
         # raise without token
         if self.token is None:
-            raise ValueError("No personall access token asssigned")
+            raise TokenScopeError("No personal access token asssigned")
 
         # check if scope is known
         if scope is None:
-            raise ValueError(f"Unknown token scope: '{scope}'")
+            raise TokenScopeError(f"Unknown token scope: '{scope}'")
 
         # validate token scope
         if scope not in self.token.loc["scope"]:
-            raise ValueError(f"Token has no '{scope}' permission.")
+            raise TokenScopeError(f"Token has no '{scope}' permission.")
 
     @property
     def merit_order_enabled(self) -> bool:
