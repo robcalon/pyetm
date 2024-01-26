@@ -6,7 +6,7 @@ from __future__ import annotations
 import pandas as pd
 
 
-class Cooling:
+class CoolingModel:
     """Aggregate cooling model."""
 
     def __init__(

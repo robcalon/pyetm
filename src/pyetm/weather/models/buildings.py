@@ -9,11 +9,11 @@ from pyetm.logger import _PACKAGEPATH_
 from pyetm.utils.profiles import validate_profile, make_period_index
 
 
-class Buildings:
+class BuildingsModel:
     """Aggregate heating model for buildings."""
 
     @classmethod
-    def from_defaults(cls, name: str = "default") -> Buildings:
+    def from_defaults(cls, name: str = "default") -> BuildingsModel:
         """Initialize with Quintel default values.
 
         Parameters
