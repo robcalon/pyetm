@@ -175,7 +175,7 @@ class WeatherProfileGenerator:
         self.ucf_windspeed = ucf_windspeed
 
     @classmethod
-    def from_pecd31_csvs(
+    def from_pecd31(
         cls,
         wdir: StrOrPath,
         mapper: WeatherProfileMapping | None = None,
@@ -183,7 +183,7 @@ class WeatherProfileGenerator:
         writer: StrOrPath | IOHandler | None = None,
         scaler: ProfileScaler | None = None
     ):
-        """CSV based PECD IO"""
+        """Initialize with csv-based PECD31 reader"""
 
         # initialise reader
         ucf_irradiance = 1 / 1e3
@@ -198,7 +198,7 @@ class WeatherProfileGenerator:
         )
 
     @classmethod
-    def from_pecd41_csvs(
+    def from_pecd41(
         cls,
         wdir: StrOrPath,
         mapper: WeatherProfileMapping | None = None,
@@ -206,7 +206,7 @@ class WeatherProfileGenerator:
         writer: StrOrPath | IOHandler | None = None,
         scaler: ProfileScaler | None = None
     ):
-        """CSV based PECD IO"""
+        """Initialize with csv-based PECD41 reader"""
 
         # initialise reader
         ucf_irradiance = 1 / 1e3

@@ -40,8 +40,6 @@ repository = "https://github.com/robcalon/pyetm"
 async = ["aiohttp>=3.8"]
 excel = ["xlsxwriter>=3.0", "openpyxl>=3.0"]
 dev = [
-    "black",
-    "mypy>=1.4.1",
     "pre-commit",
     "pre-commit-hooks",
     "pyetm[async, excel]",
@@ -55,6 +53,6 @@ dev = [
 max-args = 15
 max-local = 20
 
-[tool.mypy]
-disallow_untypes_defs = true
+# [tool.mypy]
+# disallow_untypes_defs = true
 # disallow_incomplete_defs = true
