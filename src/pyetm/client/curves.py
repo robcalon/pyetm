@@ -32,7 +32,7 @@ class CurveMethods(SessionMethods):
         curves = _get_curves(self, extra="merit_order", index_col="Time")
 
         # set periodindex
-        curves.index = pd.PeriodIndex(curves.index, freq="H").set_names(None)
+        curves.index = pd.PeriodIndex(curves.index, freq="h").set_names(None)
 
         return curves
 
@@ -51,7 +51,7 @@ class CurveMethods(SessionMethods):
         ).squeeze(axis=1)
 
         # set periodindex
-        curves.index = pd.PeriodIndex(curves.index, freq="H").set_names(None)
+        curves.index = pd.PeriodIndex(curves.index, freq="h").set_names(None)
 
         return curves.round(2)
 
@@ -68,7 +68,7 @@ class CurveMethods(SessionMethods):
         curves = _get_curves(self, extra="heat_network", index_col="Time")
 
         # set periodindex
-        curves.index = pd.PeriodIndex(curves.index, freq="H").set_names(None)
+        curves.index = pd.PeriodIndex(curves.index, freq="h").set_names(None)
 
         return curves
 
@@ -95,7 +95,7 @@ class CurveMethods(SessionMethods):
         curves = _get_curves(self, extra="hydrogen", index_col="Time")
 
         # set periodindex
-        curves.index = pd.PeriodIndex(curves.index, freq="H").set_names(None)
+        curves.index = pd.PeriodIndex(curves.index, freq="h").set_names(None)
 
         return curves
 
@@ -112,6 +112,6 @@ class CurveMethods(SessionMethods):
         curves = _get_curves(self, extra="network_gas", index_col="Time")
 
         # set periodindex
-        curves.index = pd.PeriodIndex(curves.index, freq="H").set_names(None)
+        curves.index = pd.PeriodIndex(curves.index, freq="h").set_names(None)
 
         return curves

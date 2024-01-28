@@ -62,7 +62,7 @@ class UtilMethods(SessionMethods):
             raise NotImplementedError(f'"{attribute}" not implemented')
 
         # fetch curves
-        curves = getattr(self, attribute)
+        curves = getattr(self, attribute)()
 
         # use categorization function
         curves = categorise_curves(

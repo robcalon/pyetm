@@ -55,7 +55,7 @@ def make_period_index(
         periods = len(periods)
 
     # make periodindex
-    index = pd.period_range(start=start, periods=periods, freq="H", name=name)
+    index = pd.period_range(start=start, periods=periods, freq="h", name=name)
 
     # convert type
     if as_datetime:
