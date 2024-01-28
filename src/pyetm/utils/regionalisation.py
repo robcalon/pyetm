@@ -6,39 +6,33 @@ import pandas as pd
 
 from pyetm.exceptions import BalanceError
 from pyetm.types import ErrorHandling
+from pyetm.utils.categorisation import assigin_sign_convention
 from pyetm.utils.general import iterable_to_str, mapped_floats_to_str
 
 logger = logging.getLogger(__name__)
 
 
-def validate_hourly_curves_balance(
-    curves: pd.DataFrame, precision: int = 1, errors: ErrorHandling = "warn"
-) -> None:
+def is_hourly_balanced_curves(
+    curves: pd.DataFrame,
+    precision: int = 1,
+    errors: ErrorHandling = "warn"
+) -> bool:
     """validate if deficits in curves"""
 
-    # copy curves
-    curves = curves.copy()
+    # check if mapping is already applied
+    pattern = "(^.*[.]output [(]MW[)]$|^.*[.]input [(]MW[)]$)"
+    if any(curves.columns.get_level_values(level=-1).str.match(pattern)):
+        curves = assigin_sign_convention(curves)
 
-    # regex mapping for product group
-    productmap = {
-        "^.*[.]output [(]MW[)]$": "supply",
-        "^.*[.]input [(]MW[)]$": "demand",
-    }
-
-    # make column mapping
-    cols = curves.columns.to_series(name="product")
-    cols = cols.replace(productmap, regex=True)
-
-    # map column mapping
-    curves.columns = curves.columns.map(cols)
-
-    # aggregate columns
-    curves = curves.groupby(level=0, axis=1).sum()
-    balance = curves["supply"] - curves["demand"]
-
-    # handle deficits
+    # validate balance of curves
+    balance = curves.sum(axis=1)
     if any(balance.round(precision) != 0):
-        message = "Deficits in curves"
+
+        # report inbalance
+        message = "Deficits in hourly carrier curves"
+
+        if errors == "ignore":
+            logger.debug(message)
 
         if errors == "warn":
             logger.warning(message)
@@ -46,13 +40,15 @@ def validate_hourly_curves_balance(
         if errors == "raise":
             raise BalanceError(message)
 
+        return False
+    return True
 
-def validate_regionalisation(
+def is_valid_regionalisation(
     curves: pd.DataFrame,
     reg: pd.DataFrame,
     prec: int = 3,
     errors: ErrorHandling = "warn",
-) -> None:
+) -> bool:
     """helper function to validate regionalisation table"""
 
     # check if passed curves specifies keys not specified in reg
@@ -77,6 +73,12 @@ def validate_regionalisation(
     sums = reg.sum(axis=0).round(prec)
     checksum_errors = sums[sums != 1]
     if not checksum_errors.empty:
+
+        if errors == "ignore":
+            for key, value in checksum_errors.items():
+                error = f"{key}={value:.{prec}f}"
+                logger.debug("Regionalisation key does not sum to 1: %s", error)
+
         if errors == "warn":
             for key, value in checksum_errors.items():
                 error = f"{key}={value:.{prec}f}"
@@ -86,6 +88,8 @@ def validate_regionalisation(
             error = mapped_floats_to_str((dict(checksum_errors)), prec=prec)
             raise ValueError(f"Regionalisation key(s) do not sum to 1: {error}")
 
+        return False
+    return True
 
 def regionalise_curves(
     curves: pd.DataFrame,
@@ -94,9 +98,8 @@ def regionalise_curves(
     sector: str | list[str] | None = None,
     hours: int | list[int] | None = None,
 ) -> pd.DataFrame:
-    """Return the residual power of the curves based on a regionalisation table.
-    The kwargs are passed to pd.read_csv when the regionalisation argument
-    is a passed as a filestring.
+    """
+    Return the residual power of the curves based on a regionalisation table.
 
     Parameters
     ----------
@@ -118,11 +121,12 @@ def regionalise_curves(
     Return
     ------
     curves : DataFrame
-        Residual power curves per regionalisation node."""
+        Residual power curves per regionalisation node.
+    """
 
     # validate regionalisation
-    validate_hourly_curves_balance(curves, errors="raise")
-    validate_regionalisation(curves, reg)
+    is_hourly_balanced_curves(curves, errors="raise")
+    is_valid_regionalisation(curves, reg)
 
     # handle node subsetting
     if node is not None:
@@ -165,13 +169,12 @@ def regionalise_curves(
 def regionalise_node(
     curves: pd.DataFrame,
     reg: pd.DataFrame,
-    node: str,
-    sector: str | list[str] | None = None,
-    hours: int | list[int] | None = None,
+    node,
+    sector = None,
+    hours = None,
 ) -> pd.DataFrame:
-    """Return the sector profiles for a node specified in the regionalisation
-    table. The kwargs are passed to pd.read_csv when the regionalisation
-    argument is a passed as a filestring.
+    """
+    Return the sector profiles for a node specified in the regionalisation table
 
     Parameters
     ----------
@@ -193,21 +196,18 @@ def regionalise_node(
     Return
     ------
     curves : DataFrame
-        Sector profile per specified node."""
+        Sector profile per specified node.
+    """
 
     # validate regionalisation
-    validate_hourly_curves_balance(curves)
-    validate_regionalisation(curves, reg)
-
-    if not isinstance(node, str):
-        node = str(node)
+    is_hourly_balanced_curves(curves)
+    is_valid_regionalisation(curves, reg)
 
     # subset reg for node
     nreg = reg.loc[node, :]
 
     # handle sector subsetting
     if sector is not None:
-        # handle string
         if isinstance(sector, str):
             sector = [sector]
 

@@ -11,16 +11,50 @@ logger = get_modulelogger(__name__)
 
 
 def assigin_sign_convention(
-    curves: pd.DataFrame, invert_sign: bool = False
+    curves: pd.DataFrame,
+    invert_sign: bool = False,
+    pattern: str | None = None
 ) -> pd.DataFrame:
-    """assign sign convention to hourly curves"""
+    """
+    This function applies a negative sign to the default demand
+    keys in the passed hourly carrier curves. The sign convention can be
+    optionally be inverted.
 
-    # ensure default convention
+    Parameters
+    ----------
+    curves : DataFrame
+        Hourly carrier curves.
+    invert_sign : bool, default False
+        Inverts assigned sign convention by assigning
+        a negative sign to supply instead of demand.
+    pattern: str, default None
+        Regex pattern with which the profile keys are
+        identified that are modified.
+
+    Return
+    ------
+    curves : DataFrame
+        Hourly carrier curves with sign convention.
+    """
+
+    # ensure etm convention
     curves = curves.abs()
 
-    # subset cols for sign convention
-    pattern = ".output (MW)" if invert_sign else ".input (MW)"
-    cols = curves.columns.get_level_values(level=-1).str.contains(pattern, regex=False)
+    # default etm patterns
+    if pattern is None:
+        pattern = "^.*[.]input [(]MW[)]$"
+
+    # validate pattern is present
+    if not any(curves.columns.get_level_values(level=-1).str.match(pattern)):
+        raise KeyError(f"Could not find pattern in hourly curves: '{pattern}'")
+
+    # subset relevant columns
+    cols = curves.columns.get_level_values(
+        level=-1).str.contains(pattern, regex=True)
+
+    # invert selected columns
+    if invert_sign is True:
+        cols = ~cols
 
     # apply sign convention
     curves.loc[:, cols] = -curves.loc[:, cols]
@@ -38,11 +72,8 @@ def validate_categorisation(
     # check if passed curves contains columns not specified in cat
     missing_curves = curves.columns[~curves.columns.isin(mapping.index)]
     if not missing_curves.empty:
-        # make message
-        errors = "', '".join(map(str, missing_curves))
-        message = f"Missing key(s) in mapping: '{errors}'"
-
-        raise KeyError(message)
+        missing = "', '".join(map(str, missing_curves))
+        raise KeyError(f"Missing key(s) in mapping: '{missing}'")
 
     # check if cat specifies keys not in passed curves
     superfluous_curves = mapping.index[~mapping.index.isin(curves.columns)]
