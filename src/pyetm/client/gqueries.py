@@ -1,5 +1,6 @@
 """graph query methods"""
 import functools
+from typing import Iterable
 
 import pandas as pd
 
@@ -10,20 +11,21 @@ class GQueryMethods(SessionMethods):
     """Graph query methods"""
 
     @property
-    def gqueries(self):
+    def gqueries(self) -> list[str] | None:
         """returns a list of set gqueries"""
         return self._gqueries
 
     @gqueries.setter
-    def gqueries(self, gqueries: list) -> None:
+    def gqueries(self, gqueries: Iterable[str] | None) -> None:
         """sets gqueries list"""
 
         # put string in list
         if isinstance(gqueries, str):
             gqueries = [gqueries]
 
-        if not isinstance(gqueries, list):
-            gqueries = list(gqueries)
+        if gqueries is not None:
+            if not isinstance(gqueries, list):
+                gqueries = list(gqueries)
 
         # set gqueries
         self._gqueries = gqueries
@@ -70,6 +72,9 @@ class GQueryMethods(SessionMethods):
     @functools.lru_cache(maxsize=1)
     def get_gquery_results(self):
         """get data for queried graphs from ETM"""
+
+        if self.gqueries is None:
+            raise ValueError("No gqueries specified")
 
         # raise without scenario id
         self._validate_scenario_id()

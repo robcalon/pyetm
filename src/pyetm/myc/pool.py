@@ -5,7 +5,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from queue import Queue
-from typing import get_args, Callable, Generator, Hashable, Sequence
+from typing import get_args, Callable, Generator, Hashable, Iterable
 from traceback import format_exception_only
 
 import logging
@@ -18,7 +18,7 @@ from pyetm.utils.general import iterable_to_str
 
 logger = logging.getLogger(__name__)
 Scenarios = dict[Hashable, int] | pd.Series
-ListOfStrLike = Sequence[str] | pd.Series
+ListOfStrLike = Iterable[str] | pd.Series
 
 def validate_carrier(carrier: Carrier) -> Carrier:
     """validate if carrier is supported"""
@@ -26,7 +26,7 @@ def validate_carrier(carrier: Carrier) -> Carrier:
         raise ValueError(f"Unsupported carrier: {carrier}")
     return carrier
 
-def validate_carrier_sequence(carriers: Carrier | Sequence[Carrier]) -> list[Carrier]:
+def validate_carrier_sequence(carriers: Carrier | Iterable[Carrier]) -> list[Carrier]:
     """validate if carrier sequence contains supported carrier"""
 
     # handle single carrier
@@ -119,7 +119,7 @@ class PoolTasks:
 
         # get gquery result
         with pool.get_client_from_session_id(scenario_id) as client:
-            client.gqueries = list(gqueries)
+            client.gqueries = gqueries
             _gqueries = client.get_gquery_results()
 
         # reformat results
@@ -132,7 +132,7 @@ class PoolTasks:
     def get_price_curves(
         pool: ClientPool,
         scenario_id: int,
-        carriers: Carrier | Sequence[Carrier] | None = None,
+        carriers: Carrier | Iterable[Carrier] | None = None,
     ) -> pd.Series:
         """return hourly price curve"""
 
@@ -236,7 +236,7 @@ class ClientPool:
     def __init__(
         self,
         maxsize: int | None = None,
-        clients: Sequence[Client] | None = None,
+        clients: Iterable[Client] | None = None,
         **kwargs
     ):
 
@@ -412,6 +412,10 @@ class ClientPool:
         **kwargs
     ) -> pd.DataFrame:
         """get gqueries"""
+
+        if gqueries is None:
+            raise ValueError("No gqueries specified")
+
         return self.call_threaded(
             func=self.tasks.get_gqueries,
             scenarios=scenarios,
@@ -422,7 +426,7 @@ class ClientPool:
     def get_price_curves(
         self,
         scenarios: Scenarios,
-        carriers: Carrier | Sequence[Carrier] | None = None,
+        carriers: Carrier | Iterable[Carrier] | None = None,
         **kwargs
     ) -> pd.DataFrame:
         """get hourly price curves"""

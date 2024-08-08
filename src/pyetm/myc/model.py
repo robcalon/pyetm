@@ -114,31 +114,33 @@ class MYCClient:
             self.reference = self.reference
 
     @property
-    def parameters(self) -> pd.Series[str]:
+    def parameters(self) -> pd.Series[str] | None:
         """parameters"""
         return self._parameters
 
     @parameters.setter
-    def parameters(self, parameters: pd.Series | Sequence[str]):
+    def parameters(self, parameters: pd.Series | Sequence[str] | None):
 
         # convert to series
-        if not isinstance(parameters, pd.Series):
-            parameters = pd.Series(parameters)
+        if parameters is not None:
+            if not isinstance(parameters, pd.Series):
+                parameters = pd.Series(parameters)
 
         # set parameters
         self._parameters = parameters
 
     @property
-    def gqueries(self) -> pd.Series[str]:
+    def gqueries(self) -> pd.Series[str] | None:
         """gqueries"""
         return self._gqueries
 
     @gqueries.setter
-    def gqueries(self, gqueries: pd.Series | Sequence[str]):
+    def gqueries(self, gqueries: pd.Series | Sequence[str] | None):
 
         # convert to series
-        if not isinstance(gqueries, pd.Series):
-            gqueries = pd.Series(gqueries)
+        if gqueries is not None:
+            if not isinstance(gqueries, pd.Series):
+                gqueries = pd.Series(gqueries)
 
         # set gqueries
         self._gqueries = gqueries
@@ -176,8 +178,8 @@ class MYCClient:
     def __init__(
         self,
         session_ids: pd.Series,
-        parameters: pd.Series,
-        gqueries: pd.Series,
+        parameters: pd.Series | None = None,
+        gqueries: pd.Series | None = None,
         reference: str | None = None,
         myc_url: str | None = None,
         pool: int | ClientPool | None = None,
@@ -189,10 +191,10 @@ class MYCClient:
         ----------
         session_ids: pd.Series
             Series with session ids.
-        parameters: pd.Series
+        parameters: pd.Series, default None
             Series with parameters names to collect and
             corresponding parameter unit.
-        gqueries: pd.Series
+        gqueries: pd.Series, default None
             Series with gqueries to collect and corresponding
             gquery unit.
         reference : str, default None
@@ -404,7 +406,7 @@ class MYCClient:
         gqueries = gqueries if gqueries else self.gqueries
         scenarios = self.slice_cases(scenarios=scenarios)
 
-        return self.pool.get_gqueries(scenarios, gqueries, **kwargs)
+        return self.pool.get_gqueries(scenarios=scenarios, gqueries=gqueries, **kwargs)
 
     def get_price_curves(
         self,
@@ -632,8 +634,9 @@ class MYCClient:
 
         # write gqueries
         if gqueries is not False:
-            frame = self.get_gqueries(scenarios=scenarios)
-            self.write_frame_as_parquet_table(frame, 'gqueries', dirpath)
+            if self.gqueries is not None:
+                frame = self.get_gqueries(scenarios=scenarios)
+                self.write_frame_as_parquet_table(frame, 'gqueries', dirpath)
 
         # write price curves
         if price_curves is not False:
