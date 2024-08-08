@@ -4,21 +4,22 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyetm"
-version = "1.3.6"
+version = "1.4.0"
 
 description = "Python-ETM Connector"
 authors = [{name = "Rob Calon", email = "robcalon@protonmail.com"}]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = {file = "LICENSE"}
 dependencies = [
     'requests>=2.26',
-    'pandas>=2.0',
+    'pandas[parquet]>=2.2',
+    'openpyxl>=3.0',
+    'xlsxwriter>=3.0',
 ]
 keywords = ["ETM", "Energy Transition Model"]
 classifiers = [
     'Development Status :: 4 - Beta',
-    'Environment :: Console',
     'Intended Audience :: Developers',
     'Intended Audience :: Education',
     'Intended Audience :: Science/Research',
@@ -27,9 +28,9 @@ classifiers = [
     'Operating System :: OS Independent',
     'Programming Language :: Python',
     'Programming Language :: Python :: 3',
-    'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
     'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
 ]
 
 [project.urls]
@@ -37,13 +38,10 @@ repository = "https://github.com/robcalon/pyetm"
 
 [project.optional-dependencies]
 async = ["aiohttp>=3.8"]
-excel = ["xlsxwriter>=3.0", "openpyxl>=3.0"]
 dev = [
-    "black",
-    "mypy>=1.4.1",
     "pre-commit",
     "pre-commit-hooks",
-    "pyetm[async, excel]",
+    "pytest",
     "ruff",
 ]
 
@@ -54,6 +52,8 @@ dev = [
 max-args = 15
 max-local = 20
 
-[tool.mypy]
-disallow_untypes_defs = true
-# disallow_incomplete_defs = true
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = [
+    "--import-mode=importlib",
+]
