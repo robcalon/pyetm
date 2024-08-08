@@ -12,6 +12,7 @@ import logging
 
 from typing_extensions import NotRequired
 
+import xlsxwriter
 import pandas as pd
 
 from pyetm import Client
@@ -19,7 +20,6 @@ from pyetm.types import Carrier
 from pyetm.utils.general import iterable_to_str
 from pyetm.utils.url import make_myc_url, set_url_parameters
 from pyetm.utils.excel import add_frame, add_series
-from pyetm.optional import import_optional_dependency
 
 from .pool import ClientPool
 
@@ -646,7 +646,7 @@ class MYCClient:
                 frame = self.get_carrier_curves(
                     carrier=carrier,
                     scenarios=scenarios,
-                    invert_sign_conention=invert_sign_convention
+                    invert_sign_convention=invert_sign_convention
                 )
                 self.write_frame_as_parquet_table(frame, carrier, dirpath)
 
@@ -700,9 +700,6 @@ class MYCClient:
             Inverts sign convention where demand is denoted with
             a negative sign. Demand will be denoted with a positve
             value and supply with a negative value."""
-
-        # import optional dependency
-        xlsxwriter = import_optional_dependency("xlsxwriter")
 
         # default carriers
         if carriers is None:

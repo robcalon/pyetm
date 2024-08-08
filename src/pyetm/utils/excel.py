@@ -3,15 +3,14 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 import numpy as np
 import pandas as pd
 
-if TYPE_CHECKING:
-    from xlsxwriter.format import Format
-    from xlsxwriter.workbook import Workbook
-    from xlsxwriter.worksheet import Worksheet
+from xlsxwriter.format import Format
+from xlsxwriter.workbook import Workbook
+from xlsxwriter.worksheet import Worksheet
 
 
 def _handle_nans(
