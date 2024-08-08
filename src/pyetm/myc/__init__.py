@@ -1,4 +1,5 @@
 """init myc module"""
-from .model import MYCClient
 
-__all__ = ["MYCClient"]
+__all__ = ["MYCClient", "ExcelSheetMapping"]
+
+from .model import MYCClient, ExcelSheetMapping

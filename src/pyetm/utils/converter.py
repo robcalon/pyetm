@@ -4,12 +4,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import xlsxwriter
 import pandas as pd
 
 from pyetm import Client
 from pyetm.logger import get_modulelogger
 from pyetm.myc import MYCClient
-from pyetm.optional import import_optional_dependency
 from pyetm.utils import add_frame, add_series
 
 _logger = get_modulelogger(__name__)
@@ -68,9 +68,6 @@ def copy_study_configuration(
     keep_compatible: bool = False,
 ) -> None:
     """copy study configuration"""
-
-    # import optional dependency
-    xlsxwriter = import_optional_dependency("xlsxwriter")
 
     # check filepath
     if not Path(filepath).parent.exists:
