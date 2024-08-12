@@ -6,7 +6,7 @@ from datetime import datetime
 from dataclasses import dataclass
 from os import PathLike
 from pathlib import Path
-from typing import get_args, overload, Hashable, Literal, Sequence, TypedDict
+from typing import get_args, overload, Hashable, Literal, Iterable, Sequence, TypedDict
 
 import logging
 
@@ -376,7 +376,7 @@ class MYCClient:
         scenarios: ScenarioSlice | None = None,
         **kwargs
     ) -> None:
-        """can be done threaded as well?"""
+        """set parameters"""
 
         # collect scenarios
         scenarios = self.slice_cases(scenarios=scenarios)
@@ -392,25 +392,59 @@ class MYCClient:
         if errors:
             raise KeyError(f"unknown cases in dataframe: '{errors}'")
 
-        return self.pool.set_parameters(scenarios, parameters, **kwargs)
+        self.pool.set_parameters(scenarios, parameters, **kwargs)
+
+    def upload_custom_curves(
+        self,
+        ccurves: pd.Series | pd.DataFrame,
+        scenarios: ScenarioSlice | None = None,
+        **kwargs
+    ) -> None:
+        """upload custom curves"""
+        scenarios = self.slice_cases(scenarios=scenarios)
+        self.pool.upload_custom_curves(ccurves=ccurves, scenarios=scenarios, **kwargs)
+
+    def delete_custom_curves(
+        self,
+        keys: str | Iterable[str] | None = None,
+        scenarios: ScenarioSlice | None = None,
+        **kwargs
+    ) -> None:
+        """delete custom curves"""
+        scenarios = self.slice_cases(scenarios=scenarios)
+        self.pool.delete_custom_curves(keys=keys, scenarios=scenarios, **kwargs)
+
+    def set_custom_curves(
+        self,
+        ccurves: pd.Series | pd.DataFrame,
+        scenarios: ScenarioSlice | None = None,
+        **kwargs
+    ) -> None:
+        """set custom curves"""
+        scenarios = self.slice_cases(scenarios=scenarios)
+        self.pool.set_custom_curves(ccurves=ccurves, scenarios=scenarios, **kwargs)
 
     def get_gqueries(
         self,
-        gqueries: Sequence[str] | pd.Series | None = None,
+        gqueries: Iterable[str] | pd.Series | None = None,
         scenarios: ScenarioSlice | None = None,
         **kwargs
     ) -> pd.DataFrame:
         """get gqueries"""
 
-        # collect gqueries and scenarios
+        # collect gqueries
         gqueries = gqueries if gqueries else self.gqueries
+        if gqueries is None:
+            raise ValueError("no gqueries specified")
+
+        # collect scenarios
         scenarios = self.slice_cases(scenarios=scenarios)
 
         return self.pool.get_gqueries(scenarios=scenarios, gqueries=gqueries, **kwargs)
 
     def get_price_curves(
         self,
-        carriers: Carrier | Sequence[Carrier] | None = None,
+        carriers: Carrier | Iterable[Carrier] | None = None,
         scenarios: ScenarioSlice | None = None,
         **kwargs
     ) -> pd.DataFrame:

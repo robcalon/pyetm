@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyetm"
-version = "1.4.1"
+version = "1.4.2"
 
 description = "Python-ETM Connector"
 authors = [{name = "Rob Calon", email = "robcalon@protonmail.com"}]

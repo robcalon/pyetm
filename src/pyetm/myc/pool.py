@@ -230,15 +230,56 @@ class PoolTasks:
     #     with pool.get_client_from_session_id(scenario_id) as client:
     #         pass
 
+    @staticmethod
+    def upload_custom_curves(
+        pool: ClientPool,
+        scenario_id: int,
+        ccurves: pd.Series | pd.DataFrame,
+    ) -> pd.Series:
+        """upload custom curves"""
+
+        with pool.get_client_from_session_id(scenario_id) as client:
+            client.upload_custom_curves(ccurves=ccurves)
+
+        return pd.Series(name=scenario_id)
+
+    @staticmethod
+    def delete_custom_curves(
+        pool: ClientPool,
+        scenario_id: int,
+        keys: str | Iterable[str] | None = None,
+    ) -> pd.Series:
+        """delete custom curves"""
+
+        with pool.get_client_from_session_id(scenario_id) as client:
+            client.delete_custom_curves(keys=keys)
+
+        return pd.Series(name=scenario_id)
+
+    @staticmethod
+    def set_custom_curves(
+        pool: ClientPool,
+        scenario_id: int,
+        ccurves: pd.Series | pd.DataFrame,
+    ) -> pd.Series:
+        """set custom curves"""
+
+        with pool.get_client_from_session_id(scenario_id) as client:
+            client.set_custom_curves(ccurves=ccurves)
+
+        return pd.Series(name=scenario_id)
+
+
+
 class ClientPool:
     """pool of reusable clients"""
 
     def __init__(
         self,
         maxsize: int | None = None,
-        clients: Iterable[Client] | None = None,
+        clients: list[Client] | None = None,
         **kwargs
-    ):
+    ) -> None:
 
         if maxsize is None:
             maxsize = len(clients) if clients else 3
@@ -452,5 +493,47 @@ class ClientPool:
             scenarios=scenarios,
             carrier=carrier,
             invert_sign_convention=invert_sign_convention,
+            **kwargs,
+        )
+
+    def upload_custom_curves(
+        self,
+        scenarios: Scenarios,
+        ccurves: pd.Series | pd.DataFrame,
+        **kwargs
+    ) -> None:
+        """upload custom curves"""
+        self.call_threaded(
+            func=self.tasks.upload_custom_curves,
+            scenarios=scenarios,
+            curves=ccurves,
+            **kwargs,
+        )
+
+    def delete_custom_curves(
+        self,
+        scenarios: Scenarios,
+        keys: str | Iterable[str] | None = None,
+        **kwargs
+    ) -> None:
+        """delete custom curves"""
+        self.call_threaded(
+            func=self.tasks.delete_custom_curves,
+            scenarios=scenarios,
+            keys=keys,
+            **kwargs,
+        )
+
+    def set_custom_curves(
+        self,
+        scenarios: Scenarios,
+        ccurves: pd.Series | pd.DataFrame,
+        **kwargs
+    ) -> None:
+        """set custom curves"""
+        self.call_threaded(
+            func=self.tasks.set_custom_curves,
+            scenarios=scenarios,
+            curves=ccurves,
             **kwargs,
         )
