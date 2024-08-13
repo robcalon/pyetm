@@ -506,7 +506,7 @@ class ClientPool:
         self.call_threaded(
             func=self.tasks.upload_custom_curves,
             scenarios=scenarios,
-            curves=ccurves,
+            ccurves=ccurves,
             **kwargs,
         )
 
@@ -534,6 +534,6 @@ class ClientPool:
         self.call_threaded(
             func=self.tasks.set_custom_curves,
             scenarios=scenarios,
-            curves=ccurves,
+            ccurves=ccurves,
             **kwargs,
         )
