@@ -57,7 +57,7 @@ class PoolTasks:
 
         # get inputs from scenario endpoint
         with pool.get_client_from_session_id(scenario_id) as client:
-            inputs = client.get_input_parameters(detailed=True, include_disabled=True)
+            inputs = client.get_input_parameters(detailed=True)
 
         # # find unused coupling nodes
         # mask = ~inputs['disabled'] & inputs['coupling_groups']
@@ -68,7 +68,7 @@ class PoolTasks:
         # See related github issue on ETEninge
 
         # drop disabled parameters
-        inputs = inputs[~inputs['disabled']]
+        # inputs = inputs[~inputs['disabled']]
         # inputs = inputs.drop(index=uncoupled)
 
         # filter parameters
