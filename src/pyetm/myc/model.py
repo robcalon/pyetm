@@ -251,7 +251,7 @@ class MYCClient:
     @classmethod
     def from_excel(
         cls,
-        filepath: str,
+        filepath: str | PathLike,
         reference: str | None = None,
         myc_url: str | None = None,
         sheet_mapping: ExcelSheetMapping | None = None,

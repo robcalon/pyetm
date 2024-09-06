@@ -59,17 +59,17 @@ class PoolTasks:
         with pool.get_client_from_session_id(scenario_id) as client:
             inputs = client.get_input_parameters(detailed=True, include_disabled=True)
 
-        # find unused coupling nodes
-        mask = ~inputs['disabled'] & inputs['coupling_groups']
-        uncoupled = [key for group in inputs.loc[mask]['disabled_by'] for key in group]
+        # # find unused coupling nodes
+        # mask = ~inputs['disabled'] & inputs['coupling_groups']
+        # uncoupled = [key for group in inputs.loc[mask]['coupling_disabled'] for key in group]
 
         # TODO: warn for incompatible authorisation (read only) scope
         # This case results in all parameters having a disabled is true property
         # See related github issue on ETEninge
 
-        # drop disabled and inactive parameters
+        # drop disabled parameters
         inputs = inputs[~inputs['disabled']]
-        inputs = inputs.drop(index=uncoupled)
+        # inputs = inputs.drop(index=uncoupled)
 
         # filter parameters
         if parameters is not None:
