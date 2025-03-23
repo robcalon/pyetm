@@ -7,7 +7,7 @@ name = "pyetm"
 version = "1.4.4"
 
 description = "Python-ETM Connector"
-authors = [{name = "Rob Calon", email = "robcalon@protonmail.com"}]
+authors = [{name = "Rob Calon", email = "pyetm@pm.me"}]
 readme = "README.md"
 requires-python = ">=3.10"
 license = {file = "LICENSE"}
